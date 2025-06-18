@@ -1,0 +1,443 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Management
+model User {
+  id                Int                @id @default(autoincrement())
+  email             String             @unique
+  username          String             @unique
+  password          String
+  firstName         String
+  lastName          String
+  phoneNumber       String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  roleId            Int
+  role              Role               @relation(fields: [roleId], references: [id])
+  employeeId        Int?               @unique
+  employee          Employee?          @relation(fields: [employeeId], references: [id])
+  fuelRequests      FuelRequest[]      @relation("RequestedBy")
+  fuelApprovals     FuelRequest[]      @relation("ApprovedBy")
+  fuelIssuances     FuelIssuance[]
+  projectAssignments ProjectAssignment[]
+}
+
+model Role {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  description String?
+  users       User[]
+  permissions Permission[] // Implicit many-to-many
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Permission {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  roles       Role[]   // Implicit many-to-many
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Project Management
+model Project {
+  id                Int                @id @default(autoincrement())
+  name              String
+  description       String?
+  location          String?
+  startDate         DateTime
+  endDate           DateTime?
+  budget            Float
+  status            ProjectStatus      @default(ACTIVE)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  projectCode       String             @unique
+  clientId          Int?
+  client            Client?            @relation(fields: [clientId], references: [id])
+  activities        Activity[]
+  equipmentAssigned EquipmentAssignment[]
+  fuelRequests      FuelRequest[]
+  contracts         Contract[]
+  invoices          Invoice[]
+  projectAssignments ProjectAssignment[]
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+model ProjectAssignment {
+  id          Int      @id @default(autoincrement())
+  projectId   Int
+  project     Project  @relation(fields: [projectId], references: [id])
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  role        String   // Project Manager, Site Engineer, etc.
+  startDate   DateTime @default(now())
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([projectId, userId])
+}
+
+model Client {
+  id          Int       @id @default(autoincrement())
+  name        String
+  contactName String?
+  email       String?
+  phone       String?
+  address     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  projects    Project[]
+}
+
+// Activity Management
+model Activity {
+  id                Int                @id @default(autoincrement())
+  name              String
+  description       String?
+  projectId         Int
+  project           Project            @relation(fields: [projectId], references: [id])
+  startDate         DateTime?
+  endDate           DateTime?
+  status            ActivityStatus     @default(PLANNED)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  measurements      ActivityMeasurement[]
+  estimates         ActivityEstimate[]
+  equipmentBudgets  ActivityEquipmentBudget[]
+  laborBudgets      ActivityLaborBudget[]
+  materialBudgets   ActivityMaterialBudget[]
+}
+
+enum ActivityStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  DELAYED
+  CANCELLED
+}
+
+model ActivityMeasurement {
+  id              Int      @id @default(autoincrement())
+  activityId      Int
+  activity        Activity @relation(fields: [activityId], references: [id])
+  billItem        Int
+  itemDescription String
+  unit            String
+  section         String
+  measuredDate    DateTime
+  quantity        Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ActivityEstimate {
+  id              Int      @id @default(autoincrement())
+  activityId      Int
+  activity        Activity @relation(fields: [activityId], references: [id])
+  itemNo          Int
+  itemDescription String
+  majorActivity   String
+  unit            String
+  quantity        Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ActivityEquipmentBudget {
+  id              Int      @id @default(autoincrement())
+  activityId      Int
+  activity        Activity @relation(fields: [activityId], references: [id])
+  itemNo          Int
+  itemDescription String
+  unit            String
+  resourceName    String
+  unitOutput      Float
+  daysPerUnit     Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ActivityLaborBudget {
+  id              Int      @id @default(autoincrement())
+  activityId      Int
+  activity        Activity @relation(fields: [activityId], references: [id])
+  itemNo          Int
+  itemDescription String
+  unit            String
+  resourceName    String
+  unitOutput      Float
+  daysPerUnit     Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ActivityMaterialBudget {
+  id              Int      @id @default(autoincrement())
+  activityId      Int
+  activity        Activity @relation(fields: [activityId], references: [id])
+  itemNo          Int
+  itemDescription String
+  unit            String
+  resourceName    String
+  unitOutput      Float
+  daysPerUnit     Float
+  budgetCode      Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Equipment Management
+model Equipment {
+  id                  Int                  @id @default(autoincrement())
+  equipmentCode       String               @unique
+  name                String
+  type                String
+  make                String
+  model               String
+  yearOfManufacture   Int?
+  ownership           OwnershipType
+  measurementType     String
+  unit                String
+  size                Float?
+  workMeasure         String               // consumption measurement km/l or l/hr
+  acquisitionCost     Float?
+  supplier            String?
+  dateReceived        DateTime?
+  status              EquipmentStatus      @default(OPERATIONAL)
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  assessments         EquipmentAssessment[]
+  locations           EquipmentLocation[]
+  assignments         EquipmentAssignment[]
+  fuelRequests        FuelRequest[]
+  fuelConsumptions    FuelConsumption[]
+}
+
+enum OwnershipType {
+  OWNED
+  RENTED
+  LEASED
+}
+
+enum EquipmentStatus {
+  OPERATIONAL
+  UNDER_MAINTENANCE
+  OUT_OF_SERVICE
+  RESERVED
+}
+
+model EquipmentAssessment {
+  id              Int               @id @default(autoincrement())
+  equipmentId     Int
+  equipment       Equipment         @relation(fields: [equipmentId], references: [id])
+  functionality   FunctionalityType
+  condition       ConditionType
+  insurance       Boolean
+  assessmentDate  DateTime          @default(now())
+  assessedBy      String
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+enum FunctionalityType {
+  FULLY_FUNCTIONAL
+  PARTIALLY_FUNCTIONAL
+  NON_FUNCTIONAL
+}
+
+enum ConditionType {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+  CRITICAL
+}
+
+model EquipmentLocation {
+  id                  Int       @id @default(autoincrement())
+  equipmentId         Int
+  equipment           Equipment @relation(fields: [equipmentId], references: [id])
+  currentLocation     String
+  dateMoved           DateTime  @default(now())
+  officer             String
+  authorizingOfficer  String
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+model EquipmentAssignment {
+  id              Int       @id @default(autoincrement())
+  equipmentId     Int
+  equipment       Equipment @relation(fields: [equipmentId], references: [id])
+  projectId       Int
+  project         Project   @relation(fields: [projectId], references: [id])
+  startDate       DateTime
+  endDate         DateTime?
+  assignedBy      String
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// Employee Management
+model Employee {
+  id                Int       @id @default(autoincrement())
+  employeeNumber    String    @unique
+  firstName         String
+  lastName          String
+  dateOfAppointment DateTime
+  section           String
+  designation       String
+  wageAmount        Float
+  wageFrequency     String
+  gender            String
+  bank              String?
+  accountNumber     String?
+  bankBranch        String?
+  employmentTerms   String
+  user              User?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+// Fuel Management
+model FuelRequest {
+  id              Int               @id @default(autoincrement())
+  requestNumber   String            @unique
+  equipmentId     Int
+  equipment       Equipment         @relation(fields: [equipmentId], references: [id])
+  projectId       Int
+  project         Project           @relation(fields: [projectId], references: [id])
+  fuelType        FuelType
+  quantity        Float
+  requestedById   Int
+  requestedBy     User              @relation("RequestedBy", fields: [requestedById], references: [id])
+  requestDate     DateTime          @default(now())
+  justification   String?
+  status          FuelRequestStatus @default(PENDING)
+  approvedById    Int?
+  approvedBy      User?             @relation("ApprovedBy", fields: [approvedById], references: [id])
+  approvalDate    DateTime?
+  rejectionReason String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  issuances       FuelIssuance[]
+}
+
+enum FuelType {
+  DIESEL
+  PETROL
+  KEROSENE
+}
+
+enum FuelRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ISSUED
+  CANCELLED
+}
+
+model FuelIssuance {
+  id              Int       @id @default(autoincrement())
+  issueNumber     String    @unique
+  requestId       Int
+  request         FuelRequest @relation(fields: [requestId], references: [id])
+  quantity        Float
+  issuedById      Int
+  issuedBy        User      @relation(fields: [issuedById], references: [id])
+  issueDate       DateTime  @default(now())
+  fuelStation     String?
+  odometerReading Int?
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  consumptions    FuelConsumption[]
+}
+
+model FuelConsumption {
+  id              Int           @id @default(autoincrement())
+  equipmentId     Int
+  equipment       Equipment     @relation(fields: [equipmentId], references: [id])
+  issuanceId      Int
+  issuance        FuelIssuance  @relation(fields: [issuanceId], references: [id])
+  activityDescription String?
+  consumptionDate DateTime      @default(now())
+  quantityUsed    Float
+  odometerStart   Int?
+  odometerEnd     Int?
+  hoursStart      Float?
+  hoursEnd        Float?
+  efficiency      Float?        // km/l or hours/l
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+// Contract Management
+model Contract {
+  id                            Int       @id @default(autoincrement())
+  contractNumber                String    @unique
+  procurementRefNumber          String
+  provider                      String
+  dateOfAgreement               DateTime
+  contractPrice                 Float
+  currency                      String
+  contractType                  String
+  startDate                     DateTime
+  completionDate                DateTime?
+  budgetItemCode                Int?
+  procurementMethod             String
+  dateOfProcurementInitiation   DateTime
+  projectId                     Int
+  project                       Project   @relation(fields: [projectId], references: [id])
+  createdAt                     DateTime  @default(now())
+  updatedAt                     DateTime  @updatedAt
+}
+
+// Invoice Management - Match original database schema
+model Invoice {
+  id                    Int       @id @default(autoincrement())
+  invoiceNumber         String    @unique
+  serviceProvider       String
+  invoiceDate           DateTime
+  dateReceived          DateTime
+  procurementDescription String
+  providerId            String
+  contractNumber        String?
+  documentId            Int?
+  goodsReceivedNote     String?
+  amount                Float
+  projectId             Int
+  project               Project   @relation(fields: [projectId], references: [id])
+  status                InvoiceStatus @default(PENDING)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+enum InvoiceStatus {
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
+}
