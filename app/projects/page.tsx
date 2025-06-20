@@ -110,7 +110,7 @@ export default function ProjectsPage() {
                 <CalendarDays className="mr-1 h-3 w-3" />
                 <span>{project.endDate ? `Due ${new Date(project.endDate).toLocaleDateString()}` : "No end date"}</span>
               </div>
-              <span className="font-medium text-primary">${project.budget.toLocaleString()}</span>
+              <span className="font-medium text-primary">UGX {project.budget.toLocaleString()}</span>
             </div>
             <div className="text-xs text-muted-foreground">Client: {project.client?.name || "No client"}</div>
           </div>

@@ -63,7 +63,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-gray-900">ConstructPro</h1>
-                <p className="text-gray-600">Project Management System</p>
+                <p className="text-gray-600">Construction Project Management System</p>
               </div>
             </div>
 
