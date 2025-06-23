@@ -1,38 +1,90 @@
-{/*import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/db"
+import { db, withRetry } from "@/lib/db"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
-
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
+export async function GET(request: NextRequest) {
   try {
-    const activityId = Number.parseInt(params.id)
+    const session = await getServerSession(authOptions)
 
-    if (isNaN(activityId)) {
-      return NextResponse.json({ error: "Invalid activity ID" }, { status: 400 })
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const activity = await prisma.activity.findUnique({
-      where: { id: activityId },
-      include: {
-        project: true,
-        employee: true,
-      },
+    const activities = await withRetry(async () => {
+      return await db.activity.findMany({
+        include: {
+          project: {
+            select: {
+              id: true,
+              name: true,
+              projectCode: true,
+              location: true,
+              status: true,
+            },
+          },
+          employee: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      })
     })
 
-    if (!activity) {
-      return NextResponse.json({ error: "Activity not found" }, { status: 404 })
-    }
-
-    return NextResponse.json(activity)
+    return NextResponse.json(activities)
   } catch (error) {
-    console.error("Failed to fetch activity:", error)
-    return NextResponse.json({ error: "Failed to fetch activity" }, { status: 500 })
+    console.error("Failed to fetch activities:", error)
+    return NextResponse.json({ error: "Failed to fetch activities" }, { status: 500 })
   }
 }
-*/}
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { name, description, projectId, startDate, endDate, status = "PLANNED" } = body
+
+    if (!name || !projectId) {
+      return NextResponse.json({ error: "Name and project are required" }, { status: 400 })
+    }
+
+    const activity = await withRetry(async () => {
+      return await db.activity.create({
+        data: {
+          name,
+          description: description || null,
+          projectId: Number.parseInt(projectId),
+          startDate: startDate ? new Date(startDate) : null,
+          endDate: endDate ? new Date(endDate) : null,
+          status,
+        },
+        include: {
+          project: {
+            select: {
+              id: true,
+              name: true,
+              projectCode: true,
+              location: true,
+            },
+          },
+        },
+      })
+    })
+
+    return NextResponse.json(activity, { status: 201 })
+  } catch (error) {
+    console.error("Failed to create activity:", error)
+    return NextResponse.json({ error: "Failed to create activity" }, { status: 500 })
+  }
+}

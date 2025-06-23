@@ -101,13 +101,12 @@ export default function ClientsPage() {
 
       <div className="p-6">
         <div className="flex flex-col gap-6 animate-fade-in">
-          {/** 
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input type="search" placeholder="Search clients..." className="w-full bg-background pl-8" />
             </div>
-          </div> */}
+          </div>
 
           <Card className="card-enhanced">
             <CardHeader>

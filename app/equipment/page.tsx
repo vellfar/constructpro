@@ -181,12 +181,10 @@ export default function EquipmentPage() {
           Equipment
         </div>
         <div className="ml-auto flex items-center gap-4">
-          {/* 
           <Button variant="outline" size="sm" className="hidden sm:inline-flex">
             <Filter className="mr-2 h-4 w-4" />
             Filter
-          </Button>\
-          */}
+          </Button>
           <Button size="sm" asChild>
             <Link href="/equipment/new">
               <Plus className="mr-2 h-4 w-4" />
@@ -198,13 +196,11 @@ export default function EquipmentPage() {
 
       <div className="p-6">
         <div className="flex flex-col gap-6 animate-fade-in">
-          {/*
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
-            
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input type="search" placeholder="Search equipment..." className="w-full bg-background pl-8" />
-            </div> 
+            </div>
             <div className="flex items-center gap-2">
               <Select defaultValue="all">
                 <SelectTrigger className="w-[180px]">
@@ -230,7 +226,7 @@ export default function EquipmentPage() {
                 </SelectContent>
               </Select>
             </div>
-          </div> */}
+          </div>
 
           <Tabs defaultValue="all" className="w-full">
             <TabsList className="grid w-full grid-cols-4">

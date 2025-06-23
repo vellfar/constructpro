@@ -110,11 +110,17 @@ export default function NewEquipmentPage() {
               <div className="grid gap-6 md:grid-cols-3">
                 <div className="space-y-2">
                   <Label htmlFor="type">Type *</Label>
-                  <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                  <Select
+                    value={formData.type || "__NONE__"}
+                    onValueChange={(value) => setFormData({ ...formData, type: value === "__NONE__" ? "" : value })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="__NONE__" disabled>
+                        Select equipment type
+                      </SelectItem>
                       <SelectItem value="Excavator">Excavator</SelectItem>
                       <SelectItem value="Bulldozer">Bulldozer</SelectItem>
                       <SelectItem value="Dump Truck">Dump Truck</SelectItem>
@@ -163,13 +169,18 @@ export default function NewEquipmentPage() {
                 <div className="space-y-2">
                   <Label htmlFor="ownership">Ownership *</Label>
                   <Select
-                    value={formData.ownership}
-                    onValueChange={(value) => setFormData({ ...formData, ownership: value })}
+                    value={formData.ownership || "__NONE__"}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, ownership: value === "__NONE__" ? "" : value })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select ownership" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="__NONE__" disabled>
+                        Select ownership type
+                      </SelectItem>
                       <SelectItem value="OWNED">Owned</SelectItem>
                       <SelectItem value="RENTED">Rented</SelectItem>
                       <SelectItem value="LEASED">Leased</SelectItem>

@@ -24,6 +24,8 @@ model User {
   // Relations
   role                  Role                  @relation(fields: [roleId], references: [id])
   employee              Employee?             @relation(fields: [employeeId], references: [id])
+  createdProjects       Project[]             @relation("ProjectCreatedBy")
+  projectAssignments    ProjectAssignment[]
   fuelRequestsRequested FuelRequest[]         @relation("RequestedBy")
   fuelRequestsApproved  FuelRequest[]         @relation("ApprovedBy")
   fuelRequestsIssued    FuelRequest[]         @relation("IssuedBy")
@@ -75,6 +77,7 @@ model Employee {
 
   // Relations
   user                User?
+  activities          Activity[]
 }
 
 model Client {
@@ -102,14 +105,34 @@ model Project {
   status                ProjectStatus         @default(PLANNING)
   projectCode           String                @unique
   clientId              Int?
+  createdById           Int
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
 
   // Relations
   client                Client?               @relation(fields: [clientId], references: [id])
+  createdBy             User                  @relation("ProjectCreatedBy", fields: [createdById], references: [id])
   activities            Activity[]
   equipmentAssignments  EquipmentAssignment[]
+  projectAssignments    ProjectAssignment[]
   fuelRequests          FuelRequest[]
+}
+
+model ProjectAssignment {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  userId    Int
+  role      String
+  startDate DateTime
+  endDate   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
 }
 
 model Activity {
@@ -117,14 +140,18 @@ model Activity {
   name        String
   description String?
   projectId   Int
+  employeeId  Int?           // Added employee relation
   startDate   DateTime?
   endDate     DateTime?
   status      ActivityStatus @default(PLANNED)
+  quantity    Float?         // Added for cost calculations
+  unitCost    Float?         // Added for cost calculations
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
   // Relations
   project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  employee    Employee?      @relation(fields: [employeeId], references: [id])
 }
 
 model Equipment {
@@ -179,6 +206,7 @@ model FuelRequest {
   justification           String?
   urgency                 FuelUrgency       @default(MEDIUM)
   status                  FuelRequestStatus @default(PENDING)
+  quantity                Float?            // Added for consistency
   
   // Approval fields
   approvedById            Int?

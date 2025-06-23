@@ -1,24 +1,26 @@
 #!/bin/bash
-# Database setup script for ConstructPro
 
-echo "🚀 Setting up ConstructPro database..."
+echo "🚀 Setting up Construction Management Database..."
 
-# Step 1: Generate Prisma Client
-echo "📦 Generating Prisma Client..."
+# Generate Prisma client
+echo "📦 Generating Prisma client..."
 npx prisma generate
 
-# Step 2: Create and apply migrations
-echo "🔄 Creating and applying database migrations..."
+# Create and apply migration
+echo "🔄 Creating database migration..."
 npx prisma migrate dev --name init
 
-# Step 3: Seed the database
-echo "🌱 Seeding database with initial data..."
-npx prisma db seed
-
-echo "✅ Database setup complete!"
+echo "✅ Database setup completed successfully!"
 echo ""
-echo "🔑 Demo Accounts:"
-echo "Admin: admin@example.com / password123"
-echo "Project Manager: pm@example.com / password123"
-echo "Employee: john@example.com / password123"
-echo "Employee: michael@example.com / password123"
+echo "🔑 You can now login with these demo accounts:"
+echo "┌─────────────────┬─────────────────────────┬──────────────┐"
+echo "│ Role            │ Email                   │ Password     │"
+echo "├─────────────────┼─────────────────────────┼──────────────┤"
+echo "│ Admin           │ admin@example.com       │ password123  │"
+echo "│ Project Manager │ pm@example.com          │ password123  │"
+echo "│ Store Manager   │ store@example.com       │ password123  │"
+echo "│ Employee        │ john@example.com        │ password123  │"
+echo "│ Employee        │ michael@example.com     │ password123  │"
+echo "└─────────────────┴─────────────────────────┴──────────────┘"
+echo ""
+echo "🚀 Start the development server with: npm run dev"

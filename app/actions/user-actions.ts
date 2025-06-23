@@ -2,39 +2,30 @@
 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
-import { prisma } from "@/lib/db"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import bcrypt from "bcryptjs"
-
-type CreateUserData = {
-  username: string
-  firstName: string
-  lastName: string
-  email: string
-  password: string
-  phoneNumber?: string
-  roleId: string
-}
-
-type UpdateUserData = {
-  email: string
-  firstName: string
-  lastName: string
-  phoneNumber?: string
-  roleId: string
-  isActive: boolean
-}
+import { db, withRetry } from "@/lib/db"
 
 export async function getUsers() {
   const session = await getServerSession(authOptions)
-  if (!session?.user) return { success: false, error: "Unauthorized" }
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
 
   try {
-    const users = await prisma.user.findMany({
-      include: { role: true, employee: true },
-      orderBy: { createdAt: "desc" },
+    const users = await withRetry(async () => {
+      return await db.user.findMany({
+        include: {
+          role: true,
+          employee: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      })
     })
+
     return { success: true, data: users }
   } catch (error) {
     console.error("Failed to fetch users:", error)
@@ -42,74 +33,98 @@ export async function getUsers() {
   }
 }
 
-export async function createUser(data: CreateUserData) {
+export async function createUser(formData: FormData) {
   const session = await getServerSession(authOptions)
   if (!session?.user || session.user.role !== "Admin") {
     return { success: false, error: "Unauthorized - Admin access required" }
   }
 
-  const { email, username, password, firstName, lastName, phoneNumber, roleId } = data
+  const email = formData.get("email") as string
+  const username = (formData.get("username") as string) || email
+  const password = formData.get("password") as string
+  const firstName = formData.get("firstName") as string
+  const lastName = formData.get("lastName") as string
+  const roleId = Number.parseInt(formData.get("roleId") as string)
+  const phoneNumber = formData.get("phoneNumber") as string
 
   if (!email || !password || !firstName || !lastName || !roleId) {
     return { success: false, error: "Required fields are missing" }
   }
 
   try {
-    const existingUser = await prisma.user.findUnique({ where: { email } })
-    if (existingUser) {
-      return { success: false, error: "User with this email already exists" }
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 12)
-
-    await prisma.user.create({
-      data: {
-        email,
-        username,
-        password: hashedPassword,
-        firstName,
-        lastName,
-        phoneNumber: phoneNumber || null,
-        roleId: parseInt(roleId),
+    // Check if user already exists
+    const existingUser = await db.user.findFirst({
+      where: {
+        OR: [{ email }, { username }],
       },
     })
 
+    if (existingUser) {
+      return { success: false, error: "User with this email or username already exists" }
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12)
+
+    await withRetry(async () => {
+      return await db.user.create({
+        data: {
+          email,
+          username,
+          password: hashedPassword,
+          firstName,
+          lastName,
+          phoneNumber: phoneNumber || null,
+          roleId,
+        },
+      })
+    })
+
     revalidatePath("/users")
-    return { success: true }
+    redirect("/users")
   } catch (error) {
     console.error("Failed to create user:", error)
     return { success: false, error: "Failed to create user" }
   }
 }
 
-export async function updateUser(id: number, data: UpdateUserData) {
+export async function updateUser(id: number, formData: FormData) {
   const session = await getServerSession(authOptions)
   if (!session?.user || session.user.role !== "Admin") {
     return { success: false, error: "Unauthorized - Admin access required" }
   }
 
-  const { email, firstName, lastName, phoneNumber, roleId, isActive } = data
-
-  if (!email || !firstName || !lastName || !roleId) {
-    return { success: false, error: "Required fields are missing" }
-  }
-
   try {
-    await prisma.user.update({
-      where: { id },
-      data: {
-        email,
-        firstName,
-        lastName,
-        phoneNumber: phoneNumber || null,
-        roleId: parseInt(roleId),
-        isActive,
-      },
+    const email = formData.get("email") as string
+    const username = formData.get("username") as string
+    const firstName = formData.get("firstName") as string
+    const lastName = formData.get("lastName") as string
+    const roleId = Number.parseInt(formData.get("roleId") as string)
+    const phoneNumber = formData.get("phoneNumber") as string
+    const isActive = formData.get("isActive") === "on"
+
+    if (!email || !firstName || !lastName || !roleId) {
+      return { success: false, error: "Required fields are missing" }
+    }
+
+    await withRetry(async () => {
+      return await db.user.update({
+        where: { id },
+        data: {
+          email,
+          username: username || email,
+          firstName,
+          lastName,
+          phoneNumber: phoneNumber || null,
+          roleId,
+          isActive,
+        },
+      })
     })
 
     revalidatePath("/users")
     revalidatePath(`/users/${id}`)
-    return { success: true }
+    redirect(`/users/${id}`)
   } catch (error) {
     console.error("Failed to update user:", error)
     return { success: false, error: "Failed to update user" }
@@ -123,7 +138,12 @@ export async function deleteUser(id: number) {
   }
 
   try {
-    await prisma.user.delete({ where: { id } })
+    await withRetry(async () => {
+      return await db.user.delete({
+        where: { id },
+      })
+    })
+
     revalidatePath("/users")
     return { success: true }
   } catch (error) {
@@ -139,12 +159,21 @@ export async function toggleUserStatus(id: number) {
   }
 
   try {
-    const user = await prisma.user.findUnique({ where: { id } })
-    if (!user) return { success: false, error: "User not found" }
-
-    await prisma.user.update({
+    const user = await db.user.findUnique({
       where: { id },
-      data: { isActive: !user.isActive },
+    })
+
+    if (!user) {
+      return { success: false, error: "User not found" }
+    }
+
+    await withRetry(async () => {
+      return await db.user.update({
+        where: { id },
+        data: {
+          isActive: !user.isActive,
+        },
+      })
     })
 
     revalidatePath("/users")
@@ -152,5 +181,33 @@ export async function toggleUserStatus(id: number) {
   } catch (error) {
     console.error("Failed to toggle user status:", error)
     return { success: false, error: "Failed to toggle user status" }
+  }
+}
+
+export async function getUserById(id: number) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  try {
+    const user = await withRetry(async () => {
+      return await db.user.findUnique({
+        where: { id },
+        include: {
+          role: true,
+          employee: true,
+        },
+      })
+    })
+
+    if (!user) {
+      return { success: false, error: "User not found" }
+    }
+
+    return { success: true, data: user }
+  } catch (error) {
+    console.error("Failed to fetch user:", error)
+    return { success: false, error: "Failed to fetch user" }
   }
 }

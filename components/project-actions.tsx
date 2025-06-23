@@ -41,10 +41,12 @@ export function ProjectActions({ project }: ProjectActionsProps) {
       const result = await deleteProject(project.id)
       if (result.success) {
         router.push("/projects")
+        router.refresh()
       } else {
         alert(result.error || "Failed to delete project")
       }
     } catch (error) {
+      console.error("Delete error:", error)
       alert("Failed to delete project")
     } finally {
       setIsDeleting(false)

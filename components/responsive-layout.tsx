@@ -5,7 +5,7 @@ import { useSession } from "next-auth/react"
 import { usePathname } from "next/navigation"
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar"
 import { AppSidebar } from "@/components/app-sidebar"
-import { MobileNav } from "@/components/mobile-nav"
+import { MobileHeader } from "@/components/mobile-header"
 
 interface ResponsiveLayoutProps {
   children: React.ReactNode
@@ -39,10 +39,10 @@ export function ResponsiveLayout({ children }: ResponsiveLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile Navigation */}
+      {/* Mobile Layout */}
       <div className="md:hidden">
-        <MobileNav />
-        <main className="p-4 pb-safe">{children}</main>
+        <MobileHeader />
+        <main className="p-4">{children}</main>
       </div>
 
       {/* Desktop Sidebar Layout */}

@@ -1,34 +1,45 @@
 "use client"
 
 import type React from "react"
-
 import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { useRouter, usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
 
 interface ProtectedRouteProps {
   children: React.ReactNode
   requiredRole?: string[]
+  fallbackUrl?: string
 }
 
-export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, requiredRole, fallbackUrl = "/unauthorized" }: ProtectedRouteProps) {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const pathname = usePathname()
+  const [isAuthorized, setIsAuthorized] = useState(false)
 
   useEffect(() => {
-    if (status === "loading") return // Still loading
+    if (status === "loading") return
 
+    // Not authenticated - redirect to login
     if (!session) {
-      router.push("/auth/login")
+      const callbackUrl = encodeURIComponent(pathname)
+      router.push(`/auth/login?callbackUrl=${callbackUrl}`)
       return
     }
 
-    if (requiredRole && !requiredRole.includes(session.user.role)) {
-      router.push("/unauthorized")
-      return
+    // Check role requirements
+    if (requiredRole && requiredRole.length > 0) {
+      const userRole = session.user?.role
+      if (!userRole || !requiredRole.includes(userRole)) {
+        router.push(fallbackUrl)
+        return
+      }
     }
-  }, [session, status, router, requiredRole])
 
+    setIsAuthorized(true)
+  }, [session, status, router, pathname, requiredRole, fallbackUrl])
+
+  // Loading state
   if (status === "loading") {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -37,11 +48,13 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     )
   }
 
+  // Not authenticated
   if (!session) {
     return null
   }
 
-  if (requiredRole && !requiredRole.includes(session.user.role)) {
+  // Not authorized (wrong role)
+  if (!isAuthorized) {
     return null
   }
 

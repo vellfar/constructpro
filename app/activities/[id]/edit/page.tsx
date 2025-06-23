@@ -104,11 +104,14 @@ export default async function EditActivityPage({ params }: EditActivityPageProps
 
               <div className="space-y-2">
                 <Label htmlFor="projectId">Project</Label>
-                <Select name="projectId" defaultValue={activity.projectId.toString()}>
+                <Select name="projectId" defaultValue={activity.projectId.toString() || "__EMPTY__"}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a project" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__EMPTY__" disabled>
+                      Select a project
+                    </SelectItem>
                     {projects.map((project) => (
                       <SelectItem key={project.id} value={project.id.toString()}>
                         {project.projectCode} - {project.name}
@@ -120,11 +123,14 @@ export default async function EditActivityPage({ params }: EditActivityPageProps
 
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select name="status" defaultValue={activity.status}>
+                <Select name="status" defaultValue={activity.status || "__EMPTY__"}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__EMPTY__" disabled>
+                      Select status
+                    </SelectItem>
                     <SelectItem value="PLANNED">Planned</SelectItem>
                     <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
                     <SelectItem value="COMPLETED">Completed</SelectItem>

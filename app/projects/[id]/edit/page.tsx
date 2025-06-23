@@ -20,20 +20,36 @@ export default async function EditProjectPage({ params }: { params: { id: string
   }
 
   const projectId = Number.parseInt(params.id)
-  const [project, clients] = await Promise.all([
-    prisma.project.findUnique({
-      where: { id: projectId },
-      include: { client: true },
-    }),
-    prisma.client.findMany({
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-  ])
+
+  // Fetch project and clients with error handling
+  let project = null
+  let clients: Array<{ id: number; name: string }> = []
+
+  try {
+    ;[project, clients] = await Promise.all([
+      prisma.project
+        .findUnique({
+          where: { id: projectId },
+          include: { client: true },
+        })
+        .catch(() => null),
+      prisma.client
+        .findMany({
+          select: { id: true, name: true },
+          orderBy: { name: "asc" },
+        })
+        .catch(() => []),
+    ])
+  } catch (error) {
+    console.error("Database error:", error)
+  }
 
   if (!project) {
     notFound()
   }
+
+  // Ensure we have a safe client ID value
+  const safeClientId = project.clientId ? project.clientId.toString() : "__NONE__"
 
   return (
     <div className="flex flex-col">
@@ -85,23 +101,28 @@ export default async function EditProjectPage({ params }: { params: { id: string
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="clientId">Client</Label>
-                  <Select name="clientId" defaultValue={project.clientId?.toString()}>
+                  <Select name="clientId" defaultValue={safeClientId}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select client" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="0">No client</SelectItem>
+                      <SelectItem value="__NONE__">No client assigned</SelectItem>
                       {clients.map((client) => (
                         <SelectItem key={client.id} value={client.id.toString()}>
                           {client.name}
                         </SelectItem>
                       ))}
+                      {clients.length === 0 && (
+                        <SelectItem value="__EMPTY__" disabled>
+                          No clients available
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
-                  <Select name="status" defaultValue={project.status}>
+                  <Select name="status" defaultValue={project.status || "PLANNING"}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
@@ -133,7 +154,7 @@ export default async function EditProjectPage({ params }: { params: { id: string
                     name="budget"
                     type="number"
                     step="0.01"
-                    defaultValue={project.budget}
+                    defaultValue={project.budget?.toString() || "0"}
                     required
                     placeholder="0.00"
                   />

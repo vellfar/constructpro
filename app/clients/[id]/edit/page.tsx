@@ -3,13 +3,7 @@ import { authOptions } from "@/lib/auth"
 import { redirect, notFound } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -17,22 +11,14 @@ import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { updateClient } from "@/app/actions/client-actions"
 
-export default async function EditClientPage({
-  params,
-}: {
-  params: { id: string }
-}) {
+export default async function EditClientPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
 
   if (!session?.user) {
     redirect("/auth/login")
   }
 
-  const clientId = Number(params.id)
-  if (Number.isNaN(clientId)) {
-    notFound()
-  }
-
+  const clientId = Number.parseInt(params.id)
   const client = await prisma.client.findUnique({
     where: { id: clientId },
   })
@@ -50,9 +36,7 @@ export default async function EditClientPage({
             Back to Client
           </Button>
         </Link>
-        <div className="flex items-center gap-2 font-semibold">
-          Edit Client
-        </div>
+        <div className="flex items-center gap-2 font-semibold">Edit Client</div>
       </header>
 
       <div className="p-6">
@@ -62,13 +46,7 @@ export default async function EditClientPage({
             <CardDescription>Update client information</CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={async (formData) => {
-              "use server"
-              const result = await updateClient(client.id, formData)
-              if (result.success && result.redirectTo) {
-                redirect(result.redirectTo)
-              }
-            }} className="space-y-6">
+            <form action={updateClient.bind(null, client.id)} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="name">Client Name *</Label>
                 <Input
@@ -103,12 +81,7 @@ export default async function EditClientPage({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone</Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    defaultValue={client.phone || ""}
-                    placeholder="+256 701 234567"
-                  />
+                  <Input id="phone" name="phone" defaultValue={client.phone || ""} placeholder="+1 234 567 8900" />
                 </div>
               </div>
 
@@ -118,7 +91,7 @@ export default async function EditClientPage({
                   id="address"
                   name="address"
                   defaultValue={client.address || ""}
-                  placeholder="123 Main Street, Kampala, Uganda"
+                  placeholder="123 Main Street, City, State, ZIP"
                   rows={3}
                 />
               </div>

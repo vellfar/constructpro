@@ -111,11 +111,17 @@ export default function NewActivityPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="projectId">Project *</Label>
-                <Select value={formData.projectId} onValueChange={(value) => handleInputChange("projectId", value)}>
+                <Select
+                  value={formData.projectId || "__NONE__"}
+                  onValueChange={(value) => handleInputChange("projectId", value === "__NONE__" ? "" : value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a project" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="__NONE__" disabled>
+                      Select a project
+                    </SelectItem>
                     {projects.map((project) => (
                       <SelectItem key={project.id} value={project.id.toString()}>
                         {project.name} ({project.projectCode})

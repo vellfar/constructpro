@@ -13,7 +13,7 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          return null
+          throw new Error("Email and password are required")
         }
 
         try {
@@ -28,13 +28,17 @@ export const authOptions: NextAuthOptions = {
           })
 
           if (!user) {
-            return null
+            throw new Error("No user found with this email")
+          }
+
+          if (!user.isActive) {
+            throw new Error("Account is deactivated")
           }
 
           const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
 
           if (!isPasswordValid) {
-            return null
+            throw new Error("Invalid password")
           }
 
           return {
@@ -45,25 +49,36 @@ export const authOptions: NextAuthOptions = {
             lastName: user.lastName,
             role: user.role.name,
             employeeId: user.employeeId?.toString(),
+            isActive: user.isActive,
           }
         } catch (error) {
           console.error("Authentication error:", error)
-          return null
+          throw error
         }
       },
     }),
   ],
   session: {
     strategy: "jwt",
+    maxAge: 24 * 60 * 60, // 24 hours
+  },
+  jwt: {
+    maxAge: 24 * 60 * 60, // 24 hours
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.role = user.role
         token.firstName = user.firstName
         token.lastName = user.lastName
         token.employeeId = user.employeeId
+        token.isActive = user.isActive
       }
+
+      if (trigger === "update" && session) {
+        token = { ...token, ...session }
+      }
+
       return token
     },
     async session({ session, token }) {
@@ -73,12 +88,28 @@ export const authOptions: NextAuthOptions = {
         session.user.firstName = token.firstName as string
         session.user.lastName = token.lastName as string
         session.user.employeeId = token.employeeId as string
+        session.user.isActive = token.isActive as boolean
       }
       return session
+    },
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith("/")) return `${baseUrl}${url}`
+      else if (new URL(url).origin === baseUrl) return url
+      return baseUrl
     },
   },
   pages: {
     signIn: "/auth/login",
     signUp: "/auth/register",
+    error: "/auth/error",
   },
+  events: {
+    async signIn({ user }) {
+      console.log(`User ${user.email} signed in`)
+    },
+    async signOut() {
+      console.log(`User signed out`)
+    },
+  },
+  debug: process.env.NODE_ENV === "development",
 }

@@ -11,20 +11,32 @@ import type {
   EquipmentStatus,
   ActivityStatus,
   EquipmentOwnership,
+  FuelRequest,
+  FuelType,
+  FuelUrgency,
 } from "@prisma/client"
 
-// Base API Response Types
+// Enhanced API Response Types with better error handling
 export interface ApiResponse<T = any> {
   success: boolean
   data?: T
   error?: string
   message?: string
+  code?: string
   meta?: {
     total?: number
     page?: number
     limit?: number
     hasMore?: boolean
+    timestamp?: string
   }
+}
+
+export interface ApiError {
+  code: string
+  message: string
+  details?: any
+  timestamp: string
 }
 
 export interface PaginationParams {
@@ -35,11 +47,28 @@ export interface PaginationParams {
   search?: string
 }
 
-// User Types
+// Enhanced validation schemas
+export interface ValidationResult {
+  isValid: boolean
+  errors: ValidationError[]
+}
+
+export interface ValidationError {
+  field: string
+  message: string
+  code: string
+}
+
+// User Types with enhanced relations
 export interface UserWithRelations extends User {
-  role: Role
+  role: Role & {
+    permissions?: Permission[]
+  }
   employee?: Employee | null
-  permissions?: Permission[]
+  _count?: {
+    fuelRequests: number
+    projectAssignments: number
+  }
 }
 
 export interface CreateUserRequest {
@@ -63,9 +92,12 @@ export interface UpdateUserRequest {
   isActive?: boolean
 }
 
-// Employee Types
+// Employee Types with enhanced validation
 export interface EmployeeWithRelations extends Employee {
   user?: User | null
+  _count?: {
+    fuelRequests: number
+  }
 }
 
 export interface CreateEmployeeRequest {
@@ -86,12 +118,37 @@ export interface CreateEmployeeRequest {
 
 export interface UpdateEmployeeRequest extends Partial<CreateEmployeeRequest> {}
 
-// Project Types
+// Project Types with enhanced relations
 export interface ProjectWithRelations extends Project {
   client?: Client | null
-  activities?: Activity[]
+  activities?: ActivityWithRelations[]
+  equipmentAssignments?: Array<{
+    id: number
+    equipment: {
+      id: number
+      name: string
+      equipmentCode: string
+      type: string
+      status: EquipmentStatus
+    }
+    startDate: Date
+    endDate?: Date | null
+  }>
+  projectAssignments?: Array<{
+    id: number
+    user: {
+      id: number
+      firstName: string
+      lastName: string
+    }
+    role: string
+    startDate: Date
+  }>
+  fuelRequests?: FuelRequestWithRelations[]
   _count?: {
     activities: number
+    equipmentAssignments: number
+    fuelRequests: number
   }
 }
 
@@ -110,10 +167,23 @@ export interface UpdateProjectRequest extends Partial<CreateProjectRequest> {
   status?: ProjectStatus
 }
 
-// Equipment Types
+// Equipment Types with enhanced tracking
 export interface EquipmentWithRelations extends Equipment {
+  assignments?: Array<{
+    id: number
+    project: {
+      id: number
+      name: string
+      projectCode?: string | null
+      status: ProjectStatus
+    }
+    startDate: Date
+    endDate?: Date | null
+  }>
+  fuelRequests?: FuelRequestWithRelations[]
   _count?: {
     assignments: number
+    fuelRequests: number
   }
 }
 
@@ -138,7 +208,7 @@ export interface UpdateEquipmentRequest extends Partial<CreateEquipmentRequest> 
   status?: EquipmentStatus
 }
 
-// Activity Types
+// Activity Types with enhanced project relations
 export interface ActivityWithRelations extends Activity {
   project: {
     id: number
@@ -146,6 +216,10 @@ export interface ActivityWithRelations extends Activity {
     projectCode?: string | null
     location?: string | null
     status: ProjectStatus
+    client?: {
+      id: number
+      name: string
+    } | null
   }
 }
 
@@ -161,13 +235,15 @@ export interface UpdateActivityRequest extends Partial<CreateActivityRequest> {
   status?: ActivityStatus
 }
 
-// Client Types
+// Client Types with enhanced project tracking
 export interface ClientWithRelations extends Client {
   projects?: Array<{
     id: number
     name: string
     status: ProjectStatus
     budget?: number | null
+    startDate?: Date | null
+    endDate?: Date | null
   }>
   _count?: {
     projects: number
@@ -184,72 +260,20 @@ export interface CreateClientRequest {
 
 export interface UpdateClientRequest extends Partial<CreateClientRequest> {}
 
-// Fuel Management Types
-export enum FuelType {
-  DIESEL = "DIESEL",
-  PETROL = "PETROL",
-  KEROSENE = "KEROSENE",
-}
-
-export enum FuelRequestStatus {
-  PENDING = "PENDING",
-  APPROVED = "APPROVED",
-  REJECTED = "REJECTED",
-  ISSUED = "ISSUED",
-  ACKNOWLEDGED = "ACKNOWLEDGED",
-  COMPLETED = "COMPLETED",
-  CANCELLED = "CANCELLED",
-}
-
-export enum FuelUrgency {
-  LOW = "LOW",
-  MEDIUM = "MEDIUM",
-  HIGH = "HIGH",
-  URGENT = "URGENT",
-}
-
-export interface FuelRequest {
-  id: number
-  requestNumber: string
-  equipmentId: number
-  projectId: number
-  fuelType: FuelType
-  requestedQuantity: number
-  requestedById: number
-  justification?: string | null
-  urgency: FuelUrgency
-  status: FuelRequestStatus
-  approvedById?: number | null
-  approvalDate?: Date | null
-  approvedQuantity?: number | null
-  approvalComments?: string | null
-  rejectionReason?: string | null
-  issuedById?: number | null
-  issuanceDate?: Date | null
-  issuedQuantity?: number | null
-  issuanceComments?: string | null
-  acknowledgedById?: number | null
-  acknowledgmentDate?: Date | null
-  acknowledgedQuantity?: number | null
-  acknowledgmentComments?: string | null
-  completedById?: number | null
-  completionDate?: Date | null
-  completionComments?: string | null
-  createdAt: Date
-  updatedAt: Date
-}
-
+// Enhanced Fuel Management Types
 export interface FuelRequestWithRelations extends FuelRequest {
   equipment: {
     id: number
     name: string
     equipmentCode: string
     type: string
+    status: EquipmentStatus
   }
   project: {
     id: number
     name: string
     projectCode?: string | null
+    status: ProjectStatus
   }
   requestedBy: {
     id: number
@@ -257,6 +281,7 @@ export interface FuelRequestWithRelations extends FuelRequest {
     lastName: string
     employee?: {
       employeeNumber: string
+      designation: string
     } | null
   }
   approvedBy?: {
@@ -311,19 +336,21 @@ export interface CompleteFuelRequestRequest {
   completionComments?: string
 }
 
-// Dashboard Types
+// Enhanced Dashboard Types with performance metrics
 export interface DashboardStats {
   projects: {
     total: number
     active: number
     completed: number
     onHold: number
+    planning: number
   }
   equipment: {
     total: number
     operational: number
     maintenance: number
     outOfService: number
+    utilizationRate: number
   }
   employees: {
     total: number
@@ -334,7 +361,11 @@ export interface DashboardStats {
     total: number
     pending: number
     approved: number
+    issued: number
+    acknowledged: number
     completed: number
+    rejected: number
+    cancelled: number
   }
   recentActivities: Array<{
     id: number
@@ -342,34 +373,37 @@ export interface DashboardStats {
     description: string
     timestamp: Date
     user?: string
+    entityId?: number
+    entityType?: string
   }>
+  performance: {
+    projectCompletionRate: number
+    equipmentUtilizationRate: number
+    fuelRequestProcessingTime: number
+    averageProjectDuration: number
+  }
 }
 
-// Form Validation Types
-export interface ValidationError {
-  field: string
-  message: string
-}
-
-export interface FormState<T = any> {
-  data: T
-  errors: ValidationError[]
-  isSubmitting: boolean
-  isValid: boolean
-}
-
-// Search and Filter Types
+// Search and Filter Types with enhanced capabilities
 export interface SearchFilters {
   query?: string
-  status?: string
+  status?: string | string[]
   dateFrom?: string
   dateTo?: string
   category?: string
   assignedTo?: string
   priority?: string
+  projectId?: number
+  equipmentId?: number
+  clientId?: number
 }
 
-// Audit Log Types
+export interface SortOptions {
+  field: string
+  direction: "asc" | "desc"
+}
+
+// Audit Log Types with enhanced tracking
 export interface AuditLog {
   id: number
   action: string
@@ -378,7 +412,50 @@ export interface AuditLog {
   oldValues?: any
   newValues?: any
   userId: number
+  user?: {
+    firstName: string
+    lastName: string
+    email: string
+  }
   timestamp: Date
   ipAddress?: string
   userAgent?: string
+  sessionId?: string
 }
+
+// Form State Management
+export interface FormState<T = any> {
+  data: T
+  errors: ValidationError[]
+  isSubmitting: boolean
+  isValid: boolean
+  isDirty: boolean
+  touchedFields: Set<string>
+}
+
+// Cache Types for performance optimization
+export interface CacheEntry<T> {
+  data: T
+  timestamp: number
+  ttl: number
+}
+
+export interface CacheManager {
+  get<T>(key: string): CacheEntry<T> | null
+  set<T>(key: string, data: T, ttl?: number): void
+  delete(key: string): void
+  clear(): void
+}
+
+// WebSocket Types for real-time updates
+export interface WebSocketMessage {
+  type: string
+  payload: any
+  timestamp: number
+  userId?: number
+}
+
+// Export utility types
+export type EntityType = "user" | "employee" | "project" | "equipment" | "activity" | "client" | "fuelRequest"
+export type ActionType = "create" | "update" | "delete" | "view" | "approve" | "reject"
+export type NotificationType = "info" | "success" | "warning" | "error"

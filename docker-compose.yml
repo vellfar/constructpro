@@ -1,0 +1,12 @@
+version: '1.0'
+
+services:
+  postgress:
+    image:postgress:15
+    container_name:postgres_db
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydb
+    ports:
+    

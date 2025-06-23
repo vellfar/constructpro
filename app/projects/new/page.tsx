@@ -4,33 +4,42 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Save } from "lucide-react"
+import { ArrowLeft, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { createProject } from "@/app/actions/project-actions"
+import { ProjectForm } from "@/components/forms/project-form"
 
 export default function NewProjectPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
 
   async function handleSubmit(formData: FormData) {
     setIsLoading(true)
     setError("")
+    setSuccess("")
 
     try {
+      console.log("🚀 Submitting form...")
       const result = await createProject(formData)
 
-      if (result.success) {
-        router.push("/projects")
-      } else {
+      // If we get here, it means there was an error (redirect would have happened)
+      if (result && !result.success) {
+        console.log("❌ Error:", result.error)
         setError(result.error || "Failed to create project")
       }
     } catch (error) {
-      setError("An unexpected error occurred")
+      console.error("💥 Unexpected error:", error)
+
+      // Check if this is a redirect error (which means success)
+      if (error instanceof Error && error.message.includes("NEXT_REDIRECT")) {
+        console.log("✅ Redirect detected - project was created successfully!")
+        // The redirect will handle navigation, so we don't need to do anything
+        return
+      } else {
+        setError("An unexpected error occurred")
+      }
     } finally {
       setIsLoading(false)
     }
@@ -55,76 +64,35 @@ export default function NewProjectPage() {
             <CardDescription>Add a new construction project to your portfolio</CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={handleSubmit} className="space-y-6">
-              {error && (
-                <div className="rounded-md bg-destructive/10 p-4">
-                  <p className="text-destructive text-sm">{error}</p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Project Name *</Label>
-                  <Input id="name" name="name" placeholder="Enter project name" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="clientId">Client</Label>
-                  <Select name="clientId">
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select client" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">ABC Construction Corp</SelectItem>
-                      <SelectItem value="2">XYZ Development Ltd</SelectItem>
-                      <SelectItem value="3">City Municipality</SelectItem>
-                    </SelectContent>
-                  </Select>
+            {error && (
+              <div className="rounded-md bg-destructive/10 p-4 mb-6 border border-destructive/20">
+                <div className="flex">
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-destructive">Error</h3>
+                    <div className="mt-2 text-sm text-destructive">
+                      <p>{error}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" name="description" placeholder="Project description and details" rows={3} />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input id="location" name="location" placeholder="Project location" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="budget">Budget *</Label>
-                  <Input id="budget" name="budget" type="number" step="0.01" placeholder="0.00" required />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Input id="startDate" name="startDate" type="date" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="endDate">Expected End Date</Label>
-                  <Input id="endDate" name="endDate" type="date" />
+            {success && (
+              <div className="rounded-md bg-green-50 p-4 mb-6 border border-green-200">
+                <div className="flex">
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-green-800">Success!</h3>
+                    <div className="mt-2 text-sm text-green-700">
+                      <p>{success}</p>
+                      <p className="mt-1 text-xs">Redirecting to projects page...</p>
+                    </div>
+                  </div>
                 </div>
               </div>
+            )}
 
-              <div className="flex justify-end gap-4">
-                <Button variant="outline" type="button" asChild>
-                  <Link href="/projects">Cancel</Link>
-                </Button>
-                <Button type="submit" disabled={isLoading}>
-                  {isLoading ? (
-                    <>Creating...</>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Create Project
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
+            <ProjectForm onSubmit={handleSubmit} isLoading={isLoading} />
           </CardContent>
         </Card>
       </div>

@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import { prisma } from "@/lib/db"
+import { db, withRetry } from "@/lib/db"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -18,23 +18,39 @@ export default async function ActivitiesPage() {
     redirect("/auth/login")
   }
 
-  // Fetch activities with related data
-  const activities = await prisma.activity.findMany({
-    include: {
-      project: {
-        select: {
-          id: true,
-          name: true,
-          projectCode: true,
-          location: true,
-          status: true,
+  let activities = []
+  let error = null
+
+  try {
+    activities = await withRetry(async () => {
+      return await db.activity.findMany({
+        include: {
+          project: {
+            select: {
+              id: true,
+              name: true,
+              projectCode: true,
+              location: true,
+              status: true,
+            },
+          },
+          employee: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
         },
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  })
+        orderBy: {
+          createdAt: "desc",
+        },
+      })
+    })
+  } catch (err) {
+    console.error("Failed to fetch activities:", err)
+    error = err instanceof Error ? err.message : "Failed to fetch activities"
+  }
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -58,16 +74,39 @@ export default async function ActivitiesPage() {
     return new Date(date).toLocaleDateString()
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col">
+        <header className="dashboard-header">
+          <div className="flex items-center gap-2 font-semibold">
+            <Calendar className="h-5 w-5" />
+            Activity Management
+          </div>
+        </header>
+        <div className="p-6">
+          <div className="error-state">
+            <p className="text-destructive font-medium">Error: {error}</p>
+            <Button asChild className="mt-4">
+              <Link href="/activities">Retry</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col">
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-6">
-        <div className="flex items-center gap-2 font-semibold">Activity Management</div>
+      <header className="dashboard-header">
+        <div className="flex items-center gap-2 font-semibold">
+          <Calendar className="h-5 w-5" />
+          Activity Management
+        </div>
         <div className="ml-auto flex items-center gap-4">
-          {/* 
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="hidden sm:inline-flex">
             <Filter className="mr-2 h-4 w-4" />
             Filter
-          </Button>*/}
+          </Button>
           <Button size="sm" asChild>
             <Link href="/activities/new">
               <Plus className="mr-2 h-4 w-4" />
@@ -78,8 +117,7 @@ export default async function ActivitiesPage() {
       </header>
 
       <div className="p-6">
-        <div className="flex flex-col gap-6">
-          {/*
+        <div className="flex flex-col gap-6 animate-fade-in">
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -114,12 +152,14 @@ export default async function ActivitiesPage() {
                 </SelectContent>
               </Select>
             </div>
-          </div> */}
+          </div>
 
-          <Card>
+          <Card className="card-enhanced">
             <CardHeader>
               <CardTitle>Project Activities</CardTitle>
-              <CardDescription>Track and manage project activities and tasks</CardDescription>
+              <CardDescription>
+                Track and manage project activities and tasks ({activities.length} activities)
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="rounded-md border">
@@ -138,7 +178,7 @@ export default async function ActivitiesPage() {
                   <TableBody>
                     {activities && activities.length > 0 ? (
                       activities.map((activity) => (
-                        <TableRow key={activity.id}>
+                        <TableRow key={activity.id} className="hover:bg-muted/50 transition-colors">
                           <TableCell className="font-medium">
                             <div>
                               <div className="font-medium">{activity.name}</div>
@@ -155,7 +195,7 @@ export default async function ActivitiesPage() {
                             <div>
                               <Link
                                 href={`/projects/${activity.project.id}`}
-                                className="font-medium hover:underline text-blue-600"
+                                className="font-medium hover:underline text-primary"
                               >
                                 {activity.project.name}
                               </Link>
@@ -205,10 +245,10 @@ export default async function ActivitiesPage() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-8">
-                          <div className="flex flex-col items-center gap-2">
-                            <Calendar className="h-8 w-8 text-muted-foreground" />
+                          <div className="empty-state">
+                            <Calendar className="h-12 w-12 text-muted-foreground" />
                             <p className="text-muted-foreground">No activities found</p>
-                            <Button asChild>
+                            <Button asChild className="mt-4">
                               <Link href="/activities/new">Add First Activity</Link>
                             </Button>
                           </div>

@@ -1,266 +1,294 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { getProjects } from "@/app/actions/project-actions"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { CalendarDays, Construction, Filter, Plus, Search, Loader2 } from "lucide-react"
+import { Plus, Search, Filter, Loader2, Building2, Calendar, DollarSign, MapPin, AlertCircle } from "lucide-react"
 import Link from "next/link"
 
 interface Project {
   id: number
   name: string
-  location: string
+  projectCode: string
   status: string
   budget: number
-  endDate: Date | null
+  location: string | null
+  startDate: string
+  endDate: string | null
   client: { name: string } | null
+  _count: {
+    activities: number
+    equipmentAssignments: number
+  }
 }
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("ALL_STATUS")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [total, setTotal] = useState(0)
 
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const result = await getProjects()
-        if (result.success && result.data) {
-          setProjects(result.data)
-        } else {
-          setError(result.error || "Failed to load projects")
-        }
-      } catch (err) {
-        setError("An unexpected error occurred")
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchProjects()
-  }, [])
+  }, [currentPage, searchTerm, statusFilter])
 
-  const getStatusBadgeVariant = (status: string) => {
+  async function fetchProjects() {
+    try {
+      console.log("🔍 Fetching projects...")
+      setLoading(true)
+      setError(null)
+
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: "10",
+        search: searchTerm,
+        status: statusFilter === "ALL_STATUS" ? "" : statusFilter,
+      })
+
+      console.log("📋 Request params:", params.toString())
+
+      const response = await fetch(`/api/projects?${params}`)
+
+      console.log("📡 Response status:", response.status)
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      console.log("📦 API Response:", data)
+
+      // Handle different response formats
+      const projectsArray = data.data || data.projects || []
+      const totalCount = data.total || data.pagination?.total || 0
+
+      console.log("📊 Processed data:", {
+        projectsCount: projectsArray.length,
+        total: totalCount,
+        firstProject: projectsArray[0],
+      })
+
+      setProjects(projectsArray || [])
+      setTotal(totalCount)
+      setTotalPages(Math.ceil(totalCount / 10))
+
+      if (projectsArray.length === 0 && totalCount === 0) {
+        console.log("⚠️ No projects found in database")
+      }
+    } catch (error) {
+      console.error("💥 Failed to fetch projects:", error)
+      setError(error instanceof Error ? error.message : "Failed to load projects")
+      setProjects([])
+      setTotal(0)
+      setTotalPages(1)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getStatusColor = (status: string) => {
     switch (status) {
       case "ACTIVE":
-        return "default"
-      case "COMPLETED":
-        return "secondary"
+        return "bg-green-100 text-green-800"
       case "PLANNING":
-        return "outline"
+        return "bg-blue-100 text-blue-800"
       case "ON_HOLD":
-        return "destructive"
-      case "CANCELLED":
-        return "destructive"
-      default:
-        return "secondary"
-    }
-  }
-
-  const filterProjectsByStatus = (status?: string) => {
-    if (!projects) return []
-    if (!status || status === "all") return projects
-    return projects.filter((project) => project.status === status)
-  }
-
-  const calculateProgress = (project: any) => {
-    switch (project.status) {
-      case "PLANNING":
-        return 10
-      case "ACTIVE":
-        return Math.floor(Math.random() * 70) + 20
+        return "bg-yellow-100 text-yellow-800"
       case "COMPLETED":
-        return 100
+        return "bg-gray-100 text-gray-800"
+      case "CANCELLED":
+        return "bg-red-100 text-red-800"
       default:
-        return 0
+        return "bg-gray-100 text-gray-800"
     }
   }
 
-  const ProjectCard = ({ project }: { project: any }) => (
-    <Link href={`/projects/${project.id}`} className="block animate-fade-in">
-      <Card className="card-enhanced overflow-hidden hover:shadow-lg transition-all duration-300">
-        <div className="aspect-video bg-gradient-to-br from-primary/10 to-primary/5 relative">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Construction className="h-10 w-10 text-primary/40" />
-          </div>
-          <Badge className="absolute right-2 top-2" variant={getStatusBadgeVariant(project.status)}>
-            {project.status}
-          </Badge>
-        </div>
-        <CardContent className="p-4">
-          <div className="space-y-3">
-            <div>
-              <h3 className="font-semibold truncate text-foreground">{project.name}</h3>
-              <p className="text-sm text-muted-foreground">{project.location || "No location"}</p>
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Progress</span>
-                <span className="font-medium">{calculateProgress(project)}%</span>
-              </div>
-              <Progress value={calculateProgress(project)} className="h-2" />
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center text-muted-foreground">
-                <CalendarDays className="mr-1 h-3 w-3" />
-                <span>{project.endDate ? `Due ${new Date(project.endDate).toLocaleDateString()}` : "No end date"}</span>
-              </div>
-              <span className="font-medium text-primary">UGX {project.budget.toLocaleString()}</span>
-            </div>
-            <div className="text-xs text-muted-foreground">Client: {project.client?.name || "No client"}</div>
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
-  )
-
-  if (loading) {
-    return (
-      <div className="flex flex-col">
-        <header className="dashboard-header">
-          <div className="flex items-center gap-2 font-semibold">
-            <Construction className="h-5 w-5" />
-            Projects
-          </div>
-        </header>
-        <div className="loading-spinner">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-            <p className="text-muted-foreground">Loading projects...</p>
-          </div>
-        </div>
-      </div>
-    )
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "UGX",
+    }).format(amount)
   }
 
-  if (error) {
-    return (
-      <div className="flex flex-col">
-        <header className="dashboard-header">
-          <div className="flex items-center gap-2 font-semibold">
-            <Construction className="h-5 w-5" />
-            Projects
-          </div>
-        </header>
-        <div className="p-6">
-          <div className="error-state">
-            <p className="text-destructive font-medium">Error: {error}</p>
-          </div>
-        </div>
-      </div>
-    )
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString()
   }
 
   return (
-    <div className="flex flex-col">
-      <header className="dashboard-header">
-        <div className="flex items-center gap-2 font-semibold">
-          <Construction className="h-5 w-5" />
-          Projects
+    <div className="flex flex-col space-y-6 p-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+          <p className="text-muted-foreground">Manage your construction projects ({total} total)</p>
         </div>
-        <div className="ml-auto flex items-center gap-4">
-          {/* 
-          <Button variant="outline" size="sm" className="hidden sm:inline-flex">
-            <Filter className="mr-2 h-4 w-4" />
-            Filter
-          </Button>
-          */}
-          <Button size="sm" asChild>
-            <Link href="/projects/new">
-              <Plus className="mr-2 h-4 w-4" />
-              New Project
-            </Link>
-          </Button>
-        </div>
-      </header>
-
-      <div className="p-6">
-        <div className="flex flex-col gap-6 animate-fade-in">
-          {/* <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Search projects..." className="w-full bg-background pl-8" />
-            </div>
-          </div> */}
-
-          <Tabs defaultValue="all" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="all">All Projects</TabsTrigger>
-              <TabsTrigger value="active">Active</TabsTrigger>
-              <TabsTrigger value="planning">Planning</TabsTrigger>
-              <TabsTrigger value="completed">Completed</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="all" className="mt-6">
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {filterProjectsByStatus("all").length > 0 ? (
-                  filterProjectsByStatus("all").map((project) => <ProjectCard key={project.id} project={project} />)
-                ) : (
-                  <div className="col-span-3 empty-state">
-                    <Construction className="h-12 w-12 text-muted-foreground" />
-                    <h3 className="page-title">No projects found</h3>
-                    <p className="page-subtitle">Create a new project to get started.</p>
-                    <Button className="mt-4" asChild>
-                      <Link href="/projects/new">Create Project</Link>
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="active" className="mt-6">
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {filterProjectsByStatus("ACTIVE").length > 0 ? (
-                  filterProjectsByStatus("ACTIVE").map((project) => <ProjectCard key={project.id} project={project} />)
-                ) : (
-                  <div className="col-span-3 empty-state">
-                    <Construction className="h-12 w-12 text-muted-foreground" />
-                    <h3 className="text-lg font-medium">No active projects</h3>
-                    <p className="text-sm text-muted-foreground">Active projects will appear here.</p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="planning" className="mt-6">
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {filterProjectsByStatus("PLANNING").length > 0 ? (
-                  filterProjectsByStatus("PLANNING").map((project) => (
-                    <ProjectCard key={project.id} project={project} />
-                  ))
-                ) : (
-                  <div className="col-span-3 empty-state">
-                    <Construction className="h-12 w-12 text-muted-foreground" />
-                    <h3 className="text-lg font-medium">No projects in planning</h3>
-                    <p className="text-sm text-muted-foreground">Projects in planning phase will appear here.</p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="completed" className="mt-6">
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {filterProjectsByStatus("COMPLETED").length > 0 ? (
-                  filterProjectsByStatus("COMPLETED").map((project) => (
-                    <ProjectCard key={project.id} project={project} />
-                  ))
-                ) : (
-                  <div className="col-span-3 empty-state">
-                    <Construction className="h-12 w-12 text-muted-foreground" />
-                    <h3 className="text-lg font-medium">No completed projects</h3>
-                    <p className="text-sm text-muted-foreground">Completed projects will appear here.</p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+        <Button asChild>
+          <Link href="/projects/new">
+            <Plus className="mr-2 h-4 w-4" />
+            New Project
+          </Link>
+        </Button>
       </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search projects..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <div className="sm:w-48">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL_STATUS">All Status</SelectItem>
+                  <SelectItem value="PLANNING">Planning</SelectItem>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="ON_HOLD">On Hold</SelectItem>
+                  <SelectItem value="COMPLETED">Completed</SelectItem>
+                  <SelectItem value="CANCELLED">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="outline" onClick={fetchProjects} disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refresh"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Error State */}
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-red-800">
+              <AlertCircle className="h-5 w-5" />
+              <div>
+                <h3 className="font-medium">Error loading projects</h3>
+                <p className="text-sm text-red-600">{error}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Projects Grid */}
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading projects...</span>
+        </div>
+      ) : projects.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No projects found</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              {searchTerm || statusFilter !== "ALL_STATUS"
+                ? "No projects match your current filters."
+                : "Get started by creating your first project."}
+            </p>
+            <Button asChild>
+              <Link href="/projects/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Create Project
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {projects.map((project) => (
+            <Card key={project.id} className="hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="text-lg">
+                      <Link href={`/projects/${project.id}`} className="hover:underline">
+                        {project.name}
+                      </Link>
+                    </CardTitle>
+                    <CardDescription>{project.projectCode}</CardDescription>
+                  </div>
+                  <Badge className={getStatusColor(project.status)}>{project.status}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {project.client && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Building2 className="mr-2 h-4 w-4" />
+                    {project.client.name}
+                  </div>
+                )}
+                {project.location && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <MapPin className="mr-2 h-4 w-4" />
+                    {project.location}
+                  </div>
+                )}
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  {formatCurrency(project.budget)}
+                </div>
+                {project.startDate && (
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    {formatDate(project.startDate)}
+                    {project.endDate && ` - ${formatDate(project.endDate)}`}
+                  </div>
+                )}
+                <div className="flex justify-between text-sm text-muted-foreground pt-2 border-t">
+                  <span>{project._count.activities} Activities</span>
+                  <span>{project._count.equipmentAssignments} Equipment</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1 || loading}
+          >
+            Previous
+          </Button>
+          <span className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages || loading}
+          >
+            Next
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

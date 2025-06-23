@@ -1,7 +1,10 @@
-{/*import { type NextRequest, NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/db"
+
+export const dynamic = "force-dynamic"
+export const revalidate = 0
 
 export async function GET(request: NextRequest) {
   try {
@@ -163,4 +166,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Failed to fetch analytics data" }, { status: 500 })
   }
 }
-*/}

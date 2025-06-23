@@ -1,327 +1,385 @@
--- Create database tables for Construction Project Management System
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create roles table
-CREATE TABLE IF NOT EXISTS roles (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(50) UNIQUE NOT NULL,
-  description TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Create ENUM types first
+CREATE TYPE "ProjectStatus" AS ENUM ('PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED');
+CREATE TYPE "ActivityStatus" AS ENUM ('PLANNED', 'IN_PROGRESS', 'COMPLETED', 'DELAYED', 'CANCELLED');
+CREATE TYPE "OwnershipType" AS ENUM ('OWNED', 'RENTED', 'LEASED');
+CREATE TYPE "EquipmentStatus" AS ENUM ('OPERATIONAL', 'UNDER_MAINTENANCE', 'OUT_OF_SERVICE', 'RESERVED');
+CREATE TYPE "FunctionalityType" AS ENUM ('FULLY_FUNCTIONAL', 'PARTIALLY_FUNCTIONAL', 'NON_FUNCTIONAL');
+CREATE TYPE "ConditionType" AS ENUM ('EXCELLENT', 'GOOD', 'FAIR', 'POOR', 'CRITICAL');
+CREATE TYPE "FuelType" AS ENUM ('DIESEL', 'PETROL', 'KEROSENE');
+CREATE TYPE "FuelRequestStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'ISSUED', 'CANCELLED');
+CREATE TYPE "InvoiceStatus" AS ENUM ('PENDING', 'APPROVED', 'PAID', 'REJECTED');
+
+-- Create tables in dependency order
+
+-- Roles table
+CREATE TABLE IF NOT EXISTS "Role" (
+    "id" SERIAL PRIMARY KEY,
+    "name" VARCHAR(255) UNIQUE NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create permissions table
-CREATE TABLE IF NOT EXISTS permissions (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(50) UNIQUE NOT NULL,
-  description TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Permissions table
+CREATE TABLE IF NOT EXISTS "Permission" (
+    "id" SERIAL PRIMARY KEY,
+    "name" VARCHAR(255) UNIQUE NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create role_permissions junction table
-CREATE TABLE IF NOT EXISTS role_permissions (
-  role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
-  permission_id INTEGER REFERENCES permissions(id) ON DELETE CASCADE,
-  PRIMARY KEY (role_id, permission_id)
+-- Role-Permission junction table
+CREATE TABLE IF NOT EXISTS "_PermissionToRole" (
+    "A" INTEGER REFERENCES "Permission"("id") ON DELETE CASCADE,
+    "B" INTEGER REFERENCES "Role"("id") ON DELETE CASCADE,
+    PRIMARY KEY ("A", "B")
 );
 
--- Create users table
-CREATE TABLE IF NOT EXISTS users (
-  id SERIAL PRIMARY KEY,
-  email VARCHAR(100) UNIQUE NOT NULL,
-  username VARCHAR(50) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  first_name VARCHAR(50) NOT NULL,
-  last_name VARCHAR(50) NOT NULL,
-  phone_number VARCHAR(20),
-  role_id INTEGER REFERENCES roles(id),
-  employee_id INTEGER UNIQUE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Employees table
+CREATE TABLE IF NOT EXISTS "Employee" (
+    "id" SERIAL PRIMARY KEY,
+    "employeeNumber" VARCHAR(255) UNIQUE NOT NULL,
+    "firstName" VARCHAR(255) NOT NULL,
+    "lastName" VARCHAR(255) NOT NULL,
+    "dateOfAppointment" TIMESTAMP NOT NULL,
+    "section" VARCHAR(255) NOT NULL,
+    "designation" VARCHAR(255) NOT NULL,
+    "wageAmount" DECIMAL(10,2) NOT NULL,
+    "wageFrequency" VARCHAR(255) NOT NULL,
+    "gender" VARCHAR(50) NOT NULL,
+    "bank" VARCHAR(255),
+    "accountNumber" VARCHAR(255),
+    "bankBranch" VARCHAR(255),
+    "employmentTerms" VARCHAR(255) NOT NULL,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create clients table
-CREATE TABLE IF NOT EXISTS clients (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  contact_name VARCHAR(100),
-  email VARCHAR(100),
-  phone VARCHAR(20),
-  address TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Users table
+CREATE TABLE IF NOT EXISTS "User" (
+    "id" SERIAL PRIMARY KEY,
+    "email" VARCHAR(255) UNIQUE NOT NULL,
+    "username" VARCHAR(255) UNIQUE NOT NULL,
+    "password" VARCHAR(255) NOT NULL,
+    "firstName" VARCHAR(255) NOT NULL,
+    "lastName" VARCHAR(255) NOT NULL,
+    "phoneNumber" VARCHAR(255),
+    "isActive" BOOLEAN DEFAULT true,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "roleId" INTEGER NOT NULL REFERENCES "Role"("id"),
+    "employeeId" INTEGER UNIQUE REFERENCES "Employee"("id")
 );
 
--- Create projects table
-CREATE TABLE IF NOT EXISTS projects (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  description TEXT,
-  location VARCHAR(100),
-  start_date DATE NOT NULL,
-  end_date DATE,
-  budget DECIMAL(15,2) NOT NULL,
-  status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
-  project_code VARCHAR(20) UNIQUE NOT NULL,
-  client_id INTEGER REFERENCES clients(id),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Clients table
+CREATE TABLE IF NOT EXISTS "Client" (
+    "id" SERIAL PRIMARY KEY,
+    "name" VARCHAR(255) NOT NULL,
+    "contactName" VARCHAR(255),
+    "email" VARCHAR(255),
+    "phone" VARCHAR(255),
+    "address" TEXT,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create project_assignments table
-CREATE TABLE IF NOT EXISTS project_assignments (
-  id SERIAL PRIMARY KEY,
-  project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  role VARCHAR(50) NOT NULL,
-  start_date DATE NOT NULL,
-  end_date DATE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(project_id, user_id)
+-- Projects table
+CREATE TABLE IF NOT EXISTS "Project" (
+    "id" SERIAL PRIMARY KEY,
+    "name" VARCHAR(255) NOT NULL,
+    "description" TEXT,
+    "location" VARCHAR(255),
+    "startDate" TIMESTAMP NOT NULL,
+    "endDate" TIMESTAMP,
+    "budget" DECIMAL(15,2) NOT NULL,
+    "status" "ProjectStatus" DEFAULT 'ACTIVE',
+    "projectCode" VARCHAR(255) UNIQUE NOT NULL,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "clientId" INTEGER REFERENCES "Client"("id")
 );
 
--- Create employees table
-CREATE TABLE IF NOT EXISTS employees (
-  id SERIAL PRIMARY KEY,
-  employee_number VARCHAR(20) UNIQUE NOT NULL,
-  first_name VARCHAR(50) NOT NULL,
-  last_name VARCHAR(50) NOT NULL,
-  date_of_appointment DATE NOT NULL,
-  section VARCHAR(50) NOT NULL,
-  designation VARCHAR(50) NOT NULL,
-  wage_amount DECIMAL(15,2) NOT NULL,
-  wage_frequency VARCHAR(20) NOT NULL,
-  gender VARCHAR(10) NOT NULL,
-  bank VARCHAR(50),
-  account_number VARCHAR(50),
-  bank_branch VARCHAR(50),
-  employment_terms VARCHAR(20) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Project Assignments table
+CREATE TABLE IF NOT EXISTS "ProjectAssignment" (
+    "id" SERIAL PRIMARY KEY,
+    "projectId" INTEGER NOT NULL REFERENCES "Project"("id"),
+    "userId" INTEGER NOT NULL REFERENCES "User"("id"),
+    "role" VARCHAR(255) NOT NULL,
+    "startDate" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "endDate" TIMESTAMP,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE("projectId", "userId")
 );
 
--- Create equipment table
-CREATE TABLE IF NOT EXISTS equipment (
-  id SERIAL PRIMARY KEY,
-  equipment_code VARCHAR(20) UNIQUE NOT NULL,
-  name VARCHAR(100) NOT NULL,
-  type VARCHAR(50) NOT NULL,
-  make VARCHAR(50) NOT NULL,
-  model VARCHAR(50) NOT NULL,
-  year_of_manufacture INTEGER,
-  ownership VARCHAR(20) NOT NULL,
-  measurement_type VARCHAR(20) NOT NULL,
-  unit VARCHAR(20) NOT NULL,
-  size DECIMAL(10,2),
-  work_measure VARCHAR(20) NOT NULL,
-  acquisition_cost DECIMAL(15,2),
-  supplier VARCHAR(100),
-  date_received DATE,
-  status VARCHAR(20) NOT NULL DEFAULT 'OPERATIONAL',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Activities table
+CREATE TABLE IF NOT EXISTS "Activity" (
+    "id" SERIAL PRIMARY KEY,
+    "name" VARCHAR(255) NOT NULL,
+    "description" TEXT,
+    "projectId" INTEGER NOT NULL REFERENCES "Project"("id"),
+    "employeeId" INTEGER REFERENCES "Employee"("id"),
+    "startDate" TIMESTAMP,
+    "endDate" TIMESTAMP,
+    "status" "ActivityStatus" DEFAULT 'PLANNED',
+    "totalCost" DECIMAL(15,2) DEFAULT 0,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create equipment_assessments table
-CREATE TABLE IF NOT EXISTS equipment_assessments (
-  id SERIAL PRIMARY KEY,
-  equipment_id INTEGER REFERENCES equipment(id) ON DELETE CASCADE,
-  functionality VARCHAR(30) NOT NULL,
-  condition VARCHAR(20) NOT NULL,
-  insurance BOOLEAN NOT NULL,
-  assessment_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  assessed_by VARCHAR(100) NOT NULL,
-  notes TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Activity Measurements table
+CREATE TABLE IF NOT EXISTS "ActivityMeasurement" (
+    "id" SERIAL PRIMARY KEY,
+    "activityId" INTEGER NOT NULL REFERENCES "Activity"("id"),
+    "billItem" INTEGER NOT NULL,
+    "itemDescription" VARCHAR(255) NOT NULL,
+    "unit" VARCHAR(100) NOT NULL,
+    "section" VARCHAR(255) NOT NULL,
+    "measuredDate" TIMESTAMP NOT NULL,
+    "quantity" DECIMAL(10,2) NOT NULL,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create equipment_locations table
-CREATE TABLE IF NOT EXISTS equipment_locations (
-  id SERIAL PRIMARY KEY,
-  equipment_id INTEGER REFERENCES equipment(id) ON DELETE CASCADE,
-  current_location VARCHAR(100) NOT NULL,
-  date_moved DATE NOT NULL DEFAULT CURRENT_DATE,
-  officer VARCHAR(100) NOT NULL,
-  authorizing_officer VARCHAR(100) NOT NULL,
-  notes TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Activity Estimates table
+CREATE TABLE IF NOT EXISTS "ActivityEstimate" (
+    "id" SERIAL PRIMARY KEY,
+    "activityId" INTEGER NOT NULL REFERENCES "Activity"("id"),
+    "itemNo" INTEGER NOT NULL,
+    "itemDescription" VARCHAR(255) NOT NULL,
+    "majorActivity" VARCHAR(255) NOT NULL,
+    "unit" VARCHAR(100) NOT NULL,
+    "quantity" DECIMAL(10,2) NOT NULL,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create equipment_assignments table
-CREATE TABLE IF NOT EXISTS equipment_assignments (
-  id SERIAL PRIMARY KEY,
-  equipment_id INTEGER REFERENCES equipment(id) ON DELETE CASCADE,
-  project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-  start_date DATE NOT NULL,
-  end_date DATE,
-  assigned_by VARCHAR(100) NOT NULL,
-  notes TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Activity Equipment Budget table
+CREATE TABLE IF NOT EXISTS "ActivityEquipmentBudget" (
+    "id" SERIAL PRIMARY KEY,
+    "activityId" INTEGER NOT NULL REFERENCES "Activity"("id"),
+    "itemNo" INTEGER NOT NULL,
+    "itemDescription" VARCHAR(255) NOT NULL,
+    "unit" VARCHAR(100) NOT NULL,
+    "resourceName" VARCHAR(255) NOT NULL,
+    "unitOutput" DECIMAL(10,2) NOT NULL,
+    "daysPerUnit" DECIMAL(10,2) NOT NULL,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create activities table
-CREATE TABLE IF NOT EXISTS activities (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  description TEXT,
-  project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-  start_date DATE,
-  end_date DATE,
-  status VARCHAR(20) NOT NULL DEFAULT 'PLANNED',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Activity Labor Budget table
+CREATE TABLE IF NOT EXISTS "ActivityLaborBudget" (
+    "id" SERIAL PRIMARY KEY,
+    "activityId" INTEGER NOT NULL REFERENCES "Activity"("id"),
+    "itemNo" INTEGER NOT NULL,
+    "itemDescription" VARCHAR(255) NOT NULL,
+    "unit" VARCHAR(100) NOT NULL,
+    "resourceName" VARCHAR(255) NOT NULL,
+    "unitOutput" DECIMAL(10,2) NOT NULL,
+    "daysPerUnit" DECIMAL(10,2) NOT NULL,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create activity_measurements table
-CREATE TABLE IF NOT EXISTS activity_measurements (
-  id SERIAL PRIMARY KEY,
-  activity_id INTEGER REFERENCES activities(id) ON DELETE CASCADE,
-  bill_item INTEGER NOT NULL,
-  item_description TEXT NOT NULL,
-  unit VARCHAR(20) NOT NULL,
-  section VARCHAR(50) NOT NULL,
-  measured_date DATE NOT NULL,
-  quantity DECIMAL(15,2) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Activity Material Budget table
+CREATE TABLE IF NOT EXISTS "ActivityMaterialBudget" (
+    "id" SERIAL PRIMARY KEY,
+    "activityId" INTEGER NOT NULL REFERENCES "Activity"("id"),
+    "itemNo" INTEGER NOT NULL,
+    "itemDescription" VARCHAR(255) NOT NULL,
+    "unit" VARCHAR(100) NOT NULL,
+    "resourceName" VARCHAR(255) NOT NULL,
+    "unitOutput" DECIMAL(10,2) NOT NULL,
+    "daysPerUnit" DECIMAL(10,2) NOT NULL,
+    "budgetCode" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create activity_estimates table
-CREATE TABLE IF NOT EXISTS activity_estimates (
-  id SERIAL PRIMARY KEY,
-  activity_id INTEGER REFERENCES activities(id) ON DELETE CASCADE,
-  item_no INTEGER NOT NULL,
-  item_description TEXT NOT NULL,
-  major_activity VARCHAR(100) NOT NULL,
-  unit VARCHAR(20) NOT NULL,
-  quantity DECIMAL(15,2) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Equipment table
+CREATE TABLE IF NOT EXISTS "Equipment" (
+    "id" SERIAL PRIMARY KEY,
+    "equipmentCode" VARCHAR(255) UNIQUE NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
+    "type" VARCHAR(255) NOT NULL,
+    "make" VARCHAR(255) NOT NULL,
+    "model" VARCHAR(255) NOT NULL,
+    "yearOfManufacture" INTEGER,
+    "ownership" "OwnershipType" NOT NULL,
+    "measurementType" VARCHAR(255) NOT NULL,
+    "unit" VARCHAR(100) NOT NULL,
+    "size" DECIMAL(10,2),
+    "workMeasure" VARCHAR(255) NOT NULL,
+    "acquisitionCost" DECIMAL(15,2),
+    "supplier" VARCHAR(255),
+    "dateReceived" TIMESTAMP,
+    "status" "EquipmentStatus" DEFAULT 'OPERATIONAL',
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create fuel_requests table
-CREATE TABLE IF NOT EXISTS fuel_requests (
-  id SERIAL PRIMARY KEY,
-  request_number VARCHAR(20) UNIQUE NOT NULL,
-  equipment_id INTEGER REFERENCES equipment(id) ON DELETE CASCADE,
-  project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-  fuel_type VARCHAR(20) NOT NULL,
-  quantity DECIMAL(10,2) NOT NULL,
-  requested_by_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  request_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  justification TEXT,
-  status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-  approved_by_id INTEGER REFERENCES users(id),
-  approval_date TIMESTAMP,
-  rejection_reason TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Equipment Assessment table
+CREATE TABLE IF NOT EXISTS "EquipmentAssessment" (
+    "id" SERIAL PRIMARY KEY,
+    "equipmentId" INTEGER NOT NULL REFERENCES "Equipment"("id"),
+    "functionality" "FunctionalityType" NOT NULL,
+    "condition" "ConditionType" NOT NULL,
+    "insurance" BOOLEAN NOT NULL,
+    "assessmentDate" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "assessedBy" VARCHAR(255) NOT NULL,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create fuel_issuances table
-CREATE TABLE IF NOT EXISTS fuel_issuances (
-  id SERIAL PRIMARY KEY,
-  issue_number VARCHAR(20) UNIQUE NOT NULL,
-  request_id INTEGER REFERENCES fuel_requests(id) ON DELETE CASCADE,
-  quantity DECIMAL(10,2) NOT NULL,
-  issued_by_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  issue_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  fuel_station VARCHAR(100),
-  odometer_reading INTEGER,
-  notes TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Equipment Location table
+CREATE TABLE IF NOT EXISTS "EquipmentLocation" (
+    "id" SERIAL PRIMARY KEY,
+    "equipmentId" INTEGER NOT NULL REFERENCES "Equipment"("id"),
+    "currentLocation" VARCHAR(255) NOT NULL,
+    "dateMoved" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "officer" VARCHAR(255) NOT NULL,
+    "authorizingOfficer" VARCHAR(255) NOT NULL,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create fuel_consumptions table
-CREATE TABLE IF NOT EXISTS fuel_consumptions (
-  id SERIAL PRIMARY KEY,
-  equipment_id INTEGER REFERENCES equipment(id) ON DELETE CASCADE,
-  issuance_id INTEGER REFERENCES fuel_issuances(id) ON DELETE CASCADE,
-  activity_description TEXT,
-  consumption_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  quantity_used DECIMAL(10,2) NOT NULL,
-  odometer_start INTEGER,
-  odometer_end INTEGER,
-  hours_start DECIMAL(10,2),
-  hours_end DECIMAL(10,2),
-  efficiency DECIMAL(10,2),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Equipment Assignment table
+CREATE TABLE IF NOT EXISTS "EquipmentAssignment" (
+    "id" SERIAL PRIMARY KEY,
+    "equipmentId" INTEGER NOT NULL REFERENCES "Equipment"("id"),
+    "projectId" INTEGER NOT NULL REFERENCES "Project"("id"),
+    "startDate" TIMESTAMP NOT NULL,
+    "endDate" TIMESTAMP,
+    "assignedBy" VARCHAR(255) NOT NULL,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create contracts table
-CREATE TABLE IF NOT EXISTS contracts (
-  id SERIAL PRIMARY KEY,
-  contract_number VARCHAR(20) UNIQUE NOT NULL,
-  procurement_ref_number VARCHAR(50) NOT NULL,
-  provider VARCHAR(100) NOT NULL,
-  date_of_agreement DATE NOT NULL,
-  contract_price DECIMAL(15,2) NOT NULL,
-  currency VARCHAR(10) NOT NULL,
-  contract_type VARCHAR(50) NOT NULL,
-  start_date DATE NOT NULL,
-  completion_date DATE,
-  budget_item_code INTEGER,
-  procurement_method VARCHAR(50) NOT NULL,
-  date_of_procurement_initiation DATE NOT NULL,
-  project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Fuel Request table
+CREATE TABLE IF NOT EXISTS "FuelRequest" (
+    "id" SERIAL PRIMARY KEY,
+    "requestNumber" VARCHAR(255) UNIQUE NOT NULL,
+    "equipmentId" INTEGER NOT NULL REFERENCES "Equipment"("id"),
+    "projectId" INTEGER NOT NULL REFERENCES "Project"("id"),
+    "fuelType" "FuelType" NOT NULL,
+    "quantity" DECIMAL(10,2) NOT NULL,
+    "requestedById" INTEGER NOT NULL REFERENCES "User"("id"),
+    "requestDate" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "justification" TEXT,
+    "status" "FuelRequestStatus" DEFAULT 'PENDING',
+    "approvedById" INTEGER REFERENCES "User"("id"),
+    "approvalDate" TIMESTAMP,
+    "rejectionReason" TEXT,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create invoices table
-CREATE TABLE IF NOT EXISTS invoices (
-  id SERIAL PRIMARY KEY,
-  invoice_number VARCHAR(50) UNIQUE NOT NULL,
-  service_provider VARCHAR(100) NOT NULL,
-  invoice_date DATE NOT NULL,
-  date_received DATE NOT NULL,
-  procurement_description TEXT NOT NULL,
-  provider_id VARCHAR(50) NOT NULL,
-  contract_number VARCHAR(50),
-  document_id INTEGER,
-  goods_received_note VARCHAR(50),
-  amount DECIMAL(15,2) NOT NULL,
-  project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
-  status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Fuel Issuance table
+CREATE TABLE IF NOT EXISTS "FuelIssuance" (
+    "id" SERIAL PRIMARY KEY,
+    "issueNumber" VARCHAR(255) UNIQUE NOT NULL,
+    "requestId" INTEGER NOT NULL REFERENCES "FuelRequest"("id"),
+    "quantity" DECIMAL(10,2) NOT NULL,
+    "issuedById" INTEGER NOT NULL REFERENCES "User"("id"),
+    "issueDate" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "fuelStation" VARCHAR(255),
+    "odometerReading" INTEGER,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create fuel approval workflow tables
-CREATE TABLE IF NOT EXISTS fuel_approval_workflows (
-  id SERIAL PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  description TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Fuel Consumption table
+CREATE TABLE IF NOT EXISTS "FuelConsumption" (
+    "id" SERIAL PRIMARY KEY,
+    "equipmentId" INTEGER NOT NULL REFERENCES "Equipment"("id"),
+    "issuanceId" INTEGER NOT NULL REFERENCES "FuelIssuance"("id"),
+    "activityDescription" TEXT,
+    "consumptionDate" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "quantityUsed" DECIMAL(10,2) NOT NULL,
+    "odometerStart" INTEGER,
+    "odometerEnd" INTEGER,
+    "hoursStart" DECIMAL(10,2),
+    "hoursEnd" DECIMAL(10,2),
+    "efficiency" DECIMAL(10,2),
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS fuel_approval_steps (
-  id SERIAL PRIMARY KEY,
-  workflow_id INTEGER REFERENCES fuel_approval_workflows(id) ON DELETE CASCADE,
-  step_number INTEGER NOT NULL,
-  role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
-  description TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(workflow_id, step_number)
+-- Contract table
+CREATE TABLE IF NOT EXISTS "Contract" (
+    "id" SERIAL PRIMARY KEY,
+    "contractNumber" VARCHAR(255) UNIQUE NOT NULL,
+    "procurementRefNumber" VARCHAR(255) NOT NULL,
+    "provider" VARCHAR(255) NOT NULL,
+    "dateOfAgreement" TIMESTAMP NOT NULL,
+    "contractPrice" DECIMAL(15,2) NOT NULL,
+    "currency" VARCHAR(10) NOT NULL,
+    "contractType" VARCHAR(255) NOT NULL,
+    "startDate" TIMESTAMP NOT NULL,
+    "completionDate" TIMESTAMP,
+    "budgetItemCode" INTEGER,
+    "procurementMethod" VARCHAR(255) NOT NULL,
+    "dateOfProcurementInitiation" TIMESTAMP NOT NULL,
+    "projectId" INTEGER NOT NULL REFERENCES "Project"("id"),
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create fuel request approval history table
-CREATE TABLE IF NOT EXISTS fuel_request_approvals (
-  id SERIAL PRIMARY KEY,
-  request_id INTEGER REFERENCES fuel_requests(id) ON DELETE CASCADE,
-  step_id INTEGER REFERENCES fuel_approval_steps(id) ON DELETE CASCADE,
-  approved_by_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  status VARCHAR(20) NOT NULL,
-  comments TEXT,
-  approval_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- Invoice table
+CREATE TABLE IF NOT EXISTS "Invoice" (
+    "id" SERIAL PRIMARY KEY,
+    "invoiceNumber" VARCHAR(255) UNIQUE NOT NULL,
+    "serviceProvider" VARCHAR(255) NOT NULL,
+    "invoiceDate" TIMESTAMP NOT NULL,
+    "dateReceived" TIMESTAMP NOT NULL,
+    "procurementDescription" TEXT NOT NULL,
+    "providerId" VARCHAR(255) NOT NULL,
+    "contractNumber" VARCHAR(255),
+    "documentId" INTEGER,
+    "goodsReceivedNote" VARCHAR(255),
+    "amount" DECIMAL(15,2) NOT NULL,
+    "projectId" INTEGER NOT NULL REFERENCES "Project"("id"),
+    "status" "InvoiceStatus" DEFAULT 'PENDING',
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS "idx_user_email" ON "User"("email");
+CREATE INDEX IF NOT EXISTS "idx_user_role" ON "User"("roleId");
+CREATE INDEX IF NOT EXISTS "idx_project_status" ON "Project"("status");
+CREATE INDEX IF NOT EXISTS "idx_project_client" ON "Project"("clientId");
+CREATE INDEX IF NOT EXISTS "idx_activity_project" ON "Activity"("projectId");
+CREATE INDEX IF NOT EXISTS "idx_equipment_status" ON "Equipment"("status");
+CREATE INDEX IF NOT EXISTS "idx_fuel_request_status" ON "FuelRequest"("status");
+CREATE INDEX IF NOT EXISTS "idx_fuel_request_equipment" ON "FuelRequest"("equipmentId");
+CREATE INDEX IF NOT EXISTS "idx_fuel_request_project" ON "FuelRequest"("projectId");
+
+-- Update timestamps trigger function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW."updatedAt" = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Create triggers for updated_at columns
+CREATE TRIGGER update_role_updated_at BEFORE UPDATE ON "Role" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_permission_updated_at BEFORE UPDATE ON "Permission" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_user_updated_at BEFORE UPDATE ON "User" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_employee_updated_at BEFORE UPDATE ON "Employee" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_client_updated_at BEFORE UPDATE ON "Client" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_project_updated_at BEFORE UPDATE ON "Project" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_activity_updated_at BEFORE UPDATE ON "Activity" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_equipment_updated_at BEFORE UPDATE ON "Equipment" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_fuel_request_updated_at BEFORE UPDATE ON "FuelRequest" FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

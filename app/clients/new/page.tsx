@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, Loader2, Save } from "lucide-react"
+import { ArrowLeft, Loader2, Save, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/app/actions/client-actions"
 
@@ -17,6 +17,7 @@ export default function NewClientPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
     contactName: "",
@@ -29,25 +30,72 @@ export default function NewClientPage() {
     e.preventDefault()
     setIsLoading(true)
     setError("")
+    setSuccess(false)
 
     try {
+      console.log("🚀 Submitting client form...")
+
       const formDataObj = new FormData()
       Object.entries(formData).forEach(([key, value]) => {
         formDataObj.append(key, value)
       })
 
       const result = await createClient(formDataObj)
+      console.log("📋 Client creation result:", result)
 
       if (result.success) {
-        router.push("/clients")
+        console.log("✅ Client created successfully!")
+        setSuccess(true)
+
+        // Show success message briefly, then redirect
+        setTimeout(() => {
+          router.push("/clients")
+        }, 1500)
       } else {
+        console.log("❌ Client creation failed:", result.error)
         setError(result.error || "Failed to create client")
       }
     } catch (err) {
-      setError("An error occurred while creating the client")
+      console.error("❌ Unexpected error:", err)
+      // Check if it's a redirect "error" (which is actually success)
+      if (err instanceof Error && err.message.includes("NEXT_REDIRECT")) {
+        console.log("✅ Client created successfully (redirect detected)!")
+        setSuccess(true)
+        setTimeout(() => {
+          router.push("/clients")
+        }, 1500)
+      } else {
+        setError("An error occurred while creating the client")
+      }
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (success) {
+    return (
+      <div className="flex flex-col">
+        <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-6">
+          <div className="flex items-center gap-2 font-semibold text-green-600">
+            <CheckCircle className="h-5 w-5" />
+            Client Created Successfully
+          </div>
+        </header>
+
+        <div className="mx-auto w-full max-w-2xl p-6">
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center p-8">
+              <CheckCircle className="h-16 w-16 text-green-500 mb-4" />
+              <h2 className="text-2xl font-semibold text-green-600 mb-2">Success!</h2>
+              <p className="text-muted-foreground text-center mb-4">
+                Client "{formData.name}" has been created successfully.
+              </p>
+              <p className="text-sm text-muted-foreground">Redirecting to clients page...</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -83,6 +131,7 @@ export default function NewClientPage() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
+                  disabled={isLoading}
                 />
               </div>
 
@@ -93,6 +142,7 @@ export default function NewClientPage() {
                   placeholder="John Smith"
                   value={formData.contactName}
                   onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
+                  disabled={isLoading}
                 />
               </div>
 
@@ -105,6 +155,7 @@ export default function NewClientPage() {
                     placeholder="contact@client.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    disabled={isLoading}
                   />
                 </div>
                 <div className="space-y-2">
@@ -114,6 +165,7 @@ export default function NewClientPage() {
                     placeholder="+1 234 567 8900"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -126,11 +178,12 @@ export default function NewClientPage() {
                   rows={3}
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  disabled={isLoading}
                 />
               </div>
             </CardContent>
             <CardFooter className="flex justify-between border-t p-6">
-              <Button type="button" variant="outline" asChild>
+              <Button type="button" variant="outline" asChild disabled={isLoading}>
                 <Link href="/clients">Cancel</Link>
               </Button>
               <Button type="submit" disabled={isLoading}>

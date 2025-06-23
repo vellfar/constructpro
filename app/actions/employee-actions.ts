@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { prisma } from "@/lib/db"
+import { db, safeDbOperation } from "@/lib/db"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { z } from "zod"
@@ -30,30 +30,36 @@ export async function getEmployees() {
       return { success: false, error: "Unauthorized" }
     }
 
-    const employees = await prisma.employee.findMany({
-      select: {
-        id: true,
-        employeeNumber: true,
-        firstName: true,
-        lastName: true,
-        section: true,
-        designation: true,
-        wageAmount: true,
-        wageFrequency: true,
-        gender: true,
-        employmentTerms: true,
-        dateOfAppointment: true,
-        createdAt: true,
+    const employees = await safeDbOperation(
+      async () => {
+        return await db.employee.findMany({
+          select: {
+            id: true,
+            employeeNumber: true,
+            firstName: true,
+            lastName: true,
+            section: true,
+            designation: true,
+            wageAmount: true,
+            wageFrequency: true,
+            gender: true,
+            employmentTerms: true,
+            dateOfAppointment: true,
+            createdAt: true,
+          },
+          orderBy: {
+            createdAt: "desc",
+          },
+        })
       },
-      orderBy: {
-        createdAt: "desc",
-      },
-    })
+      () => [], // Fallback to empty array
+      "Get employees",
+    )
 
     return { success: true, data: employees }
   } catch (error) {
     console.error("Failed to fetch employees:", error)
-    return { success: false, error: "Failed to fetch employees" }
+    return { success: false, error: "Failed to fetch employees. Please try again later." }
   }
 }
 
@@ -64,9 +70,15 @@ export async function getEmployee(id: number) {
       return { success: false, error: "Unauthorized" }
     }
 
-    const employee = await prisma.employee.findUnique({
-      where: { id },
-    })
+    const employee = await safeDbOperation(
+      async () => {
+        return await db.employee.findUnique({
+          where: { id },
+        })
+      },
+      () => null,
+      "Get employee",
+    )
 
     if (!employee) {
       return { success: false, error: "Employee not found" }
@@ -75,7 +87,7 @@ export async function getEmployee(id: number) {
     return { success: true, data: employee }
   } catch (error) {
     console.error("Failed to fetch employee:", error)
-    return { success: false, error: "Failed to fetch employee" }
+    return { success: false, error: "Failed to fetch employee. Please try again later." }
   }
 }
 
@@ -105,31 +117,39 @@ export async function createEmployee(formData: FormData) {
     // Validate data
     const validatedData = employeeSchema.parse(rawData)
 
-    // Check if employee number already exists
-    const existingEmployee = await prisma.employee.findUnique({
-      where: { employeeNumber: validatedData.employeeNumber },
-      select: { id: true },
-    })
+    const employee = await safeDbOperation(
+      async () => {
+        // Check if employee number already exists
+        const existingEmployee = await db.employee.findUnique({
+          where: { employeeNumber: validatedData.employeeNumber },
+          select: { id: true },
+        })
 
-    if (existingEmployee) {
-      return { success: false, error: "Employee number already exists" }
-    }
+        if (existingEmployee) {
+          throw new Error("Employee number already exists")
+        }
 
-    const employee = await prisma.employee.create({
-      data: {
-        ...validatedData,
-        dateOfAppointment: new Date(validatedData.dateOfAppointment),
-        bank: validatedData.bank || null,
-        accountNumber: validatedData.accountNumber || null,
-        bankBranch: validatedData.bankBranch || null,
+        return await db.employee.create({
+          data: {
+            ...validatedData,
+            dateOfAppointment: new Date(validatedData.dateOfAppointment),
+            bank: validatedData.bank || null,
+            accountNumber: validatedData.accountNumber || null,
+            bankBranch: validatedData.bankBranch || null,
+          },
+          select: {
+            id: true,
+            employeeNumber: true,
+            firstName: true,
+            lastName: true,
+          },
+        })
       },
-      select: {
-        id: true,
-        employeeNumber: true,
-        firstName: true,
-        lastName: true,
+      () => {
+        throw new Error("Database operation failed")
       },
-    })
+      "Create employee",
+    )
 
     revalidatePath("/employees")
     return { success: true, data: employee }
@@ -137,8 +157,15 @@ export async function createEmployee(formData: FormData) {
     if (error instanceof z.ZodError) {
       return { success: false, error: error.errors[0].message }
     }
+
+    if (error instanceof Error) {
+      if (error.message === "Employee number already exists") {
+        return { success: false, error: error.message }
+      }
+    }
+
     console.error("Failed to create employee:", error)
-    return { success: false, error: "Failed to create employee" }
+    return { success: false, error: "Failed to create employee. Please try again later." }
   }
 }
 
@@ -168,35 +195,43 @@ export async function updateEmployee(id: number, formData: FormData) {
     // Validate data
     const validatedData = employeeSchema.parse(rawData)
 
-    // Check if employee number exists for another employee
-    const existingEmployee = await prisma.employee.findFirst({
-      where: {
-        employeeNumber: validatedData.employeeNumber,
-        NOT: { id },
-      },
-      select: { id: true },
-    })
+    const employee = await safeDbOperation(
+      async () => {
+        // Check if employee number exists for another employee
+        const existingEmployee = await db.employee.findFirst({
+          where: {
+            employeeNumber: validatedData.employeeNumber,
+            NOT: { id },
+          },
+          select: { id: true },
+        })
 
-    if (existingEmployee) {
-      return { success: false, error: "Employee number already exists" }
-    }
+        if (existingEmployee) {
+          throw new Error("Employee number already exists")
+        }
 
-    const employee = await prisma.employee.update({
-      where: { id },
-      data: {
-        ...validatedData,
-        dateOfAppointment: new Date(validatedData.dateOfAppointment),
-        bank: validatedData.bank || null,
-        accountNumber: validatedData.accountNumber || null,
-        bankBranch: validatedData.bankBranch || null,
+        return await db.employee.update({
+          where: { id },
+          data: {
+            ...validatedData,
+            dateOfAppointment: new Date(validatedData.dateOfAppointment),
+            bank: validatedData.bank || null,
+            accountNumber: validatedData.accountNumber || null,
+            bankBranch: validatedData.bankBranch || null,
+          },
+          select: {
+            id: true,
+            employeeNumber: true,
+            firstName: true,
+            lastName: true,
+          },
+        })
       },
-      select: {
-        id: true,
-        employeeNumber: true,
-        firstName: true,
-        lastName: true,
+      () => {
+        throw new Error("Database operation failed")
       },
-    })
+      "Update employee",
+    )
 
     revalidatePath("/employees")
     revalidatePath(`/employees/${id}`)
@@ -205,8 +240,15 @@ export async function updateEmployee(id: number, formData: FormData) {
     if (error instanceof z.ZodError) {
       return { success: false, error: error.errors[0].message }
     }
+
+    if (error instanceof Error) {
+      if (error.message === "Employee number already exists") {
+        return { success: false, error: error.message }
+      }
+    }
+
     console.error("Failed to update employee:", error)
-    return { success: false, error: "Failed to update employee" }
+    return { success: false, error: "Failed to update employee. Please try again later." }
   }
 }
 
@@ -217,15 +259,23 @@ export async function deleteEmployee(id: number) {
       return { success: false, error: "Unauthorized" }
     }
 
-    await prisma.employee.delete({
-      where: { id },
-    })
+    await safeDbOperation(
+      async () => {
+        await db.employee.delete({
+          where: { id },
+        })
+      },
+      () => {
+        throw new Error("Database operation failed")
+      },
+      "Delete employee",
+    )
 
     revalidatePath("/employees")
     return { success: true }
   } catch (error) {
     console.error("Failed to delete employee:", error)
-    return { success: false, error: "Failed to delete employee" }
+    return { success: false, error: "Failed to delete employee. Please try again later." }
   }
 }
 
@@ -236,38 +286,44 @@ export async function searchEmployees(query: string) {
       return { success: false, error: "Unauthorized" }
     }
 
-    const employees = await prisma.employee.findMany({
-      where: {
-        OR: [
-          { firstName: { contains: query, mode: "insensitive" } },
-          { lastName: { contains: query, mode: "insensitive" } },
-          { employeeNumber: { contains: query, mode: "insensitive" } },
-          { designation: { contains: query, mode: "insensitive" } },
-          { section: { contains: query, mode: "insensitive" } },
-        ],
+    const employees = await safeDbOperation(
+      async () => {
+        return await db.employee.findMany({
+          where: {
+            OR: [
+              { firstName: { contains: query, mode: "insensitive" } },
+              { lastName: { contains: query, mode: "insensitive" } },
+              { employeeNumber: { contains: query, mode: "insensitive" } },
+              { designation: { contains: query, mode: "insensitive" } },
+              { section: { contains: query, mode: "insensitive" } },
+            ],
+          },
+          select: {
+            id: true,
+            employeeNumber: true,
+            firstName: true,
+            lastName: true,
+            section: true,
+            designation: true,
+            wageAmount: true,
+            wageFrequency: true,
+            gender: true,
+            employmentTerms: true,
+            dateOfAppointment: true,
+          },
+          orderBy: {
+            firstName: "asc",
+          },
+          take: 50, // Limit results for performance
+        })
       },
-      select: {
-        id: true,
-        employeeNumber: true,
-        firstName: true,
-        lastName: true,
-        section: true,
-        designation: true,
-        wageAmount: true,
-        wageFrequency: true,
-        gender: true,
-        employmentTerms: true,
-        dateOfAppointment: true,
-      },
-      orderBy: {
-        firstName: "asc",
-      },
-      take: 50, // Limit results for performance
-    })
+      () => [], // Fallback to empty array
+      "Search employees",
+    )
 
     return { success: true, data: employees }
   } catch (error) {
     console.error("Failed to search employees:", error)
-    return { success: false, error: "Failed to search employees" }
+    return { success: false, error: "Failed to search employees. Please try again later." }
   }
 }

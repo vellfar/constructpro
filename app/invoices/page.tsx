@@ -1,41 +1,53 @@
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth"
-import { redirect } from "next/navigation"
-import { prisma } from "@/lib/db"
+"use client"
+
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { Plus, Search, FileText, DollarSign, Clock, CheckCircle } from "lucide-react"
+import { Plus, Search, FileText, DollarSign, Clock, CheckCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
 
-export default async function InvoicesPage() {
-  const session = await getServerSession(authOptions)
-
-  if (!session?.user) {
-    redirect("/auth/login")
+interface Invoice {
+  id: number
+  invoiceNumber: string
+  amount: number
+  invoiceDate: Date
+  status: string
+  serviceProvider: string
+  project: {
+    name: string
+    projectCode: string
+    client: {
+      name: string
+    } | null
   }
+}
 
-  // Fetch invoices from database
-  const invoices = await prisma.invoice.findMany({
-    include: {
-      project: {
-        select: {
-          name: true,
-          projectCode: true,
-          client: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  })
+export default function InvoicesPage() {
+  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      try {
+        const response = await fetch("/api/invoices")
+        if (!response.ok) {
+          throw new Error("Failed to fetch invoices")
+        }
+        const data = await response.json()
+        setInvoices(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An unexpected error occurred")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchInvoices()
+  }, [])
 
   // Calculate statistics
   const totalInvoices = invoices.length
@@ -58,15 +70,52 @@ export default async function InvoicesPage() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="flex flex-col">
+        <header className="dashboard-header">
+          <div className="flex items-center gap-2 font-semibold">
+            <FileText className="h-5 w-5" />
+            Invoice Management
+          </div>
+        </header>
+        <div className="loading-spinner">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+            <p className="text-muted-foreground">Loading invoices...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col">
+        <header className="dashboard-header">
+          <div className="flex items-center gap-2 font-semibold">
+            <FileText className="h-5 w-5" />
+            Invoice Management
+          </div>
+        </header>
+        <div className="p-6">
+          <div className="error-state">
+            <p className="text-destructive font-medium">Error: {error}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col">
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background px-6">
+      <header className="dashboard-header">
         <div className="flex items-center gap-2 font-semibold">
-          <FileText className="h-6 w-6" />
+          <FileText className="h-5 w-5" />
           Invoice Management
         </div>
         <div className="ml-auto flex items-center gap-4">
-          <div className="relative">
+          <div className="relative hidden sm:block">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input type="search" placeholder="Search invoices..." className="w-[300px] pl-8" />
           </div>
@@ -79,59 +128,59 @@ export default async function InvoicesPage() {
         </div>
       </header>
 
-      <div className="p-6 space-y-6">
+      <div className="p-6 space-y-6 animate-fade-in">
         {/* Statistics Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
+          <Card className="stat-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
+              <FileText className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalInvoices}</div>
+              <div className="text-2xl font-bold text-foreground">{totalInvoices}</div>
               <p className="text-xs text-muted-foreground">All time invoices</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="stat-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <DollarSign className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">UGX {totalAmount.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-foreground">${totalAmount.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">Total invoice value</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="stat-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <Clock className="h-4 w-4 text-yellow-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{pendingInvoices}</div>
+              <div className="text-2xl font-bold text-foreground">{pendingInvoices}</div>
               <p className="text-xs text-muted-foreground">Awaiting approval</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="stat-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Paid</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              <CheckCircle className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{paidInvoices}</div>
+              <div className="text-2xl font-bold text-foreground">{paidInvoices}</div>
               <p className="text-xs text-muted-foreground">Completed payments</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Invoices Table */}
-        <Card>
+        <Card className="card-enhanced">
           <CardHeader>
             <CardTitle>Recent Invoices</CardTitle>
-            <CardDescription>Manage and track all project invoices</CardDescription>
+            <CardDescription>Manage and track all project invoices ({invoices.length} invoices)</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -150,13 +199,21 @@ export default async function InvoicesPage() {
               <TableBody>
                 {invoices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      No invoices found. Create your first invoice to get started.
+                    <TableCell colSpan={8} className="text-center py-8">
+                      <div className="empty-state">
+                        <FileText className="h-12 w-12 text-muted-foreground" />
+                        <p className="text-muted-foreground">
+                          No invoices found. Create your first invoice to get started.
+                        </p>
+                        <Button asChild className="mt-4">
+                          <Link href="/invoices/new">Create First Invoice</Link>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
                   invoices.map((invoice) => (
-                    <TableRow key={invoice.id}>
+                    <TableRow key={invoice.id} className="hover:bg-muted/50 transition-colors">
                       <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                       <TableCell>
                         <div>
@@ -166,7 +223,7 @@ export default async function InvoicesPage() {
                       </TableCell>
                       <TableCell>{invoice.project.client?.name || "No client"}</TableCell>
                       <TableCell>{invoice.serviceProvider}</TableCell>
-                      <TableCell className="font-medium">UGX{invoice.amount.toLocaleString()}</TableCell>
+                      <TableCell className="font-medium text-primary">${invoice.amount.toLocaleString()}</TableCell>
                       <TableCell>{new Date(invoice.invoiceDate).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(invoice.status)}>{invoice.status}</Badge>

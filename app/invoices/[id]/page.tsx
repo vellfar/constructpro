@@ -143,7 +143,7 @@ export default async function InvoicePage({ params }: InvoicePageProps) {
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <p className="text-sm text-muted-foreground">Invoice Amount</p>
-                  <p className="text-2xl font-bold">UGX {invoice.amount.toLocaleString()}</p>
+                  <p className="text-2xl font-bold">${invoice.amount.toLocaleString()}</p>
                 </div>
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <p className="text-sm text-muted-foreground">Invoice Date</p>
