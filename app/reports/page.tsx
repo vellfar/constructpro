@@ -90,12 +90,17 @@ export default function ReportsPage() {
       formData.append("dateTo", dateRange.to)
       formData.append("projectId", selectedProject)
 
-      await generateReport(formData)
+      const result = await generateReport(formData)
 
-      // Reload reports
-      await loadReports()
-      alert("Report generated successfully!")
+      if (result.success) {
+        // Reload reports
+        await loadReports()
+        alert("Report generated successfully!")
+      } else {
+        alert(result.error || "Failed to generate report. Please try again.")
+      }
     } catch (error) {
+      console.error("Error generating report:", error)
       alert("Failed to generate report. Please try again.")
     } finally {
       setIsGenerating(null)
@@ -115,21 +120,28 @@ export default function ReportsPage() {
   }
 
   const downloadReport = (reportId: number) => {
-    // Create a download link for the report
     const report = reports.find((r) => r.id === reportId)
     if (report) {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(report.data)
+      let reportData
+      try {
+        reportData = typeof report.data === "string" ? JSON.parse(report.data) : report.data
+      } catch (e) {
+        reportData = report.data
+      }
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(reportData, null, 2))
       const downloadAnchorNode = document.createElement("a")
       downloadAnchorNode.setAttribute("href", dataStr)
-      downloadAnchorNode.setAttribute("download", `${report.name}.json`)
+      downloadAnchorNode.setAttribute("download", `${report.name.replace(/[^a-z0-9]/gi, "_")}.json`)
       document.body.appendChild(downloadAnchorNode)
       downloadAnchorNode.click()
       downloadAnchorNode.remove()
     }
   }
 
-  const formatFileSize = (data: string) => {
-    const bytes = new Blob([data]).size
+  const formatFileSize = (data: string | object) => {
+    const dataString = typeof data === "string" ? data : JSON.stringify(data)
+    const bytes = new Blob([dataString]).size
     if (bytes === 0) return "0 Bytes"
     const k = 1024
     const sizes = ["Bytes", "KB", "MB", "GB"]

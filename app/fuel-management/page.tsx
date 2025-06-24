@@ -40,10 +40,12 @@ import {
   Fuel,
   Search,
   Loader2,
+  Download,
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import type { FuelType, FuelUrgency } from "@prisma/client"
+import { exportToCSV, exportToExcel, formatDataForExport } from "@/lib/export-utils"
 
 // Local types for this component
 interface FuelRequestWithRelations {
@@ -438,6 +440,16 @@ export default function FuelManagementPage() {
     }
   }
 
+  const handleExportCSV = () => {
+    const exportData = formatDataForExport(filteredRequests, "fuel-requests")
+    exportToCSV(exportData, `fuel-requests-${new Date().toISOString().split("T")[0]}`)
+  }
+
+  const handleExportExcel = () => {
+    const exportData = formatDataForExport(filteredRequests, "fuel-requests")
+    exportToExcel(exportData, `fuel-requests-${new Date().toISOString().split("T")[0]}`, "Fuel Requests")
+  }
+
   // Validation functions
   const validateCreateForm = (): boolean => {
     if (createForm.projectId === EMPTY_VALUE) {
@@ -576,12 +588,26 @@ export default function FuelManagementPage() {
             Fuel Management
           </h2>
           <p className="text-muted-foreground">Manage fuel requests and track consumption across projects</p>
-          
+          {session?.user && (
+            <div className="mt-2 p-2 bg-green-50 rounded-md border border-green-200">
+              <p className="text-sm text-green-700">
+                ✅ Access Granted - <strong>{session.user.name}</strong> ({session.user.role})
+              </p>
+            </div>
+          )}
         </div>
         <div className="flex items-center space-x-2">
           <Button onClick={fetchData} variant="outline" size="sm" disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Refresh
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportExcel}>
+            <Download className="mr-2 h-4 w-4" />
+            Export Excel
           </Button>
           {canCreateRequest && (
             <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
@@ -741,7 +767,7 @@ export default function FuelManagementPage() {
         </Card>
       )}
 
-      {/* Filters 
+      {/* Filters */}
       <Card>
         <CardHeader>
           <CardTitle>Filters</CardTitle>
@@ -797,7 +823,7 @@ export default function FuelManagementPage() {
             </Select>
           </div>
         </CardContent>
-      </Card> */}
+      </Card>
 
       {/* Dynamic Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>

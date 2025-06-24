@@ -5,11 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Plus, HardHat, Loader2 } from "lucide-react"
+import { Plus, HardHat, Loader2, Download } from "lucide-react"
 import Link from "next/link"
 import { getEmployees } from "@/app/actions/employee-actions"
 import { EmployeeActions } from "@/components/employee-actions"
 import { EmployeeSearch } from "@/components/employee-search"
+import { exportToCSV, exportToExcel, formatDataForExport } from "@/lib/export-utils"
 
 interface Employee {
   id: number
@@ -50,6 +51,16 @@ export default function EmployeesPage() {
 
     fetchEmployees()
   }, [])
+
+  const handleExportCSV = () => {
+    const exportData = formatDataForExport(employees, "employees")
+    exportToCSV(exportData, `employees-${new Date().toISOString().split("T")[0]}`)
+  }
+
+  const handleExportExcel = () => {
+    const exportData = formatDataForExport(employees, "employees")
+    exportToExcel(exportData, `employees-${new Date().toISOString().split("T")[0]}`, "Employees")
+  }
 
   const getEmploymentBadgeVariant = (terms: string) => {
     switch (terms?.toLowerCase()) {
@@ -116,6 +127,14 @@ export default function EmployeesPage() {
               <Plus className="mr-2 h-4 w-4" />
               Add Employee
             </Link>
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportExcel}>
+            <Download className="mr-2 h-4 w-4" />
+            Export Excel
           </Button>
         </div>
       </header>

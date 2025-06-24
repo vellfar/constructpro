@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Filter, Plus, Search, Truck, Loader2 } from "lucide-react"
+import { Filter, Plus, Search, Truck, Loader2, Download } from "lucide-react"
 import Link from "next/link"
 import { getEquipment } from "@/app/actions/equipment-actions"
 import { EquipmentActions } from "@/components/equipment-actions"
+import { exportToCSV, exportToExcel, formatDataForExport } from "@/lib/export-utils"
 
 interface Equipment {
   id: number
@@ -49,6 +50,16 @@ export default function EquipmentPage() {
 
     fetchEquipment()
   }, [])
+
+  const handleExportCSV = () => {
+    const exportData = formatDataForExport(equipment, "equipment")
+    exportToCSV(exportData, `equipment-${new Date().toISOString().split("T")[0]}`)
+  }
+
+  const handleExportExcel = () => {
+    const exportData = formatDataForExport(equipment, "equipment")
+    exportToExcel(exportData, `equipment-${new Date().toISOString().split("T")[0]}`, "Equipment")
+  }
 
   const operationalEquipment = equipment?.filter((e) => e.status === "OPERATIONAL") || []
   const maintenanceEquipment = equipment?.filter((e) => e.status === "UNDER_MAINTENANCE") || []
@@ -184,6 +195,14 @@ export default function EquipmentPage() {
           <Button variant="outline" size="sm" className="hidden sm:inline-flex">
             <Filter className="mr-2 h-4 w-4" />
             Filter
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportExcel}>
+            <Download className="mr-2 h-4 w-4" />
+            Export Excel
           </Button>
           <Button size="sm" asChild>
             <Link href="/equipment/new">

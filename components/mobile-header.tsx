@@ -1,8 +1,8 @@
 "use client"
 
 import { usePathname } from "next/navigation"
-import { ChevronLeft, Bell, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Bell, Search, User } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,115 +11,71 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useSession, signOut } from "next-auth/react"
-import Link from "next/link"
-import { MobileNav } from "@/components/mobile-nav"
 
-const pageNames: Record<string, string> = {
-  "/": "Dashboard",
-  "/projects": "Projects",
-  "/activities": "Activities",
-  "/employees": "Employees",
-  "/equipment": "Equipment",
-  "/clients": "Clients",
-  "/fuel-management": "Fuel Management",
-  "/invoices": "Invoices",
-  "/reports": "Reports",
-  "/analytics": "Analytics",
-  "/users": "Users",
-  "/settings": "Settings",
-  "/calendar": "Calendar",
+const getPageTitle = (pathname: string) => {
+  const segments = pathname.split("/").filter(Boolean)
+
+  if (pathname === "/") return "Dashboard"
+  if (segments.length === 1) {
+    return segments[0].charAt(0).toUpperCase() + segments[0].slice(1)
+  }
+  if (segments.length === 2 && segments[1] === "new") {
+    return `New ${segments[0].slice(0, -1)}`
+  }
+  if (segments.length === 3 && segments[2] === "edit") {
+    return `Edit ${segments[0].slice(0, -1)}`
+  }
+
+  return segments[segments.length - 1].charAt(0).toUpperCase() + segments[segments.length - 1].slice(1)
 }
 
-interface MobileHeaderProps {
-  showBackButton?: boolean
-  title?: string
-}
-
-export function MobileHeader({ showBackButton = false, title }: MobileHeaderProps) {
+export function MobileHeader() {
   const pathname = usePathname()
   const { data: session } = useSession()
-
-  const getPageTitle = () => {
-    if (title) return title
-
-    // Handle dynamic routes
-    if (pathname.includes("/new")) return "New"
-    if (pathname.includes("/edit")) return "Edit"
-    if (pathname.match(/\/\d+$/)) return "Details"
-
-    return pageNames[pathname] || "Page"
-  }
-
-  const getBackPath = () => {
-    const segments = pathname.split("/").filter(Boolean)
-    if (segments.length <= 1) return "/"
-    return "/" + segments.slice(0, -1).join("/")
-  }
+  const pageTitle = getPageTitle(pathname)
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden">
-      <div className="flex h-16 items-center justify-between px-4">
-        {/* Left side - Menu button, back button and title */}
-        <div className="flex items-center space-x-2">
-          {!showBackButton && <MobileNav />}
-          {showBackButton && (
-            <Button variant="ghost" size="icon" asChild>
-              <Link href={getBackPath()}>
-                <ChevronLeft className="h-4 w-4" />
-              </Link>
+    <div className="flex items-center justify-between flex-1 ml-4">
+      {/* Page Title */}
+      <h1 className="text-lg font-semibold truncate">{pageTitle}</h1>
+
+      {/* Actions */}
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+          <Search className="h-4 w-4" />
+          <span className="sr-only">Search</span>
+        </Button>
+
+        <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+          <Bell className="h-4 w-4" />
+          <span className="sr-only">Notifications</span>
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+              <User className="h-4 w-4" />
+              <span className="sr-only">User menu</span>
             </Button>
-          )}
-          <h1 className="text-lg font-semibold ml-12">{getPageTitle()}</h1>
-        </div>
-
-        {/* Right side - Actions */}
-        <div className="flex items-center space-x-2">
-          {/* Search */}
-          <Button variant="ghost" size="icon" className="hidden sm:flex">
-            <Search className="h-4 w-4" />
-            <span className="sr-only">Search</span>
-          </Button>
-
-          {/* Notifications */}
-          <Button variant="ghost" size="icon">
-            <Bell className="h-4 w-4" />
-            <span className="sr-only">Notifications</span>
-          </Button>
-
-          {/* User Menu */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={session?.user?.image || ""} alt={session?.user?.name || ""} />
-                  <AvatarFallback>
-                    {session?.user?.name?.charAt(0) || session?.user?.email?.charAt(0) || "U"}
-                  </AvatarFallback>
-                </Avatar>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{session?.user?.name || "User"}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{session?.user?.email}</p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/profile">Profile</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/settings">Settings</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/auth/login" })}>Log out</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">{session?.user?.name || "User"}</p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {session?.user?.email || "user@example.com"}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => (window.location.href = "/profile")}>Profile</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => (window.location.href = "/settings")}>Settings</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => signOut()}>Sign out</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-    </header>
+    </div>
   )
 }

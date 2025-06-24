@@ -1,7 +1,6 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { redirect } from "next/navigation"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
@@ -206,9 +205,16 @@ export async function createProject(formData: FormData) {
 
     console.log("✅ Project created successfully:", project)
 
-    // Revalidate and redirect
+    // Revalidate paths
     revalidatePath("/projects")
-    redirect("/projects")
+    revalidatePath("/")
+
+    // Return success with project data instead of redirecting
+    return {
+      success: true,
+      data: project,
+      message: "Project created successfully!",
+    }
   } catch (error: any) {
     console.error("❌ Failed to create project:", error)
 
@@ -307,7 +313,12 @@ export async function updateProject(id: number, formData: FormData) {
 
     revalidatePath("/projects")
     revalidatePath(`/projects/${id}`)
-    redirect(`/projects/${id}`)
+
+    return {
+      success: true,
+      data: updatedProject,
+      message: "Project updated successfully!",
+    }
   } catch (error) {
     console.error("❌ Failed to update project:", error)
     return { success: false, error: "Failed to update project" }

@@ -6,10 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Building2, Plus, Search, Phone, Mail, Loader2 } from "lucide-react"
+import { Building2, Plus, Search, Phone, Mail, Loader2, Download } from "lucide-react"
 import Link from "next/link"
 import { getClients } from "@/app/actions/client-actions"
 import { ClientActions } from "@/components/client-actions"
+import { exportToCSV, exportToExcel, formatDataForExport } from "@/lib/export-utils"
 
 interface Client {
   id: number
@@ -44,6 +45,16 @@ export default function ClientsPage() {
 
     fetchClients()
   }, [])
+
+  const handleExportCSV = () => {
+    const exportData = formatDataForExport(clients, "clients")
+    exportToCSV(exportData, `clients-${new Date().toISOString().split("T")[0]}`)
+  }
+
+  const handleExportExcel = () => {
+    const exportData = formatDataForExport(clients, "clients")
+    exportToExcel(exportData, `clients-${new Date().toISOString().split("T")[0]}`, "Clients")
+  }
 
   if (loading) {
     return (
@@ -95,6 +106,14 @@ export default function ClientsPage() {
               <Plus className="mr-2 h-4 w-4" />
               Add Client
             </Link>
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportExcel}>
+            <Download className="mr-2 h-4 w-4" />
+            Export Excel
           </Button>
         </div>
       </header>

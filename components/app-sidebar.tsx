@@ -48,8 +48,8 @@ const getNavigationItems = (userRole?: string) => {
     { title: "Fuel Management", url: "/fuel-management", icon: Fuel },
     { title: "Clients", url: "/clients", icon: UserCircle },
     { title: "Invoices", url: "/invoices", icon: Receipt },
-    { title: "Calendar", url: "/calendar", icon: Calendar },
-    { title: "Analytics", url: "/analytics", icon: TrendingUp },
+   /* { title: "Calendar", url: "/calendar", icon: Calendar },
+    { title: "Analytics", url: "/analytics", icon: TrendingUp },*/
     { title: "Reports", url: "/reports", icon: FileText },
   ]
 

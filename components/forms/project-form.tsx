@@ -1,6 +1,9 @@
 "use client"
 
+import type React from "react"
+
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -8,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, AlertCircle, RefreshCw, Hash } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { toast } from "@/hooks/use-toast"
 
 interface Client {
   id: number
@@ -29,12 +33,14 @@ interface Employee {
 
 interface ProjectFormProps {
   initialData?: any
-  onSubmit: (formData: FormData) => Promise<void>
+  onSubmit: (formData: FormData) => Promise<any>
   isLoading?: boolean
   submitButtonText?: string
 }
 
 export function ProjectForm({ initialData, onSubmit, isLoading = false, submitButtonText }: ProjectFormProps) {
+  const router = useRouter()
+
   // Data states
   const [clients, setClients] = useState<Client[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -172,7 +178,11 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
     }
   }
 
-  async function handleSubmit(formData: FormData) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const formData = new FormData(event.currentTarget)
+
     console.log("📝 Form submitted with data:")
     for (const [key, value] of formData.entries()) {
       console.log(`  ${key}: ${value}`)
@@ -199,9 +209,36 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
       console.log("🏷️ Project code set to:", projectCode)
 
       console.log("🚀 Calling onSubmit...")
-      await onSubmit(formData)
+      const result = await onSubmit(formData)
+
+      if (result?.success) {
+        toast({
+          title: "Success!",
+          description: result.message || "Operation completed successfully",
+          duration: 3000,
+        })
+
+        // Navigate immediately after success
+        console.log("🎯 Navigating to projects page...")
+        router.push("/projects")
+        router.refresh() // Force refresh to show updated data
+      } else {
+        console.error("❌ Operation failed:", result)
+        toast({
+          title: "Error",
+          description: result?.error || "An error occurred",
+          variant: "destructive",
+          duration: 5000,
+        })
+      }
     } catch (error) {
       console.error("❌ Form submission error:", error)
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      })
     } finally {
       setIsSubmitting(false)
     }
@@ -332,8 +369,8 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
   const isFormLoading = isLoading || isSubmitting || loadingClients || loadingEmployees
 
   return (
-    <form action={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="name">Project Name *</Label>
           <Input
@@ -365,7 +402,7 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="clientId">Client</Label>
           {renderClientSelect()}
@@ -387,7 +424,7 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="location">Location</Label>
           <Input
@@ -413,7 +450,7 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="startDate">Start Date</Label>
           <Input
@@ -437,7 +474,7 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
       </div>
 
       <div className="flex justify-end gap-4">
-        <Button type="submit" disabled={isFormLoading || !projectCode} className="w-full">
+        <Button type="submit" disabled={isFormLoading || !projectCode} className="w-full md:w-auto min-w-[200px]">
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
