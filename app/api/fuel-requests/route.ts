@@ -5,6 +5,9 @@ import { db } from "@/lib/db"
 import { FuelRequestStatus } from "@prisma/client"
 import type { CreateFuelRequestData, ApiResponse, FuelRequestWithRelations } from "@/types/fuel-management"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export async function GET(request: NextRequest): Promise<NextResponse<ApiResponse<FuelRequestWithRelations[]>>> {
   try {
     console.log("🔍 Fuel requests API called")
