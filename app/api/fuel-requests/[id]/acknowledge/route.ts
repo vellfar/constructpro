@@ -5,6 +5,9 @@ import { db } from "@/lib/db"
 import { FuelRequestStatus } from "@prisma/client"
 import type { AcknowledgeData, ApiResponse } from "@/types/fuel-management"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 interface RouteParams {
   params: {
     id: string

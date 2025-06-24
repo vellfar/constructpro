@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getFuelRequestById } from "@/app/actions/fuel-actions"
 import { handleApiError, ValidationError } from "@/lib/errors"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 interface RouteParams {
   params: {
     id: string
