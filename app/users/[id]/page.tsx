@@ -9,6 +9,9 @@ import { ArrowLeft, Edit, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { deleteUser } from "@/app/actions/user-actions"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 interface UserPageProps {
   params: {
     id: string

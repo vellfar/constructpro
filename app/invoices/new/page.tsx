@@ -12,6 +12,9 @@ import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
 import { createInvoice } from "@/app/actions/invoice-actions"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export default async function NewInvoicePage() {
   const session = await getServerSession(authOptions)
 

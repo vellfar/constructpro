@@ -11,6 +11,9 @@ import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { updateEquipment } from "@/app/actions/equipment-actions"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export default async function EditEquipmentPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
 

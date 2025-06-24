@@ -12,6 +12,9 @@ import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { updateInvoice } from "@/app/actions/invoice-actions"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 interface EditInvoicePageProps {
   params: {
     id: string

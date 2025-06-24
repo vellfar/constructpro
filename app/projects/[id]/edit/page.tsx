@@ -12,6 +12,9 @@ import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { updateProject } from "@/app/actions/project-actions"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export default async function EditProjectPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
 

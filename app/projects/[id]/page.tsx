@@ -22,6 +22,9 @@ import type {
   FuelRequestStatus,
 } from "@prisma/client"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 // Define proper types for the component - simplified for current schema
 type ProjectWithRelations = Project & {
   client:

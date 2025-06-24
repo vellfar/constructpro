@@ -9,6 +9,9 @@ import { ArrowLeft, Edit, Download, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { deleteInvoice } from "@/app/actions/invoice-actions"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 interface InvoicePageProps {
   params: {
     id: string

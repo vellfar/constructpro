@@ -8,6 +8,9 @@ import { ArrowLeft, Edit, MapPin, Calendar, Fuel, Wrench } from "lucide-react"
 import Link from "next/link"
 import { getEquipmentById } from "@/app/actions/equipment-actions"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export default async function EquipmentDetailPage({ params }: { params: { id: string } }) {
   const equipmentId = Number.parseInt(params.id)
   const { success, data: equipment, error } = await getEquipmentById(equipmentId)
