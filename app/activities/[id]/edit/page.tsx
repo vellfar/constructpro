@@ -12,6 +12,9 @@ import { redirect, notFound } from "next/navigation"
 import { prisma } from "@/lib/db"
 import { updateActivity } from "@/app/actions/activity-actions"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 interface EditActivityPageProps {
   params: {
     id: string
