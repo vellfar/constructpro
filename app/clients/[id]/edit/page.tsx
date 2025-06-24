@@ -11,6 +11,9 @@ import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { updateClient } from "@/app/actions/client-actions"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export default async function EditClientPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
 

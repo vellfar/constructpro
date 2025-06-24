@@ -9,6 +9,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ArrowLeft, Edit, Mail, Phone, MapPin, Building } from "lucide-react"
 import Link from "next/link"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions)
 
