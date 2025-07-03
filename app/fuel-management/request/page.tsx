@@ -13,7 +13,11 @@ import { ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { toast } from "@/hooks/use-toast"
 import type { FuelType, FuelUrgency } from "@prisma/client"
-
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 interface Equipment {
   id: number
   name: string
@@ -307,7 +311,7 @@ export default function FuelRequestForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="justification">Justification *</Label>
+                <Label htmlFor="justification">Purpose *</Label>
                 <Textarea
                   id="justification"
                   placeholder="Explain why this fuel is needed and how it will be used"

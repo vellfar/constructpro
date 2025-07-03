@@ -12,7 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Loader2, Save } from "lucide-react"
 import Link from "next/link"
 import { createEquipment } from "@/app/actions/equipment-actions"
-
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 export default function NewEquipmentPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)

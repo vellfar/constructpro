@@ -23,7 +23,11 @@ import {
   Download,
   Upload,
 } from "lucide-react"
-
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 export default function SettingsPage() {
   const [notifications, setNotifications] = useState({
     email: true,

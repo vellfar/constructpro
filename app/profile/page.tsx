@@ -13,7 +13,11 @@ import { ArrowLeft, Loader2, CheckCircle, AlertCircle } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
-
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 export default function ProfilePage() {
   const { data: session, status, update } = useSession()
   const { toast } = useToast()

@@ -34,22 +34,17 @@ export function useRealTimeData<T = any>({
   const [error, setError] = useState<Error | null>(null)
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const { data: session, status } = useSession()
-  const intervalRef = useRef<NodeJS.Timeout>()
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const abortControllerRef = useRef<AbortController>()
 
   const fetchData = useCallback(async () => {
-    if (!enabled || status === "loading" || !session) {
-      return
-    }
+    if (!enabled || status !== "authenticated" || !session) return
 
     try {
       setError(null)
 
-      // Cancel previous request
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
-
+      // Abort previous fetch
+      abortControllerRef.current?.abort()
       abortControllerRef.current = new AbortController()
 
       const response = await fetch(endpoint, {
@@ -65,16 +60,15 @@ export function useRealTimeData<T = any>({
       }
 
       const result = await response.json()
+      if (result.error) throw new Error(result.error)
 
-      if (result.error) {
-        throw new Error(result.error)
-      }
+      const transformed = transform ? transform(result) : result
 
-      const transformedData = transform ? transform(result) : result
-      setData(transformedData)
+      setData(transformed)
       setLastUpdated(new Date())
-    } catch (err) {
-      if (err instanceof Error && err.name !== "AbortError") {
+      console.log(`[📡 Fetched] ${endpoint} at ${new Date().toLocaleTimeString()}`)
+    } catch (err: any) {
+      if (err.name !== "AbortError") {
         console.error(`Error fetching ${endpoint}:`, err)
         setError(err)
         onError?.(err)
@@ -94,34 +88,28 @@ export function useRealTimeData<T = any>({
     setLastUpdated(new Date())
   }, [])
 
-  // Initial fetch and dependency updates
+  // First fetch on mount
   useEffect(() => {
-    if (enabled && status === "authenticated") {
+    if (enabled && status === "authenticated" && session) {
       fetchData()
     }
-  }, [fetchData, enabled, status, ...dependencies])
+  }, [fetchData, enabled, session, status, ...dependencies])
 
-  // Set up polling
+  // Start polling after initial data load
   useEffect(() => {
-    if (enabled && refreshInterval > 0 && status === "authenticated") {
+    if (enabled && refreshInterval > 0 && data && status === "authenticated") {
       intervalRef.current = setInterval(fetchData, refreshInterval)
       return () => {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current)
-        }
+        intervalRef.current && clearInterval(intervalRef.current)
       }
     }
-  }, [fetchData, refreshInterval, enabled, status])
+  }, [fetchData, refreshInterval, enabled, status, data])
 
   // Cleanup
   useEffect(() => {
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort()
-      }
+      intervalRef.current && clearInterval(intervalRef.current)
+      abortControllerRef.current?.abort()
     }
   }, [])
 
@@ -135,11 +123,12 @@ export function useRealTimeData<T = any>({
   }
 }
 
-// Specialized hooks for different data types
+// ⬇️ Specialized Hooks
+
 export function useDashboardStats() {
   return useRealTimeData({
     endpoint: "/api/dashboard/stats",
-    refreshInterval: 10000, // 10 seconds for dashboard
+    refreshInterval: 10000, // 10s polling
   })
 }
 

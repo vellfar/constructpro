@@ -11,7 +11,11 @@ import Link from "next/link"
 import { getClients } from "@/app/actions/client-actions"
 import { ClientActions } from "@/components/client-actions"
 import { exportToCSV, exportToExcel, formatDataForExport } from "@/lib/export-utils"
-
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 interface Client {
   id: number
   name: string

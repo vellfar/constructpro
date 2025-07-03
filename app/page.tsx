@@ -1,15 +1,35 @@
 "use client"
 
-import type React from "react"
+import React, { useState } from "react"
+import Link from "next/link"
+import { useSession } from "next-auth/react"
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
+
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts"
+
 import {
   Building2,
   Users,
@@ -24,82 +44,70 @@ import {
   XCircle,
   Zap,
 } from "lucide-react"
+
 import { useDashboardStats } from "@/hooks/use-real-time-data"
-import { useSession } from "next-auth/react"
-import Link from "next/link"
-
-const CHART_COLORS = {
-  primary: "#3b82f6",
-  success: "#10b981",
-  warning: "#f59e0b",
-  danger: "#ef4444",
-  info: "#06b6d4",
-  purple: "#8b5cf6",
-  pink: "#ec4899",
-  indigo: "#6366f1",
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 }
-
-const PIE_COLORS = [
-  CHART_COLORS.primary,
-  CHART_COLORS.success,
-  CHART_COLORS.warning,
-  CHART_COLORS.danger,
-  CHART_COLORS.purple,
-]
+const CHART_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"]
 
 export default function DashboardPage() {
   const { data: session } = useSession()
   const [selectedTimeRange, setSelectedTimeRange] = useState("30d")
-
   const { data: stats, loading, error, refresh, lastUpdated } = useDashboardStats()
 
-  if (loading && !stats) {
-    return <DashboardSkeleton />
-  }
-
-  if (error) {
+  if (loading && !stats) return <DashboardSkeleton />
+  if (error)
     return (
-      <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription className="flex items-center justify-between">
-            <span>Failed to load dashboard data: {error.message}</span>
-            <Button onClick={refresh} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Retry
-            </Button>
-          </AlertDescription>
+      <div className="flex-1 p-6">
+        <Alert variant="destructive" className="flex items-center justify-between">
+          <AlertTriangle className="h-5 w-5 mr-2" />
+          <AlertDescription>Failed to load dashboard data: {error.message}</AlertDescription>
+          <Button onClick={refresh} variant="outline" size="sm" className="ml-4">
+            <RefreshCw className="h-4 w-4 mr-1" />
+            Retry
+          </Button>
         </Alert>
       </div>
     )
-  }
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 min-h-screen">
+    <main className="flex-1 p-6 bg-white dark:bg-slate-900 min-h-screen">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-600 dark:from-slate-100 dark:to-slate-400 bg-clip-text text-transparent">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-2">
+        <div>
+          <h1 className="text-3xl font-semibold text-slate-900 dark:text-slate-100">
             Welcome back, {session?.user?.firstName || "User"}!
           </h1>
-          <p className="text-muted-foreground">Here's what's happening with your construction projects today.</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+            Here's what's happening with your projects today.
+          </p>
         </div>
-        <div className="flex items-center space-x-3">
+
+        <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
           {lastUpdated && (
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4" />
+            <div className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
               <span>Updated {lastUpdated.toLocaleTimeString()}</span>
             </div>
           )}
-          <Button onClick={refresh} variant="outline" size="sm" className="shadow-sm">
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+          <Button
+            onClick={refresh}
+            variant="outline"
+            size="sm"
+            disabled={loading}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
         </div>
-      </div>
+      </header>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
         <StatsCard
           title="Total Projects"
           value={stats?.totalProjects || 0}
@@ -135,233 +143,177 @@ export default function DashboardPage() {
           urgent={stats?.pendingFuelRequests > 0}
           href="/fuel-management"
         />
-      </div>
+      </section>
 
-      {/* Main Content Tabs */}
+      {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[400px] bg-white dark:bg-slate-800 shadow-sm">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+        <TabsList className="grid grid-cols-4 max-w-lg bg-slate-100 dark:bg-slate-800 rounded-md shadow-sm">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
             Overview
           </TabsTrigger>
-          <TabsTrigger value="projects" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+          <TabsTrigger value="projects" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
             Projects
           </TabsTrigger>
-          <TabsTrigger value="equipment" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+          <TabsTrigger value="equipment" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
             Equipment
           </TabsTrigger>
-          <TabsTrigger value="activity" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+          <TabsTrigger value="activity" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
             Activity
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Project Status Chart */}
-            <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center space-x-2">
-                  <Building2 className="h-5 w-5 text-blue-500" />
-                  <span>Project Status</span>
-                </CardTitle>
-                <CardDescription>Distribution of project statuses</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={stats?.projectStatusData || []}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="count"
-                    >
-                      {(stats?.projectStatusData || []).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Equipment Status Chart */}
-            <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center space-x-2">
-                  <Wrench className="h-5 w-5 text-green-500" />
-                  <span>Equipment Status</span>
-                </CardTitle>
-                <CardDescription>Current equipment distribution</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={stats?.equipmentStatusData || []}>
-                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="count" fill={CHART_COLORS.success} radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recent Activity */}
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center space-x-2">
-                  <Activity className="h-5 w-5 text-purple-500" />
-                  <span>Recent Activities</span>
-                </CardTitle>
-                <CardDescription>Latest system activities</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {(stats?.recentActivities || []).length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">No recent activities</p>
-                  ) : (
-                    (stats?.recentActivities || []).map((activity, index) => (
-                      <div
-                        key={index}
-                        className="flex items-start space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50"
-                      >
-                        <div className="flex-shrink-0 mt-1">
-                          {activity.type === "success" && <CheckCircle className="h-4 w-4 text-green-500" />}
-                          {activity.type === "warning" && <AlertTriangle className="h-4 w-4 text-yellow-500" />}
-                          {activity.type === "error" && <XCircle className="h-4 w-4 text-red-500" />}
-                          {activity.type === "info" && <Zap className="h-4 w-4 text-blue-500" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">{activity.description}</p>
-                          <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-                <div className="mt-4">
-                  <Button variant="outline" size="sm" asChild className="w-full">
-                    <Link href="/activities">View All Activities</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center space-x-2">
-                  <Fuel className="h-5 w-5 text-orange-500" />
-                  <span>Fuel Requests</span>
-                </CardTitle>
-                <CardDescription>Recent fuel request activity</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {(stats?.recentFuelRequests || []).length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">No recent fuel requests</p>
-                  ) : (
-                    (stats?.recentFuelRequests || []).map((request, index) => (
-                      <div
-                        key={index}
-                        className="flex items-start space-x-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50"
-                      >
-                        <div className="flex-shrink-0 mt-1">
-                          <Badge
-                            variant={
-                              request.status === "APPROVED"
-                                ? "default"
-                                : request.status === "PENDING"
-                                  ? "secondary"
-                                  : "destructive"
-                            }
-                            className="text-xs"
-                          >
-                            {request.status}
-                          </Badge>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">{request.description}</p>
-                          <p className="text-xs text-muted-foreground">{request.timestamp}</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-                <div className="mt-4">
-                  <Button variant="outline" size="sm" asChild className="w-full">
-                    <Link href="/fuel-management">View All Requests</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="projects" className="space-y-6">
-          <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+        {/* Overview Content */}
+        <TabsContent value="overview" className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Project Status Pie */}
+          <Card className="shadow-sm border border-slate-200 dark:border-slate-700 rounded-md">
             <CardHeader>
-              <CardTitle>Project Overview</CardTitle>
-              <CardDescription>Current project status and progress</CardDescription>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <Building2 className="w-5 h-5 text-blue-600" />
+                Project Status
+              </CardTitle>
+              <CardDescription>Distribution of project statuses</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Project details will be loaded here</p>
-                <Button variant="outline" asChild className="mt-4">
-                  <Link href="/projects">View All Projects</Link>
-                </Button>
-              </div>
+            <CardContent style={{ height: 280 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={stats?.projectStatusData || []}
+                    dataKey="count"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    labelLine={false}
+                  >
+                    {(stats?.projectStatusData || []).map((entry, i) => (
+                      <Cell key={`cell-${i}`} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Equipment Status Bar */}
+          <Card className="shadow-sm border border-slate-200 dark:border-slate-700 rounded-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <Wrench className="w-5 h-5 text-green-600" />
+                Equipment Status
+              </CardTitle>
+              <CardDescription>Current equipment distribution</CardDescription>
+            </CardHeader>
+            <CardContent style={{ height: 280 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats?.equipmentStatusData || []} margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count" fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Recent Activities */}
+          <Card className="shadow-sm border border-slate-200 dark:border-slate-700 rounded-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <Activity className="w-5 h-5 text-purple-600" />
+                Recent Activities
+              </CardTitle>
+              <CardDescription>Latest system activities</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 max-h-72 overflow-y-auto pr-2">
+              {(stats?.recentActivities?.length ?? 0) === 0 && (
+                <p className="text-center text-sm text-slate-500 dark:text-slate-400 py-10">
+                  No recent activities
+                </p>
+              )}
+              {stats?.recentActivities?.map((act, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800"
+                >
+                  <ActivityIcon status={act.type} />
+                  <div>
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{act.description}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{act.timestamp}</p>
+                  </div>
+                </div>
+              ))}
+              <Button variant="outline" size="sm" className="w-full mt-3" asChild>
+                <Link href="/activities">View All Activities</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Fuel Requests */}
+          <Card className="shadow-sm border border-slate-200 dark:border-slate-700 rounded-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <Fuel className="w-5 h-5 text-orange-600" />
+                Fuel Requests
+              </CardTitle>
+              <CardDescription>Recent fuel request activity</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 max-h-72 overflow-y-auto pr-2">
+              {(stats?.recentFuelRequests?.length ?? 0) === 0 && (
+                <p className="text-center text-sm text-slate-500 dark:text-slate-400 py-10">
+                  No recent fuel requests
+                </p>
+              )}
+              {stats?.recentFuelRequests?.map((req, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800"
+                >
+                  <Badge
+                    variant={
+                      req.status === "APPROVED"
+                        ? "default"
+                        : req.status === "PENDING"
+                        ? "secondary"
+                        : "destructive"
+                    }
+                    className="text-xs px-2 py-1 mt-1"
+                  >
+                    {req.status}
+                  </Badge>
+                  <div>
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{req.description}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{req.timestamp}</p>
+                  </div>
+                </div>
+              ))}
+              <Button variant="outline" size="sm" className="w-full mt-3" asChild>
+                <Link href="/fuel-management">View All Requests</Link>
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="equipment" className="space-y-6">
-          <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle>Equipment Overview</CardTitle>
-              <CardDescription>Equipment status and utilization</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Wrench className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Equipment details will be loaded here</p>
-                <Button variant="outline" asChild className="mt-4">
-                  <Link href="/equipment">View All Equipment</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="activity" className="space-y-6">
-          <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle>Activity Timeline</CardTitle>
-              <CardDescription>Recent system activities and updates</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Activity timeline will be loaded here</p>
-                <Button variant="outline" asChild className="mt-4">
-                  <Link href="/activities">View All Activities</Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {/* Placeholder tabs for Projects, Equipment, Activity */}
+        {["projects", "equipment", "activity"].map((tab) => (
+          <TabsContent key={tab} value={tab} className="p-6 bg-slate-50 dark:bg-slate-800 rounded-md shadow-sm">
+            <div className="flex flex-col items-center justify-center gap-4 py-20 text-slate-500 dark:text-slate-400">
+              {tab === "projects" && <Building2 className="w-12 h-12" />}
+              {tab === "equipment" && <Wrench className="w-12 h-12" />}
+              {tab === "activity" && <Activity className="w-12 h-12" />}
+              <p className="text-lg capitalize">{tab} details will be loaded here</p>
+              <Button variant="outline" asChild>
+                <Link href={`/${tab}`}>View All {tab.charAt(0).toUpperCase() + tab.slice(1)}</Link>
+              </Button>
+            </div>
+          </TabsContent>
+        ))}
       </Tabs>
-    </div>
+    </main>
   )
 }
 
-// Stats Card Component
 interface StatsCardProps {
   title: string
   value: number
@@ -373,85 +325,80 @@ interface StatsCardProps {
   href?: string
 }
 
-function StatsCard({ title, value, subtitle, icon: Icon, color, trend, urgent, href }: StatsCardProps) {
-  const colorClasses = {
+function StatsCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+  color,
+  trend,
+  urgent,
+  href,
+}: StatsCardProps) {
+  const colors = {
     blue: "text-blue-600 bg-blue-100 dark:bg-blue-900/20",
     green: "text-green-600 bg-green-100 dark:bg-green-900/20",
     purple: "text-purple-600 bg-purple-100 dark:bg-purple-900/20",
     orange: "text-orange-600 bg-orange-100 dark:bg-orange-900/20",
   }
 
-  const CardWrapper = href ? Link : "div"
-  const cardProps = href ? { href } : {}
+  const Wrapper = href ? Link : React.Fragment
+  const wrapperProps = href ? { href } : {}
 
   return (
-    <CardWrapper {...cardProps}>
-      <Card className="shadow-lg border-0 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm hover:shadow-xl transition-all duration-200 cursor-pointer group">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-          <div className={`p-2 rounded-full ${colorClasses[color]} group-hover:scale-110 transition-transform`}>
-            <Icon className="h-4 w-4" />
+    <Wrapper {...wrapperProps}>
+      <Card
+        className={`cursor-pointer hover:shadow-md transition-shadow duration-150 border border-transparent hover:border-slate-300 dark:hover:border-slate-700 rounded-md bg-white dark:bg-slate-800`}
+      >
+        <CardHeader className="flex justify-between items-center pb-2">
+          <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">{title}</CardTitle>
+          <div className={`p-2 rounded-full ${colors[color]}`}>
+            <Icon className="w-5 h-5" />
           </div>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{value.toLocaleString()}</div>
-          {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
+          <p className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{value.toLocaleString()}</p>
+          {subtitle && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>}
           {trend && (
-            <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center">
-              <TrendingUp className="h-3 w-3 mr-1" />
+            <Badge
+              variant={urgent ? "destructive" : "secondary"}
+              className="mt-2 inline-block px-2 py-1 text-xs"
+            >
               {trend}
-            </p>
-          )}
-          {urgent && (
-            <Badge variant="destructive" className="mt-2 text-xs">
-              <AlertTriangle className="h-3 w-3 mr-1" />
-              Needs Attention
             </Badge>
           )}
         </CardContent>
       </Card>
-    </CardWrapper>
+    </Wrapper>
   )
 }
 
-// Loading Skeleton
+function ActivityIcon({ status }: { status: string }) {
+  switch (status) {
+    case "success":
+      return <CheckCircle className="w-5 h-5 text-green-600" />
+    case "warning":
+      return <AlertTriangle className="w-5 h-5 text-yellow-500" />
+    case "error":
+      return <XCircle className="w-5 h-5 text-red-600" />
+    case "info":
+    default:
+      return <Zap className="w-5 h-5 text-blue-600" />
+  }
+}
+
 function DashboardSkeleton() {
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-4 w-96" />
-        </div>
-        <Skeleton className="h-9 w-24" />
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i} className="shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-8 w-8 rounded-full" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-8 w-16" />
-              <Skeleton className="h-3 w-20 mt-2" />
-            </CardContent>
-          </Card>
+    <div className="space-y-6 p-6">
+      <Skeleton className="h-10 w-64 rounded-md" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={i} className="h-32 rounded-md" />
         ))}
       </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {Array.from({ length: 2 }).map((_, i) => (
-          <Card key={i} className="shadow-lg">
-            <CardHeader>
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-4 w-48" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-[300px] w-full" />
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+        {[...Array(4)].map((_, i) => (
+          <Skeleton key={i} className="h-72 rounded-md" />
         ))}
       </div>
     </div>

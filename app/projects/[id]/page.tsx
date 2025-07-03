@@ -22,9 +22,6 @@ import type {
   FuelRequestStatus,
 } from "@prisma/client"
 
-export const dynamic = "force-dynamic"
-export const revalidate = 0
-
 // Define proper types for the component - simplified for current schema
 type ProjectWithRelations = Project & {
   client:
@@ -154,7 +151,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
 
       return new Intl.NumberFormat("en-US", {
         style: "currency",
-        currency: "USD",
+        currency: "UGX",
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       }).format(numAmount)
@@ -221,9 +218,6 @@ export default async function ProjectDetailPage({ params }: PageProps) {
               <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <DollarSign className="h-5 w-5 text-green-600" />
-                    </div>
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Budget</p>
                       <p className="text-2xl font-bold text-green-600">{formatCurrency(projectBudget)}</p>
@@ -246,19 +240,6 @@ export default async function ProjectDetailPage({ params }: PageProps) {
                 </CardContent>
               </Card>
 
-              <Card className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-purple-100 rounded-lg">
-                      <Users className="h-5 w-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Progress</p>
-                      <p className="text-2xl font-bold text-purple-600">{progressPercentage}%</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
 
               <Card className="hover:shadow-md transition-shadow">
                 <CardContent className="p-6">
@@ -330,13 +311,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
                   </div>
                 )}
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-muted-foreground">Project Progress</p>
-                    <span className="text-sm font-medium">{progressPercentage}%</span>
-                  </div>
-                  <Progress value={progressPercentage} className="h-3" />
-                </div>
+                
               </CardContent>
             </Card>
 

@@ -14,7 +14,11 @@ import { ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { createActivity } from "@/app/actions/activity-actions"
 import { getProjects } from "@/app/actions/project-actions"
-
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 export default function NewActivityPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)

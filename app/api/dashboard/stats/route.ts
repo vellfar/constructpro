@@ -13,195 +13,140 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    console.log("🔍 Fetching dashboard stats...")
-
-    // Get all stats with safe database operations and fallback values
     const [
       totalProjects,
       activeProjects,
+      newProjectsThisMonth,
       totalEquipment,
       operationalEquipment,
-      totalClients,
       totalEmployees,
       pendingFuelRequests,
-      totalFuelRequests,
+      projectStatusData,
+      equipmentStatusData,
       recentActivities,
-      projectsByStatus,
-      equipmentByStatus,
-      fuelRequestsByStatus,
+      recentFuelRequests,
     ] = await Promise.all([
-      safeDbOperation(() => prisma.project.count(), 0, "Count projects"),
-      safeDbOperation(() => prisma.project.count({ where: { status: "ACTIVE" } }), 0, "Count active projects"),
-      safeDbOperation(() => prisma.equipment.count(), 0, "Count equipment"),
+      safeDbOperation(() => prisma.project.count(), 0),
+      safeDbOperation(() => prisma.project.count({ where: { status: "ACTIVE" } }), 0),
       safeDbOperation(
-        () => prisma.equipment.count({ where: { status: "OPERATIONAL" } }),
-        0,
-        "Count operational equipment",
+        () =>
+          prisma.project.count({
+            where: {
+              createdAt: {
+                gte: new Date(new Date().setDate(new Date().getDate() - 30)),
+              },
+            },
+          }),
+        0
       ),
-      safeDbOperation(() => prisma.client.count(), 0, "Count clients"),
-      safeDbOperation(() => prisma.employee.count(), 0, "Count employees"),
+      safeDbOperation(() => prisma.equipment.count(), 0),
+      safeDbOperation(() => prisma.equipment.count({ where: { status: "OPERATIONAL" } }), 0),
+      safeDbOperation(() => prisma.employee.count(), 0),
+      safeDbOperation(() => prisma.fuelRequest.count({ where: { status: "PENDING" } }), 0),
       safeDbOperation(
-        () => prisma.fuelRequest.count({ where: { status: "PENDING" } }),
-        0,
-        "Count pending fuel requests",
+        () =>
+          prisma.project.groupBy({
+            by: ["status"],
+            _count: { status: true },
+          }),
+        []
       ),
-      safeDbOperation(() => prisma.fuelRequest.count(), 0, "Count fuel requests"),
+      safeDbOperation(
+        () =>
+          prisma.equipment.groupBy({
+            by: ["status"],
+            _count: { status: true },
+          }),
+        []
+      ),
       safeDbOperation(
         () =>
           prisma.activity.findMany({
             take: 5,
             orderBy: { createdAt: "desc" },
-            include: {
-              project: { select: { name: true } },
-            },
           }),
-        [],
-        "Fetch recent activities",
+        []
       ),
       safeDbOperation(
-        () => prisma.project.groupBy({ by: ["status"], _count: { status: true } }),
-        [],
-        "Group projects by status",
-      ),
-      safeDbOperation(
-        () => prisma.equipment.groupBy({ by: ["status"], _count: { status: true } }),
-        [],
-        "Group equipment by status",
-      ),
-      safeDbOperation(
-        () => prisma.fuelRequest.groupBy({ by: ["status"], _count: { status: true } }),
-        [],
-        "Group fuel requests by status",
+        () =>
+          prisma.fuelRequest.findMany({
+            take: 5,
+            orderBy: { createdAt: "desc" },
+          }),
+        []
       ),
     ])
 
-    console.log("📊 Dashboard stats collected:", {
+    return NextResponse.json({
       totalProjects,
       activeProjects,
+      newProjectsThisMonth,
       totalEquipment,
+      equipmentUtilization:
+        totalEquipment > 0 ? Math.round((operationalEquipment / totalEquipment) * 100) : 0,
       operationalEquipment,
-      totalClients,
       totalEmployees,
       pendingFuelRequests,
-      totalFuelRequests,
-      activitiesCount: Array.isArray(recentActivities) ? recentActivities.length : 0,
+      projectStatusData: projectStatusData.map((p: any) => ({
+        name: p.status,
+        count: p._count.status,
+      })),
+      equipmentStatusData: equipmentStatusData.map((e: any) => ({
+        name: e.status,
+        count: e._count.status,
+      })),
+      recentActivities: recentActivities.map((a: any) => ({
+        type:
+          a.status === "COMPLETED"
+            ? "success"
+            : a.status === "PENDING"
+            ? "warning"
+            : a.status === "FAILED"
+            ? "error"
+            : "info",
+        description: a.description || "No description",
+        timestamp: new Date(a.createdAt).toLocaleString(),
+      })),
+      recentFuelRequests: recentFuelRequests.map((r: any) => ({
+        status: r.status,
+        description: r.description || "No description",
+        timestamp: new Date(r.createdAt).toLocaleString(),
+      })),
     })
-
-    const stats = {
-      overview: {
-        totalProjects: totalProjects || 0,
-        activeProjects: activeProjects || 0,
-        totalEquipment: totalEquipment || 0,
-        operationalEquipment: operationalEquipment || 0,
-        totalClients: totalClients || 0,
-        totalEmployees: totalEmployees || 0,
-        pendingFuelRequests: pendingFuelRequests || 0,
-        totalFuelRequests: totalFuelRequests || 0,
-      },
-      recentActivities: Array.isArray(recentActivities)
-        ? recentActivities.map((activity: any) => ({
-            id: activity.id,
-            name: activity.name,
-            description: activity.description,
-            project: activity.project?.name || "Unknown Project",
-            status: activity.status,
-            createdAt: activity.createdAt,
-          }))
-        : [
-            // Fallback activities
-            {
-              id: 1,
-              name: "Sample Activity",
-              description: "Demo activity while data is loading",
-              project: "Sample Project",
-              status: "IN_PROGRESS",
-              createdAt: new Date(),
-            },
-          ],
-      charts: {
-        projectsByStatus: Array.isArray(projectsByStatus)
-          ? projectsByStatus.map((item: any) => ({
-              status: item.status,
-              count: item._count?.status || item._count || 0,
-            }))
-          : [
-              { status: "ACTIVE", count: activeProjects || 1 },
-              { status: "PLANNING", count: Math.max(0, (totalProjects || 1) - (activeProjects || 0)) },
-            ],
-        equipmentByStatus: Array.isArray(equipmentByStatus)
-          ? equipmentByStatus.map((item: any) => ({
-              status: item.status,
-              count: item._count?.status || item._count || 0,
-            }))
-          : [
-              { status: "OPERATIONAL", count: operationalEquipment || 1 },
-              { status: "MAINTENANCE", count: Math.max(0, (totalEquipment || 1) - (operationalEquipment || 0)) },
-            ],
-        fuelRequestsByStatus: Array.isArray(fuelRequestsByStatus)
-          ? fuelRequestsByStatus.map((item: any) => ({
-              status: item.status,
-              count: item._count?.status || item._count || 0,
-            }))
-          : [
-              { status: "PENDING", count: pendingFuelRequests || 1 },
-              { status: "APPROVED", count: Math.max(0, (totalFuelRequests || 1) - (pendingFuelRequests || 0)) },
-            ],
-      },
-    }
-
-    console.log("✅ Dashboard stats response ready")
-
-    return NextResponse.json(stats)
   } catch (error) {
-    console.error("❌ Dashboard stats API error:", error)
+    console.error("Dashboard stats error:", error)
 
-    // Return comprehensive fallback stats
-    const fallbackStats = {
-      overview: {
-        totalProjects: 3,
-        activeProjects: 2,
-        totalEquipment: 5,
-        operationalEquipment: 4,
-        totalClients: 2,
-        totalEmployees: 8,
-        pendingFuelRequests: 3,
-        totalFuelRequests: 7,
-      },
+    return NextResponse.json({
+      totalProjects: 3,
+      activeProjects: 2,
+      newProjectsThisMonth: 1,
+      totalEquipment: 5,
+      equipmentUtilization: 80,
+      operationalEquipment: 4,
+      totalEmployees: 8,
+      pendingFuelRequests: 3,
+      projectStatusData: [
+        { name: "ACTIVE", count: 2 },
+        { name: "PLANNING", count: 1 },
+      ],
+      equipmentStatusData: [
+        { name: "OPERATIONAL", count: 4 },
+        { name: "MAINTENANCE", count: 1 },
+      ],
       recentActivities: [
         {
-          id: 1,
-          name: "Site Preparation",
-          description: "Preparing construction site for Naguru Highway",
-          project: "Naguru Highway",
-          status: "IN_PROGRESS",
-          createdAt: new Date(),
-        },
-        {
-          id: 2,
-          name: "Equipment Setup",
-          description: "Setting up construction equipment",
-          project: "Naguru Highway",
-          status: "COMPLETED",
-          createdAt: new Date(Date.now() - 86400000), // 1 day ago
+          type: "success",
+          description: "Demo: Completed foundation work",
+          timestamp: new Date().toLocaleString(),
         },
       ],
-      charts: {
-        projectsByStatus: [
-          { status: "ACTIVE", count: 2 },
-          { status: "PLANNING", count: 1 },
-        ],
-        equipmentByStatus: [
-          { status: "OPERATIONAL", count: 4 },
-          { status: "MAINTENANCE", count: 1 },
-        ],
-        fuelRequestsByStatus: [
-          { status: "PENDING", count: 3 },
-          { status: "APPROVED", count: 2 },
-          { status: "COMPLETED", count: 2 },
-        ],
-      },
-    }
-
-    return NextResponse.json(fallbackStats)
+      recentFuelRequests: [
+        {
+          status: "PENDING",
+          description: "Fuel for Project A",
+          timestamp: new Date().toLocaleString(),
+        },
+      ],
+    })
   }
 }

@@ -99,17 +99,13 @@ export default async function ActivitiesPage() {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="flex-1 p-6 bg-white dark:bg-slate-900 min-h-screen">
       <header className="dashboard-header">
         <div className="flex items-center gap-2 font-semibold">
           <Calendar className="h-5 w-5" />
           Activity Management
         </div>
         <div className="ml-auto flex items-center gap-4">
-          <Button variant="outline" size="sm" className="hidden sm:inline-flex">
-            <Filter className="mr-2 h-4 w-4" />
-            Filter
-          </Button>
           <Button size="sm" asChild>
             <Link href="/activities/new">
               <Plus className="mr-2 h-4 w-4" />
@@ -121,6 +117,7 @@ export default async function ActivitiesPage() {
 
       <div className="p-6">
         <div className="flex flex-col gap-6 animate-fade-in">
+          {/*
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -155,7 +152,7 @@ export default async function ActivitiesPage() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
+          </div> */}
 
           <Card className="card-enhanced">
             <CardHeader>

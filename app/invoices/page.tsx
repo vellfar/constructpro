@@ -8,7 +8,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input"
 import { Plus, Search, FileText, DollarSign, Clock, CheckCircle, Loader2 } from "lucide-react"
 import Link from "next/link"
-
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 interface Invoice {
   id: number
   invoiceNumber: string
@@ -115,10 +119,11 @@ export default function InvoicesPage() {
           Invoice Management
         </div>
         <div className="ml-auto flex items-center gap-4">
+          {/* 
           <div className="relative hidden sm:block">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input type="search" placeholder="Search invoices..." className="w-[300px] pl-8" />
-          </div>
+          </div> */}
           <Button asChild>
             <Link href="/invoices/new">
               <Plus className="mr-2 h-4 w-4" />
@@ -143,12 +148,12 @@ export default function InvoicesPage() {
           </Card>
 
           <Card className="stat-card">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
               <DollarSign className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-foreground">${totalAmount.toLocaleString()}</div>
+              <div className="text-xl font-bold text-foreground">UGX{totalAmount.toLocaleString()}</div>
               <p className="text-xs text-muted-foreground">Total invoice value</p>
             </CardContent>
           </Card>
@@ -188,7 +193,6 @@ export default function InvoicesPage() {
                 <TableRow>
                   <TableHead>Invoice #</TableHead>
                   <TableHead>Project</TableHead>
-                  <TableHead>Client</TableHead>
                   <TableHead>Service Provider</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Date</TableHead>
@@ -221,9 +225,8 @@ export default function InvoicesPage() {
                           <div className="text-sm text-muted-foreground">{invoice.project.projectCode}</div>
                         </div>
                       </TableCell>
-                      <TableCell>{invoice.project.client?.name || "No client"}</TableCell>
                       <TableCell>{invoice.serviceProvider}</TableCell>
-                      <TableCell className="font-medium text-primary">${invoice.amount.toLocaleString()}</TableCell>
+                      <TableCell className="font-medium text-primary">UGX{invoice.amount.toLocaleString()}</TableCell>
                       <TableCell>{new Date(invoice.invoiceDate).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(invoice.status)}>{invoice.status}</Badge>

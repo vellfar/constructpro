@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { updateClient } from "@/app/actions/client-actions"
+import { updateClient, deleteClient } from "@/app/actions/client-actions"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
@@ -84,7 +84,7 @@ export default async function EditClientPage({ params }: { params: { id: string 
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" name="phone" defaultValue={client.phone || ""} placeholder="+1 234 567 8900" />
+                  <Input id="phone" name="phone" defaultValue={client.phone || ""} placeholder="+256 700 000000" />
                 </div>
               </div>
 
@@ -94,7 +94,7 @@ export default async function EditClientPage({ params }: { params: { id: string 
                   id="address"
                   name="address"
                   defaultValue={client.address || ""}
-                  placeholder="123 Main Street, City, State, ZIP"
+                  placeholder="123 Main Street, City, District"
                   rows={3}
                 />
               </div>
@@ -105,6 +105,12 @@ export default async function EditClientPage({ params }: { params: { id: string 
                   <Link href={`/clients/${client.id}`}>Cancel</Link>
                 </Button>
               </div>
+            </form>
+
+            <form action={deleteClient.bind(null, client.id)} className="pt-6">
+              <Button type="submit" variant="destructive">
+                Delete Client
+              </Button>
             </form>
           </CardContent>
         </Card>

@@ -116,6 +116,7 @@ model Project {
   equipmentAssignments  EquipmentAssignment[]
   projectAssignments    ProjectAssignment[]
   fuelRequests          FuelRequest[]
+  invoices              Invoice[]       // ✅ If you want to include invoices
 }
 
 model ProjectAssignment {
@@ -318,4 +319,24 @@ enum FuelUrgency {
   MEDIUM
   HIGH
   URGENT
+}
+
+model Invoice {
+  id                     Int      @id @default(autoincrement())
+  invoiceNumber          String   @unique    // ✅ Add this line
+  projectId              Int
+  serviceProvider        String
+  amount                 Float
+  invoiceDate            DateTime
+  dateReceived           DateTime
+  contractNumber         String?
+  status                 String
+  procurementDescription String
+  providerId             String?
+  documentId             Int?
+  goodsReceivedNote      String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  project                Project  @relation(fields: [projectId], references: [id])
 }

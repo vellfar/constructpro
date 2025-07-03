@@ -12,7 +12,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, Loader2, Save, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { createClient } from "@/app/actions/client-actions"
-
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 export default function NewClientPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)

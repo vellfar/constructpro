@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import { updateProject } from "@/app/actions/project-actions"
+import { updateProjectFormAction } from "@/app/actions/project-actions"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
@@ -22,26 +22,21 @@ export default async function EditProjectPage({ params }: { params: { id: string
     redirect("/auth/login")
   }
 
-  const projectId = Number.parseInt(params.id)
+  const projectId = Number(params.id)
 
-  // Fetch project and clients with error handling
   let project = null
   let clients: Array<{ id: number; name: string }> = []
 
   try {
     ;[project, clients] = await Promise.all([
-      prisma.project
-        .findUnique({
-          where: { id: projectId },
-          include: { client: true },
-        })
-        .catch(() => null),
-      prisma.client
-        .findMany({
-          select: { id: true, name: true },
-          orderBy: { name: "asc" },
-        })
-        .catch(() => []),
+      prisma.project.findUnique({
+        where: { id: projectId },
+        include: { client: true },
+      }),
+      prisma.client.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
     ])
   } catch (error) {
     console.error("Database error:", error)
@@ -51,7 +46,6 @@ export default async function EditProjectPage({ params }: { params: { id: string
     notFound()
   }
 
-  // Ensure we have a safe client ID value
   const safeClientId = project.clientId ? project.clientId.toString() : "__NONE__"
 
   return (
@@ -73,7 +67,7 @@ export default async function EditProjectPage({ params }: { params: { id: string
             <CardDescription>Update project information and settings</CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={updateProject.bind(null, project.id)} className="space-y-6">
+            <form action={updateProjectFormAction.bind(null, project.id)} className="space-y-6" method="post">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Project Name *</Label>

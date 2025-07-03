@@ -5,53 +5,37 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ProjectStatus } from "@prisma/client"
+import { redirect } from "next/navigation"
 
+// Get all projects
 export async function getProjects() {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return { success: false, error: "Unauthorized" }
-    }
+    if (!session?.user) return { success: false, error: "Unauthorized" }
 
     const projects = await prisma.project.findMany({
       include: {
-        client: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
+        client: { select: { id: true, name: true } },
       },
-      orderBy: {
-        createdAt: "desc",
-      },
+      orderBy: { createdAt: "desc" },
     })
 
-    return {
-      success: true,
-      data: projects,
-    }
+    return { success: true, data: projects }
   } catch (error) {
     console.error("Failed to fetch projects:", error)
-    return {
-      success: false,
-      error: "Failed to fetch projects",
-    }
+    return { success: false, error: "Failed to fetch projects" }
   }
 }
 
+// Get active/planning projects
 export async function getActiveProjects() {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return { success: false, error: "Unauthorized" }
-    }
+    if (!session?.user) return { success: false, error: "Unauthorized" }
 
     const projects = await prisma.project.findMany({
       where: {
-        status: {
-          in: [ProjectStatus.PLANNING, ProjectStatus.ACTIVE],
-        },
+        status: { in: [ProjectStatus.PLANNING, ProjectStatus.ACTIVE] },
       },
       select: {
         id: true,
@@ -59,32 +43,22 @@ export async function getActiveProjects() {
         projectCode: true,
         status: true,
       },
-      orderBy: {
-        name: "asc",
-      },
+      orderBy: { name: "asc" },
     })
 
-    return {
-      success: true,
-      data: projects,
-    }
+    return { success: true, data: projects }
   } catch (error) {
     console.error("Failed to fetch active projects:", error)
-    return {
-      success: false,
-      error: "Failed to fetch active projects",
-    }
+    return { success: false, error: "Failed to fetch active projects" }
   }
 }
 
+// Create project
 export async function createProject(formData: FormData) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return { success: false, error: "Please log in to create projects" }
-    }
+    if (!session?.user) return { success: false, error: "Please log in to create projects" }
 
-    // Extract form data
     const name = formData.get("name") as string
     const description = formData.get("description") as string
     const location = formData.get("location") as string
@@ -94,151 +68,67 @@ export async function createProject(formData: FormData) {
     const clientId = formData.get("clientId") as string
     let projectCode = formData.get("projectCode") as string
 
-    console.log("📝 Creating project with data:", {
-      name,
-      description,
-      location,
-      budget,
-      startDate,
-      endDate,
-      clientId,
-      projectCode,
-    })
-
-    // Basic validation
-    if (!name || !budget) {
-      return { success: false, error: "Project name and budget are required" }
-    }
+    if (!name || !budget) return { success: false, error: "Project name and budget are required" }
 
     if (!projectCode) {
-      return { success: false, error: "Project code is required" }
-    }
-
-    // Enhanced duplicate checking with retry logic
-    let attempts = 0
-    const maxAttempts = 5
-
-    while (attempts < maxAttempts) {
-      // Check if project code already exists
-      const existingProject = await prisma.project.findUnique({
-        where: { projectCode },
-        select: { id: true },
+      const last = await prisma.project.findFirst({
+        where: { projectCode: { startsWith: "PRJ-" } },
+        orderBy: { projectCode: "desc" },
+        select: { projectCode: true },
       })
 
-      if (!existingProject) {
-        // Project code is available, break out of loop
-        break
+      let next = 1
+      if (last?.projectCode) {
+        const match = last.projectCode.match(/PRJ-(\d+)/)
+        if (match) next = parseInt(match[1]) + 1
       }
 
-      // If this is the original code from the form, try to generate a new one
-      attempts++
-      console.log(`⚠️ Project code ${projectCode} already exists, attempt ${attempts}/${maxAttempts}`)
+      next += Math.floor(Math.random() * 5)
+      projectCode = `PRJ-${String(next).padStart(4, "0")}`
+    }
 
-      if (attempts >= maxAttempts) {
-        return {
-          success: false,
-          error: "Unable to generate a unique project code. Please try again or enter a custom code.",
-        }
-      }
-
-      // Generate a new project code
-      try {
-        const lastProject = await prisma.project.findFirst({
-          where: {
-            projectCode: {
-              startsWith: "PRJ-",
-            },
-          },
-          orderBy: {
-            projectCode: "desc",
-          },
-          select: {
-            projectCode: true,
-          },
-        })
-
-        let nextNumber = 1
-        if (lastProject?.projectCode) {
-          const match = lastProject.projectCode.match(/PRJ-(\d+)/)
-          if (match) {
-            nextNumber = Number.parseInt(match[1]) + 1
-          }
-        }
-
-        // Add some randomness to avoid conflicts in concurrent requests
-        nextNumber += Math.floor(Math.random() * 10)
-        projectCode = `PRJ-${String(nextNumber).padStart(4, "0")}`
-        console.log(`🔄 Generated new project code: ${projectCode}`)
-      } catch (error) {
-        console.error("Failed to generate new project code:", error)
-        // Fallback to timestamp-based code
-        const timestamp = Date.now().toString().slice(-6)
-        projectCode = `PRJ-${timestamp}`
-        console.log(`🔄 Using timestamp-based code: ${projectCode}`)
+    const existing = await prisma.project.findUnique({ where: { projectCode } })
+    if (existing) {
+      return {
+        success: false,
+        error: `Project code ${projectCode} already exists. Try regenerating.`,
       }
     }
 
-    // Create project data - only using fields that exist in schema
-    const projectData: any = {
+    const data: any = {
       name,
       description: description || null,
       location: location || null,
-      budget: Number.parseFloat(budget),
+      budget: parseFloat(budget),
       startDate: startDate ? new Date(startDate) : new Date(),
       endDate: endDate ? new Date(endDate) : null,
       projectCode,
       status: ProjectStatus.PLANNING,
-      createdById: Number.parseInt(session.user.id),
+      createdById: Number(session.user.id),
     }
 
-    // Add client if provided
-    if (clientId && clientId !== "" && clientId !== "NO_CLIENT") {
-      projectData.clientId = Number.parseInt(clientId)
+    if (clientId && clientId !== "NO_CLIENT") {
+      data.clientId = Number(clientId)
     }
 
-    console.log("🚀 Final project data:", projectData)
+    const project = await prisma.project.create({ data })
 
-    // Create the project
-    const project = await prisma.project.create({
-      data: projectData,
-    })
-
-    console.log("✅ Project created successfully:", project)
-
-    // Revalidate paths
     revalidatePath("/projects")
-    revalidatePath("/")
-
-    // Return success with project data instead of redirecting
-    return {
-      success: true,
-      data: project,
-      message: "Project created successfully!",
-    }
-  } catch (error: any) {
+    return { success: true, data: project }
+  } catch (error) {
     console.error("❌ Failed to create project:", error)
-
-    // Handle specific Prisma errors
-    if (error.code === "P2002") {
-      return {
-        success: false,
-        error: "A project with this code already exists. Please try again with a different code.",
-      }
-    }
-
-    return {
-      success: false,
-      error: "Failed to create project. Please try again.",
-    }
+    return { success: false, error: "Failed to create project. Please try again." }
   }
 }
 
-export async function updateProject(id: number, formData: FormData) {
+// Update project — safe for internal usage (returns result)
+export async function updateProject(
+  id: number,
+  formData: FormData
+): Promise<{ success: boolean; error?: string; data?: any }> {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return { success: false, error: "Unauthorized" }
-    }
+    if (!session?.user) return { success: false, error: "Unauthorized" }
 
     const name = formData.get("name") as string
     const description = formData.get("description") as string
@@ -250,198 +140,126 @@ export async function updateProject(id: number, formData: FormData) {
     const status = formData.get("status") as string
     const projectCode = formData.get("projectCode") as string
 
-    console.log("📝 Updating project with data:", {
-      id,
-      name,
-      description,
-      location,
-      budget,
-      startDate,
-      endDate,
-      clientId,
-      status,
-      projectCode,
+    if (!name || !budget || !projectCode) {
+      return { success: false, error: "Required fields are missing" }
+    }
+
+    const duplicate = await prisma.project.findFirst({
+      where: { projectCode, NOT: { id } },
     })
-
-    // Basic validation
-    if (!name || !budget) {
-      return { success: false, error: "Project name and budget are required" }
-    }
-
-    if (!projectCode) {
-      return { success: false, error: "Project code is required" }
-    }
-
-    // Check if project code already exists (excluding current project)
-    const existingProject = await prisma.project.findFirst({
-      where: {
-        projectCode,
-        NOT: { id },
-      },
-      select: { id: true },
-    })
-
-    if (existingProject) {
-      return { success: false, error: "Project code already exists. Please use a different code." }
-    }
+    if (duplicate) return { success: false, error: "Project code already exists." }
 
     const updateData: any = {
       name,
       description: description || null,
       location: location || null,
-      budget: Number.parseFloat(budget),
+      budget: parseFloat(budget),
       startDate: startDate ? new Date(startDate) : new Date(),
       endDate: endDate ? new Date(endDate) : null,
       status: status as ProjectStatus,
       projectCode,
+      clientId: clientId && clientId !== "NO_CLIENT" ? Number(clientId) : null,
     }
 
-    if (clientId && clientId !== "" && clientId !== "NO_CLIENT") {
-      updateData.clientId = Number.parseInt(clientId)
-    } else {
-      updateData.clientId = null
-    }
-
-    console.log("🚀 Final update data:", updateData)
-
-    const updatedProject = await prisma.project.update({
+    const updated = await prisma.project.update({
       where: { id },
       data: updateData,
     })
 
-    console.log("✅ Project updated successfully:", updatedProject)
-
     revalidatePath("/projects")
     revalidatePath(`/projects/${id}`)
 
-    return {
-      success: true,
-      data: updatedProject,
-      message: "Project updated successfully!",
-    }
+    return { success: true, data: updated }
   } catch (error) {
     console.error("❌ Failed to update project:", error)
     return { success: false, error: "Failed to update project" }
   }
 }
 
+// Safe for use in <form action={...}>
+export async function updateProjectFormAction(id: number, formData: FormData): Promise<void> {
+  const result = await updateProject(id, formData)
+
+  if (result.success) {
+    redirect(`/projects/${id}`)
+  } else {
+    console.error("❌ Update error:", result.error)
+    // Optionally: log or show error
+  }
+}
+
+// Delete project
 export async function deleteProject(id: number, force = false) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return { success: false, error: "Unauthorized" }
-    }
+    if (!session?.user) return { success: false, error: "Unauthorized" }
 
-    // Check for dependencies
     const project = await prisma.project.findUnique({
       where: { id },
       include: {
-        activities: { select: { id: true } },
-        equipmentAssignments: { select: { id: true } },
-        fuelRequests: { select: { id: true } },
-        projectAssignments: { select: { id: true } },
+        activities: true,
+        equipmentAssignments: true,
+        fuelRequests: true,
+        projectAssignments: true,
       },
     })
 
-    if (!project) {
-      return { success: false, error: "Project not found" }
-    }
+    if (!project) return { success: false, error: "Project not found" }
 
-    const hasDependencies =
-      project.activities.length > 0 ||
-      project.equipmentAssignments.length > 0 ||
-      project.fuelRequests.length > 0 ||
-      project.projectAssignments.length > 0
+    const hasDependencies = [
+      project.activities,
+      project.equipmentAssignments,
+      project.fuelRequests,
+      project.projectAssignments,
+    ].some((arr) => arr.length > 0)
 
     if (hasDependencies && !force) {
       return {
         success: false,
-        error: "Cannot delete project with existing dependencies",
-        details: {
-          activities: project.activities.length,
-          equipmentAssignments: project.equipmentAssignments.length,
-          fuelRequests: project.fuelRequests.length,
-          projectAssignments: project.projectAssignments.length,
-        },
+        error: "Project has dependencies. Use force delete.",
         canForceDelete: true,
       }
     }
 
-    // If force delete, remove dependencies first
-    if (force && hasDependencies) {
-      console.log("🗑️ Force deleting project dependencies...")
-
-      // Delete in correct order to avoid foreign key constraints
+    if (hasDependencies && force) {
       await prisma.$transaction(async (tx) => {
-        // Delete fuel requests first
-        if (project.fuelRequests.length > 0) {
-          await tx.fuelRequest.deleteMany({
-            where: { projectId: id },
-          })
-        }
-
-        // Delete equipment assignments
-        if (project.equipmentAssignments.length > 0) {
-          await tx.equipmentAssignment.deleteMany({
-            where: { projectId: id },
-          })
-        }
-
-        // Delete project assignments
-        if (project.projectAssignments.length > 0) {
-          await tx.projectAssignment.deleteMany({
-            where: { projectId: id },
-          })
-        }
-
-        // Delete activities
-        if (project.activities.length > 0) {
-          await tx.activity.deleteMany({
-            where: { projectId: id },
-          })
-        }
-
-        // Finally delete the project
-        await tx.project.delete({
-          where: { id },
-        })
+        await tx.fuelRequest.deleteMany({ where: { projectId: id } })
+        await tx.equipmentAssignment.deleteMany({ where: { projectId: id } })
+        await tx.projectAssignment.deleteMany({ where: { projectId: id } })
+        await tx.activity.deleteMany({ where: { projectId: id } })
+        await tx.project.delete({ where: { id } })
       })
     } else {
-      // Simple delete (no dependencies)
       await prisma.project.delete({ where: { id } })
     }
 
     revalidatePath("/projects")
-    return {
-      success: true,
-      message: `Project "${project.name}" ${force ? "and all its dependencies" : ""} deleted successfully`,
-    }
+    return { success: true, message: `Project "${project.name}" deleted` }
   } catch (error) {
-    console.error("Failed to delete project:", error)
+    console.error("❌ Failed to delete project:", error)
     return { success: false, error: "Failed to delete project" }
   }
 }
 
+// Update only project status
 export async function updateProjectStatus(id: number, status: ProjectStatus) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return { success: false, error: "Unauthorized" }
-    }
+    if (!session?.user) return { success: false, error: "Unauthorized" }
 
-    const updatedProject = await prisma.project.update({
+    const updated = await prisma.project.update({
       where: { id },
       data: { status },
     })
 
     revalidatePath("/projects")
     revalidatePath(`/projects/${id}`)
-    return { success: true, data: updatedProject }
+    return { success: true, data: updated }
   } catch (error) {
-    console.error("Failed to update project status:", error)
-    return { success: false, error: "Failed to update project status" }
+    console.error("Failed to update status:", error)
+    return { success: false, error: "Failed to update status" }
   }
 }
 
-// Alias for backward compatibility
+// Alias for compatibility
 export const createProjectSimple = createProject

@@ -10,7 +10,11 @@ import { Filter, Plus, Search, Users, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { UserActions } from "@/components/user-actions"
 import { useSession } from "next-auth/react"
-
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 interface User {
   id: number
   firstName: string

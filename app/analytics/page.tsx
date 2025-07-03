@@ -7,7 +7,11 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { BarChart3, TrendingUp, DollarSign, Clock, Users, Fuel, Download, RefreshCw, Loader2 } from "lucide-react"
-
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 interface AnalyticsData {
   overview: {
     totalProjects: number

@@ -10,7 +10,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Construction, Loader2, Eye, EyeOff, ArrowRight } from "lucide-react"
-
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 export default function ResetPasswordPage() {
   const router = useRouter()
   const searchParams = useSearchParams()

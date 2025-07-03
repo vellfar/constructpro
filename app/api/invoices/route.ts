@@ -24,13 +24,6 @@ export async function GET(request: NextRequest) {
       async () => {
         return await db.invoice.findMany({
           include: {
-            client: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
             project: {
               select: {
                 id: true,
@@ -96,13 +89,6 @@ export async function POST(request: NextRequest) {
             items: items,
           },
           include: {
-            client: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
             project: {
               select: {
                 id: true,

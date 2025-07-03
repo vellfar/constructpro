@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/db"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
+import { redirect } from "next/navigation"
 
 export async function getEquipment() {
   const session = await getServerSession(authOptions)
@@ -223,6 +224,7 @@ export async function deleteEquipment(id: number) {
     })
 
     revalidatePath("/equipment")
+    redirect("/equipment")
     return { success: true }
   } catch (error) {
     console.error("Failed to delete equipment:", error)

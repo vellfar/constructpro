@@ -11,7 +11,11 @@ import { getEmployees } from "@/app/actions/employee-actions"
 import { EmployeeActions } from "@/components/employee-actions"
 import { EmployeeSearch } from "@/components/employee-search"
 import { exportToCSV, exportToExcel, formatDataForExport } from "@/lib/export-utils"
-
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 interface Employee {
   id: number
   employeeNumber: string
@@ -186,7 +190,7 @@ export default function EmployeesPage() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            ${employee.wageAmount.toLocaleString()}/{employee.wageFrequency}
+                            UGX{employee.wageAmount.toLocaleString()}/{employee.wageFrequency}
                           </TableCell>
                           <TableCell>{new Date(employee.dateOfAppointment).toLocaleDateString()}</TableCell>
                           <TableCell className="text-right">

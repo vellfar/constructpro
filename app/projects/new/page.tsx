@@ -8,7 +8,11 @@ import { ArrowLeft, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { createProject } from "@/app/actions/project-actions"
 import { ProjectForm } from "@/components/forms/project-form"
-
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 export default function NewProjectPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)

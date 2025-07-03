@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Edit, Download, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { deleteInvoice } from "@/app/actions/invoice-actions"
+import { InvoiceDownloadButton } from "@/components/invoice-download-button"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
@@ -71,10 +72,7 @@ export default async function InvoicePage({ params }: InvoicePageProps) {
         </Link>
         <div className="flex items-center gap-2 font-semibold">Invoice Details</div>
         <div className="ml-auto flex items-center gap-4">
-          <Button variant="outline" size="sm">
-            <Download className="mr-2 h-4 w-4" />
-            Download PDF
-          </Button>
+          {/*<InvoiceDownloadButton invoiceId={invoice.id} />*/}
           <Button variant="outline" size="sm" asChild>
             <Link href={`/invoices/${invoice.id}/edit`}>
               <Edit className="mr-2 h-4 w-4" />
@@ -146,7 +144,7 @@ export default async function InvoicePage({ params }: InvoicePageProps) {
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <p className="text-sm text-muted-foreground">Invoice Amount</p>
-                  <p className="text-2xl font-bold">${invoice.amount.toLocaleString()}</p>
+                  <p className="text-2xl font-bold">UGX{invoice.amount.toLocaleString()}</p>
                 </div>
                 <div className="text-center p-4 bg-muted rounded-lg">
                   <p className="text-sm text-muted-foreground">Invoice Date</p>

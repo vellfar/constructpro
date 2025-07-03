@@ -12,7 +12,11 @@ import { FileText, Download, Filter, BarChart3, TrendingUp, DollarSign, Loader2,
 import { generateReport, getReports, deleteReport } from "@/app/actions/report-actions"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+}
 export default function ReportsPage() {
   const [dateRange, setDateRange] = useState({ from: "", to: "" })
   const [selectedProject, setSelectedProject] = useState("all")
