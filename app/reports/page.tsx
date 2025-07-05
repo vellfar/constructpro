@@ -9,20 +9,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { FileText, Download, Filter, BarChart3, TrendingUp, DollarSign, Loader2, Eye, Trash2 } from "lucide-react"
-import { generateReport, getReports, deleteReport } from "@/app/actions/report-actions"
+import { generateReport, getReports, deleteReport, getAllProjects } from "@/app/actions/report-actions"
+import { useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
 }
-export default function ReportsPage() {
+
   const [dateRange, setDateRange] = useState({ from: "", to: "" })
   const [selectedProject, setSelectedProject] = useState("all")
   const [isGenerating, setIsGenerating] = useState<string | null>(null)
   const [reports, setReports] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [projects, setProjects] = useState<any[]>([])
+  const [isProjectsLoading, setIsProjectsLoading] = useState(true)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null)
   const router = useRouter()
 
   const reportTypes = [
@@ -72,7 +78,20 @@ export default function ReportsPage() {
 
   useEffect(() => {
     loadReports()
+    loadProjects()
   }, [])
+
+  const loadProjects = async () => {
+    setIsProjectsLoading(true)
+    try {
+      const projectsData = await getAllProjects()
+      setProjects(projectsData)
+    } catch (error) {
+      console.error("Failed to load projects:", error)
+    } finally {
+      setIsProjectsLoading(false)
+    }
+  }
 
   const loadReports = async () => {
     try {
@@ -97,7 +116,6 @@ export default function ReportsPage() {
       const result = await generateReport(formData)
 
       if (result.success) {
-        // Reload reports
         await loadReports()
         alert("Report generated successfully!")
       } else {
@@ -111,35 +129,37 @@ export default function ReportsPage() {
     }
   }
 
-  const handleDeleteReport = async (reportId: number) => {
-    if (confirm("Are you sure you want to delete this report?")) {
-      try {
-        await deleteReport(reportId)
-        await loadReports()
-        alert("Report deleted successfully!")
-      } catch (error) {
-        alert("Failed to delete report. Please try again.")
-      }
+  const handleDeleteReport = async () => {
+    if (!deleteTargetId) return
+    try {
+      await deleteReport(deleteTargetId)
+      await loadReports()
+      setShowDeleteDialog(false)
+      setDeleteTargetId(null)
+      alert("Report deleted successfully!")
+    } catch (error) {
+      alert("Failed to delete report. Please try again.")
     }
   }
 
-  const downloadReport = (reportId: number) => {
-    const report = reports.find((r) => r.id === reportId)
-    if (report) {
-      let reportData
-      try {
-        reportData = typeof report.data === "string" ? JSON.parse(report.data) : report.data
-      } catch (e) {
-        reportData = report.data
+  const downloadReport = async (reportId: number, format: 'json' | 'csv' | 'pdf' = 'json') => {
+    try {
+      const res = await fetch(`/api/reports/${reportId}/download?format=${format}`)
+      if (!res.ok) {
+        alert(`Failed to download report as ${format}.`)
+        return
       }
-
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(reportData, null, 2))
-      const downloadAnchorNode = document.createElement("a")
-      downloadAnchorNode.setAttribute("href", dataStr)
-      downloadAnchorNode.setAttribute("download", `${report.name.replace(/[^a-z0-9]/gi, "_")}.json`)
-      document.body.appendChild(downloadAnchorNode)
-      downloadAnchorNode.click()
-      downloadAnchorNode.remove()
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `report-${reportId}.${format}`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      alert(`Failed to download report as ${format}.`)
     }
   }
 
@@ -208,12 +228,16 @@ export default function ReportsPage() {
                       <SelectTrigger>
                         <SelectValue placeholder="Select project" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Projects</SelectItem>
-                        <SelectItem value="1">Highway Extension</SelectItem>
-                        <SelectItem value="2">Bridge Reconstruction</SelectItem>
-                        <SelectItem value="3">Commercial Complex</SelectItem>
-                      </SelectContent>
+                    <SelectContent>
+                      <SelectItem value="all">All Projects</SelectItem>
+                      {isProjectsLoading ? (
+                        <SelectItem value="loading" disabled>Loading...</SelectItem>
+                      ) : (
+                        projects.map((project) => (
+                          <SelectItem key={project.id} value={String(project.id)}>{project.name}</SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
                     </Select>
                   </div>
                 </div>
@@ -296,7 +320,9 @@ export default function ReportsPage() {
                               <span>Generated on {new Date(report.createdAt).toLocaleDateString()}</span>
                               <span>•</span>
                               <span>
-                                By {report.user.firstName} {report.user.lastName}
+                                By {report.user?.firstName && report.user?.lastName
+                                  ? `${report.user.firstName} ${report.user.lastName}`
+                                  : "Unknown"}
                               </span>
                             </div>
                           </div>
@@ -310,12 +336,31 @@ export default function ReportsPage() {
                               <Eye className="h-4 w-4" />
                             </Button>
                           </Link>
-                          <Button variant="outline" size="sm" onClick={() => downloadReport(report.id)}>
+                          {/* Removed JSON download button */}
+                          <Button variant="outline" size="sm" title="Download CSV" onClick={() => downloadReport(report.id, 'csv')}>
                             <Download className="h-4 w-4" />
+                            <span className="sr-only">CSV</span>
                           </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleDeleteReport(report.id)}>
+                          <Button variant="outline" size="sm" title="Download PDF" onClick={() => downloadReport(report.id, 'pdf')}>
+                            <Download className="h-4 w-4" />
+                            <span className="sr-only">PDF</span>
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => { setShowDeleteDialog(true); setDeleteTargetId(report.id); }}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
+      {/* Delete Confirmation Dialog */}
+      {showDeleteDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
+            <h2 className="text-lg font-semibold mb-4">Delete Report</h2>
+            <p className="mb-6">Are you sure you want to delete this report? This action cannot be undone.</p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setShowDeleteDialog(false); setDeleteTargetId(null); }}>Cancel</Button>
+              <Button variant="destructive" onClick={handleDeleteReport}>Delete</Button>
+            </div>
+          </div>
+        </div>
+      )}
                         </div>
                       </div>
                     ))}

@@ -90,7 +90,7 @@ export default function NewEquipmentPage() {
 
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="equipmentCode">Equipment Code *</Label>
+                  <Label htmlFor="equipmentCode">Equipment Plate Number*</Label>
                   <Input
                     id="equipmentCode"
                     placeholder="EXC-001"
@@ -119,7 +119,7 @@ export default function NewEquipmentPage() {
                     onValueChange={(value) => setFormData({ ...formData, type: value === "__NONE__" ? "" : value })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
+                      <SelectValue placeholder="Select type or enter custom" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__NONE__" disabled>
@@ -134,6 +134,13 @@ export default function NewEquipmentPage() {
                       <SelectItem value="Compactor">Compactor</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Input
+                    className="mt-2"
+                    id="typeCustom"
+                    placeholder="Or enter custom type"
+                    value={formData.type && !["Excavator","Bulldozer","Dump Truck","Crane","Loader","Grader","Compactor"].includes(formData.type) ? formData.type : ""}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="make">Make *</Label>
@@ -146,13 +153,12 @@ export default function NewEquipmentPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="model">Model *</Label>
+                  <Label htmlFor="model">Model</Label>
                   <Input
                     id="model"
                     placeholder="CAT 320"
                     value={formData.model}
                     onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-                    required
                   />
                 </div>
               </div>
@@ -195,23 +201,21 @@ export default function NewEquipmentPage() {
 
               <div className="grid gap-6 md:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="measurementType">Measurement Type *</Label>
+                  <Label htmlFor="measurementType">Measurement Type</Label>
                   <Input
                     id="measurementType"
                     placeholder="Volume"
                     value={formData.measurementType}
                     onChange={(e) => setFormData({ ...formData, measurementType: e.target.value })}
-                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="unit">Unit *</Label>
+                  <Label htmlFor="unit">Unit</Label>
                   <Input
                     id="unit"
                     placeholder="m³"
                     value={formData.unit}
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -228,13 +232,12 @@ export default function NewEquipmentPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="workMeasure">Work Measure *</Label>
+                <Label htmlFor="workMeasure">Fuel Consumption Rate</Label>
                 <Input
                   id="workMeasure"
                   placeholder="12L/hr"
                   value={formData.workMeasure}
                   onChange={(e) => setFormData({ ...formData, workMeasure: e.target.value })}
-                  required
                 />
               </div>
 

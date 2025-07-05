@@ -160,15 +160,16 @@ export function EmployeeForm({ employee, mode }: EmployeeFormProps) {
                       <SelectValue placeholder="Select department" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Engineering">Engineering</SelectItem>
+                      <SelectItem value="Engineering">Quality Control</SelectItem>
                       <SelectItem value="Management">Management</SelectItem>
-                      <SelectItem value="Operations">Operations</SelectItem>
-                      <SelectItem value="Finance">Finance</SelectItem>
-                      <SelectItem value="HR">Human Resources</SelectItem>
-                      <SelectItem value="Safety">Safety</SelectItem>
+                      <SelectItem value="Operations">Production</SelectItem>
+                      <SelectItem value="HR">Administrative Support</SelectItem>
+                      <SelectItem value="Safety">Mechanical</SelectItem>
+                      <SelectItem value="Safety">Survey</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                {/* Add fiels for active or non active */}
                 <div className="space-y-2">
                   <Label htmlFor="designation">Designation *</Label>
                   <Input

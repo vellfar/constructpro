@@ -1,4 +1,4 @@
-"use client"
+// All server-only export logic has been moved to lib/export-server-utils.ts
 
 // Excel/CSV Export Utilities
 export function exportToCSV(data: any[], filename: string) {

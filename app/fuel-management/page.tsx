@@ -1081,6 +1081,7 @@ export default function FuelManagementPage() {
                 <p className="text-sm text-muted-foreground">Maximum: {selectedRequest.approvedQuantity}L</p>
               )}
             </div>
+            {/* add to whom we are going to issue here */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Issuance Comments</label>
               <Textarea

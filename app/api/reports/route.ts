@@ -1,15 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
-import { generateReport } from "@/app/actions/report-actions"
+import { generateReport, getReports } from "@/app/actions/report-actions"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
 
+// POST /api/reports
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
@@ -17,7 +17,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const formData = new FormData()
 
-    // Convert JSON body to FormData
     Object.entries(body).forEach(([key, value]) => {
       if (value !== null && value !== undefined) {
         formData.append(key, String(value))
@@ -32,16 +31,16 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// GET /api/reports
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    // Return empty array for now since we don't have reports table
-    return NextResponse.json([])
+    const reports = await getReports()
+    return NextResponse.json(reports)
   } catch (error) {
     console.error("Failed to fetch reports:", error)
     return NextResponse.json({ error: "Failed to fetch reports" }, { status: 500 })

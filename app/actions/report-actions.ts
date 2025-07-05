@@ -1,4 +1,22 @@
+
 "use server"
+
+// Fetch all projects for populating dropdowns
+export async function getAllProjects() {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    throw new Error("Unauthorized")
+  }
+  try {
+    const projects = await db.project.findMany({
+      select: { id: true, name: true }
+    })
+    return projects
+  } catch (error) {
+    console.error("Failed to fetch projects:", error)
+    return []
+  }
+}
 
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
@@ -22,50 +40,49 @@ export async function generateReport(formData: FormData) {
 
     // Generate report based on type
     let reportData = {}
-
+    let reportTitle = "Report"
     switch (reportType) {
       case "project-summary":
         reportData = await generateProjectSummaryReport(dateFrom, dateTo, projectId)
+        reportTitle = "Project Summary Report"
         break
       case "financial":
         reportData = await generateFinancialReport(dateFrom, dateTo, projectId)
+        reportTitle = "Financial Report"
         break
       case "equipment-utilization":
         reportData = await generateEquipmentReport(dateFrom, dateTo)
+        reportTitle = "Equipment Utilization Report"
         break
       case "fuel-consumption":
         reportData = await generateFuelReport(dateFrom, dateTo, projectId)
+        reportTitle = "Fuel Consumption Report"
         break
       case "employee-productivity":
         reportData = await generateEmployeeReport(dateFrom, dateTo)
+        reportTitle = "Employee Productivity Report"
         break
       case "safety-compliance":
         reportData = await generateSafetyReport(dateFrom, dateTo)
+        reportTitle = "Safety & Compliance Report"
         break
       default:
         throw new Error("Invalid report type")
     }
 
-    // Create a simple report record (mock database save for now)
-    const report = {
-      id: Date.now(),
-      name: `${reportData.type} - ${new Date().toLocaleDateString()}`,
-      type: reportType,
-      data: JSON.stringify(reportData),
-      parameters: JSON.stringify({
-        dateFrom,
-        dateTo,
-        projectId,
-      }),
-      status: "COMPLETED",
-      createdAt: new Date(),
-      generatedById: Number.parseInt(session.user.id),
-    }
+    // Save report to database
+    const savedReport = await db.report.create({
+      data: {
+        title: reportTitle,
+        description: `${reportTitle} generated on ${new Date().toLocaleDateString()}`,
+        type: reportType,
+        data: reportData as any, // Prisma expects Json type
+      },
+    })
 
-    console.log("✅ Report generated successfully:", report.id)
-
+    console.log("✅ Report generated and saved:", savedReport.id)
     revalidatePath("/reports")
-    return { success: true, reportId: report.id, reportData }
+    return { success: true, reportId: savedReport.id, reportData }
   } catch (error) {
     console.error("❌ Error generating report:", error)
     return { success: false, error: error instanceof Error ? error.message : "Failed to generate report" }
@@ -79,9 +96,10 @@ export async function getReports() {
   }
 
   try {
-    // For now, return mock data since we don't have reports table
-    // In production, this would query the actual reports table
-    return []
+    const reports = await db.report.findMany({
+      orderBy: { createdAt: "desc" },
+    })
+    return reports
   } catch (error) {
     console.error("Failed to fetch reports:", error)
     return []
@@ -95,18 +113,12 @@ export async function getReportById(id: number) {
   }
 
   try {
-    // Mock report data for now
-    return {
-      id,
-      name: "Sample Report",
-      type: "project-summary",
-      data: JSON.stringify({}),
-      createdAt: new Date(),
-      user: {
-        firstName: session.user.name?.split(" ")[0] || "User",
-        lastName: session.user.name?.split(" ")[1] || "",
-      },
-    }
+    const report = await db.report.findUnique({
+      where: { id },
+    })
+    if (!report) throw new Error("Report not found")
+    // For compatibility with the frontend, add generatedBy if possible (fallback to undefined)
+    return { ...report, generatedBy: undefined }
   } catch (error) {
     console.error("Failed to fetch report:", error)
     throw new Error("Failed to fetch report")
@@ -120,7 +132,9 @@ export async function deleteReport(id: number) {
   }
 
   try {
-    // Mock deletion for now
+    await db.report.delete({
+      where: { id },
+    })
     revalidatePath("/reports")
     return { success: true }
   } catch (error) {
@@ -183,7 +197,11 @@ async function generateProjectSummaryReport(dateFrom: string, dateTo: string, pr
       })
     })
 
-    const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0)
+    // Dynamically calculate total budget as the sum of all project budgets
+    const totalBudget = projects
+      .map((p) => Number(p.budget) || 0)
+      .reduce((sum, val) => sum + val, 0)
+
     const totalSpent = projects.reduce((sum, p) => {
       const projectInvoices = p.invoices?.filter((inv) => inv.status === "PAID") || []
       return sum + projectInvoices.reduce((invSum, inv) => invSum + inv.amount, 0)
@@ -310,7 +328,7 @@ async function generateFinancialReport(dateFrom: string, dateTo: string, project
         amount: inv.amount,
         status: inv.status,
         invoiceDate: inv.invoiceDate,
-        dueDate: inv.dueDate,
+        dateReceived: inv.dateReceived,
         project: inv.project.name,
         client: inv.project.client?.name || "N/A",
       })),
@@ -398,8 +416,8 @@ async function generateEquipmentReport(dateFrom: string, dateTo: string) {
           type: eq.type,
           assignmentsCount: eq.assignments.length,
           status: eq.status,
-          purchaseDate: eq.purchaseDate,
-          purchasePrice: eq.purchasePrice,
+          dateReceived: eq.dateReceived,
+          acquisitionCost: eq.acquisitionCost,
         }))
         .sort((a, b) => b.assignmentsCount - a.assignmentsCount)
         .slice(0, 10),
@@ -410,8 +428,8 @@ async function generateEquipmentReport(dateFrom: string, dateTo: string) {
         status: eq.status,
         assignmentsCount: eq.assignments.length,
         currentProject: eq.assignments[0]?.project?.name || "Not assigned",
-        purchaseDate: eq.purchaseDate,
-        purchasePrice: eq.purchasePrice,
+        dateReceived: eq.dateReceived,
+        acquisitionCost: eq.acquisitionCost,
       })),
     }
   } catch (error) {
@@ -457,7 +475,10 @@ async function generateFuelReport(dateFrom: string, dateTo: string, projectId: s
           equipment: {
             select: {
               id: true,
+              equipmentCode: true,
               name: true,
+              status: true,
+              type: true,
             },
           },
           project: {
@@ -473,17 +494,38 @@ async function generateFuelReport(dateFrom: string, dateTo: string, projectId: s
               lastName: true,
             },
           },
+          approvedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          issuedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          acknowledgedBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
         },
       })
     })
 
-    const totalQuantity = fuelRequests.reduce((sum, req) => sum + req.quantity, 0)
+    const totalQuantity = fuelRequests.reduce((sum, req) => sum + (req.quantity ?? 0), 0)
     const approvedQuantity = fuelRequests
       .filter((req) => req.status === "APPROVED")
-      .reduce((sum, req) => sum + req.quantity, 0)
+      .reduce((sum, req) => sum + (req.quantity ?? 0), 0)
     const issuedQuantity = fuelRequests
       .filter((req) => req.status === "ISSUED")
-      .reduce((sum, req) => sum + req.quantity, 0)
+      .reduce((sum, req) => sum + (req.quantity ?? 0), 0)
 
     return {
       type: "Fuel Consumption Report",
@@ -527,14 +569,19 @@ async function generateFuelReport(dateFrom: string, dateTo: string, projectId: s
       }, {}),
       detailedRequests: fuelRequests.map((req) => ({
         id: req.id,
-        requestDate: req.requestDate,
-        fuelType: req.fuelType,
-        quantity: req.quantity,
-        status: req.status,
-        purpose: req.purpose,
-        equipment: req.equipment?.name || "N/A",
+        equipmentCode: req.equipment?.equipmentCode || "N/A",
+        equipmentName: req.equipment?.name || "N/A",
+        equipmentType: req.equipment?.type || "N/A",
+        equipmentStatus: req.equipment?.status || "N/A",
         project: req.project?.name || "N/A",
-        requestedBy: `${req.requestedBy?.firstName || ""} ${req.requestedBy?.lastName || ""}`.trim() || "N/A",
+        quantityRequested: req.requestedQuantity ?? req.quantity ?? 0,
+        quantityApproved: req.approvedQuantity ?? 0,
+        quantityIssued: req.issuedQuantity ?? 0,
+        status: req.status,
+        requestedBy: req.requestedBy ? `${req.requestedBy.firstName} ${req.requestedBy.lastName}` : "N/A",
+        approvedOrRejectedBy: req.approvedBy && typeof req.approvedBy === 'object' ? `${req.approvedBy.firstName} ${req.approvedBy.lastName}` : "N/A",
+        issuedBy: req.issuedBy ? `${req.issuedBy.firstName} ${req.issuedBy.lastName}` : "N/A",
+        receivedBy: req.acknowledgedBy ? `${req.acknowledgedBy.firstName} ${req.acknowledgedBy.lastName}` : "N/A",
       })),
     }
   } catch (error) {

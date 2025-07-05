@@ -436,11 +436,11 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="budget">Budget *</Label>
+          <Label htmlFor="budget">Project Budget / contract price *</Label>
           <Input
             id="budget"
             name="budget"
-            type="number"
+            type="number" /* put commas */
             step="0.01"
             placeholder="0.00"
             defaultValue={initialData?.budget?.toString() || ""}
@@ -462,7 +462,7 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="endDate">Expected End Date</Label>
+          <Label htmlFor="endDate">Planned End Date</Label>
           <Input
             id="endDate"
             name="endDate"
