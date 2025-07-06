@@ -123,6 +123,7 @@ interface ApprovalData {
 
 interface IssueData {
   issuedQuantity: number
+  issuedTo: string
   issuanceComments?: string
 }
 
@@ -206,6 +207,7 @@ export default function FuelManagementPage() {
   // Issue form state
   const [issueForm, setIssueForm] = useState<IssueData>({
     issuedQuantity: 0,
+    issuedTo: "",
     issuanceComments: "",
   })
 
@@ -321,7 +323,8 @@ export default function FuelManagementPage() {
     if (session?.user) {
       fetchData()
     }
-  }, [fetchData, session])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, session?.user])
 
   // Permission checks
   const canCreateRequest = !!session?.user
@@ -488,6 +491,10 @@ export default function FuelManagementPage() {
       toast.error("Please enter issued quantity")
       return false
     }
+    if (!issueForm.issuedTo.trim()) {
+      toast.error("Please enter the name of the person the fuel is issued to")
+      return false
+    }
     if (selectedRequest?.approvedQuantity && issueForm.issuedQuantity > selectedRequest.approvedQuantity) {
       toast.error("Issued quantity cannot exceed approved quantity")
       return false
@@ -520,6 +527,7 @@ export default function FuelManagementPage() {
   const resetIssueForm = () => {
     setIssueForm({
       issuedQuantity: 0,
+      issuedTo: "",
       issuanceComments: "",
     })
   }
@@ -1081,7 +1089,15 @@ export default function FuelManagementPage() {
                 <p className="text-sm text-muted-foreground">Maximum: {selectedRequest.approvedQuantity}L</p>
               )}
             </div>
-            {/* add to whom we are going to issue here */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Issued To *</label>
+              <Input
+                type="text"
+                placeholder="Enter recipient's name"
+                value={issueForm.issuedTo}
+                onChange={(e) => setIssueForm((prev) => ({ ...prev, issuedTo: e.target.value }))}
+              />
+            </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Issuance Comments</label>
               <Textarea

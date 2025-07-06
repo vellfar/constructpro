@@ -20,6 +20,7 @@ export const viewport = {
   maximumScale: 1,
 };
 
+export default function ReportsPage() {
   const [dateRange, setDateRange] = useState({ from: "", to: "" });
   const [selectedProject, setSelectedProject] = useState("all");
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
@@ -74,103 +75,105 @@ export const viewport = {
       icon: FileText,
       category: "safety",
     },
-  ]
+  ];
 
   useEffect(() => {
-    loadReports()
-    loadProjects()
-  }, [])
+    loadReports();
+    loadProjects();
+  }, []);
 
   const loadProjects = async () => {
-    setIsProjectsLoading(true)
+    setIsProjectsLoading(true);
     try {
-      const projectsData = await getAllProjects()
-      setProjects(projectsData)
+      const projectsData = await getAllProjects();
+      setProjects(projectsData);
     } catch (error) {
-      console.error("Failed to load projects:", error)
+      console.error("Failed to load projects:", error);
     } finally {
-      setIsProjectsLoading(false)
+      setIsProjectsLoading(false);
     }
-  }
+  };
 
   const loadReports = async () => {
     try {
-      const reportsData = await getReports()
-      setReports(reportsData)
+      const reportsData = await getReports();
+      setReports(reportsData);
     } catch (error) {
-      console.error("Failed to load reports:", error)
+      console.error("Failed to load reports:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleGenerateReport = async (reportId: string) => {
-    setIsGenerating(reportId)
+    setIsGenerating(reportId);
     try {
-      const formData = new FormData()
-      formData.append("reportType", reportId)
-      formData.append("dateFrom", dateRange.from)
-      formData.append("dateTo", dateRange.to)
-      formData.append("projectId", selectedProject)
+      const formData = new FormData();
+      formData.append("reportType", reportId);
+      formData.append("dateFrom", dateRange.from);
+      formData.append("dateTo", dateRange.to);
+      formData.append("projectId", selectedProject);
 
-      const result = await generateReport(formData)
+      const result = await generateReport(formData);
 
       if (result.success) {
-        await loadReports()
-        alert("Report generated successfully!")
+        await loadReports();
+        alert("Report generated successfully!");
       } else {
-        alert(result.error || "Failed to generate report. Please try again.")
+        alert(result.error || "Failed to generate report. Please try again.");
       }
     } catch (error) {
-      console.error("Error generating report:", error)
-      alert("Failed to generate report. Please try again.")
+      console.error("Error generating report:", error);
+      alert("Failed to generate report. Please try again.");
     } finally {
-      setIsGenerating(null)
+      setIsGenerating(null);
     }
-  }
+  };
 
   const handleDeleteReport = async () => {
-    if (!deleteTargetId) return
+    if (!deleteTargetId) return;
     try {
-      await deleteReport(deleteTargetId)
-      await loadReports()
-      setShowDeleteDialog(false)
-      setDeleteTargetId(null)
-      alert("Report deleted successfully!")
+      await deleteReport(deleteTargetId);
+      await loadReports();
+      setShowDeleteDialog(false);
+      setDeleteTargetId(null);
+      alert("Report deleted successfully!");
     } catch (error) {
-      alert("Failed to delete report. Please try again.")
+      alert("Failed to delete report. Please try again.");
     }
-  }
+  };
 
   const downloadReport = async (reportId: number, format: 'json' | 'csv' | 'pdf' = 'json') => {
     try {
-      const res = await fetch(`/api/reports/${reportId}/download?format=${format}`)
+      const res = await fetch(`/api/reports/${reportId}/download?format=${format}`);
       if (!res.ok) {
-        alert(`Failed to download report as ${format}.`)
-        return
+        alert(`Failed to download report as ${format}.`);
+        return;
       }
-      const blob = await res.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `report-${reportId}.${format}`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      window.URL.revokeObjectURL(url)
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `report-${reportId}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
-      alert(`Failed to download report as ${format}.`)
+      alert(`Failed to download report as ${format}.`);
     }
-  }
+  };
 
   const formatFileSize = (data: string | object) => {
-    const dataString = typeof data === "string" ? data : JSON.stringify(data)
-    const bytes = new Blob([dataString]).size
-    if (bytes === 0) return "0 Bytes"
-    const k = 1024
-    const sizes = ["Bytes", "KB", "MB", "GB"]
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+    const dataString = typeof data === "string" ? data : JSON.stringify(data);
+    const bytes = new Blob([dataString]).size;
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
   return (
     <>
       <div className="flex flex-col">

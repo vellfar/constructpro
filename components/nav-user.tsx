@@ -71,7 +71,24 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem onClick={async () => {
+              // Try to sign out using next-auth if available
+              if (typeof window !== 'undefined') {
+                try {
+                  const mod = await import('next-auth/react');
+                  if (mod.signOut) {
+                    mod.signOut();
+                    return;
+                  }
+                } catch (e) {
+                  // fallback below
+                }
+                // fallback: clear localStorage/sessionStorage and reload
+                window.localStorage.clear();
+                window.sessionStorage.clear();
+                window.location.href = '/login';
+              }
+            }}>
               <LogOut />
               Log out
             </DropdownMenuItem>

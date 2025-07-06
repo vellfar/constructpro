@@ -37,6 +37,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
     if (!body.issuedQuantity || body.issuedQuantity <= 0) {
       return NextResponse.json({ success: false, error: "Issued quantity must be greater than 0" }, { status: 400 })
     }
+    if (!body.issuedTo || !body.issuedTo.trim()) {
+      return NextResponse.json({ success: false, error: "Issued to is required" }, { status: 400 })
+    }
 
     // Get current request
     const currentRequest = await db.fuelRequest.findUnique({
@@ -63,9 +66,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams): Prom
       where: { id: requestId },
       data: {
         status: FuelRequestStatus.ISSUED,
-        issuedById: Number.parseInt(session.user.id),
+        issuedBy: { connect: { id: Number.parseInt(session.user.id) } },
         issuanceDate: new Date(),
         issuedQuantity: body.issuedQuantity,
+        issuedTo: body.issuedTo,
         issuanceComments: body.issuanceComments,
       },
     })

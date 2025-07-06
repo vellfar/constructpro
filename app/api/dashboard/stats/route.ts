@@ -13,19 +13,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const [
-      totalProjects,
-      activeProjects,
-      newProjectsThisMonth,
-      totalEquipment,
-      operationalEquipment,
-      totalEmployees,
-      pendingFuelRequests,
-      projectStatusData,
-      equipmentStatusData,
-      recentActivities,
-      recentFuelRequests,
-    ] = await Promise.all([
+    // Fetch additional lists for dashboard tabs
+    let totalProjects = 0,
+      activeProjects = 0,
+      newProjectsThisMonth = 0,
+      totalEquipment = 0,
+      operationalEquipment = 0,
+      totalEmployees = 0,
+      pendingFuelRequests = 0,
+      projectStatusData = [],
+      equipmentStatusData = [],
+      recentActivities = [],
+      recentFuelRequests = [],
+      projectsList = [],
+      equipmentList = [];
+
+    const results = await Promise.all([
       safeDbOperation(() => prisma.project.count(), 0),
       safeDbOperation(() => prisma.project.count({ where: { status: "ACTIVE" } }), 0),
       safeDbOperation(
@@ -75,7 +78,38 @@ export async function GET(request: NextRequest) {
           }),
         []
       ),
-    ])
+    ]);
+    totalProjects = results[0];
+    activeProjects = results[1];
+    newProjectsThisMonth = results[2];
+    totalEquipment = results[3];
+    operationalEquipment = results[4];
+    totalEmployees = results[5];
+    pendingFuelRequests = results[6];
+    projectStatusData = results[7];
+    equipmentStatusData = results[8];
+    recentActivities = results[9];
+    recentFuelRequests = results[10];
+
+    [projectsList, equipmentList] = await Promise.all([
+      safeDbOperation(
+        () =>
+          prisma.project.findMany({
+            take: 8,
+            orderBy: { createdAt: "desc" },
+            include: { client: { select: { name: true } } },
+          }),
+        []
+      ),
+      safeDbOperation(
+        () =>
+          prisma.equipment.findMany({
+            take: 8,
+            orderBy: { createdAt: "desc" },
+          }),
+        []
+      ),
+    ]);
 
     return NextResponse.json({
       totalProjects,
@@ -112,7 +146,9 @@ export async function GET(request: NextRequest) {
         description: r.description || "No description",
         timestamp: new Date(r.createdAt).toLocaleString(),
       })),
-    })
+      projectsList,
+      equipmentList,
+    });
   } catch (error) {
     console.error("Dashboard stats error:", error)
 

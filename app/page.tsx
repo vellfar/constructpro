@@ -295,20 +295,101 @@ export default function DashboardPage() {
           </Card>
         </TabsContent>
 
-        {/* Placeholder tabs for Projects, Equipment, Activity */}
-        {["projects", "equipment", "activity"].map((tab) => (
-          <TabsContent key={tab} value={tab} className="p-6 bg-slate-50 dark:bg-slate-800 rounded-md shadow-sm">
-            <div className="flex flex-col items-center justify-center gap-4 py-20 text-slate-500 dark:text-slate-400">
-              {tab === "projects" && <Building2 className="w-12 h-12" />}
-              {tab === "equipment" && <Wrench className="w-12 h-12" />}
-              {tab === "activity" && <Activity className="w-12 h-12" />}
-              <p className="text-lg capitalize">{tab} details will be loaded here</p>
-              <Button variant="outline" asChild>
-                <Link href={`/${tab}`}>View All {tab.charAt(0).toUpperCase() + tab.slice(1)}</Link>
-              </Button>
-            </div>
-          </TabsContent>
-        ))}
+        {/* Projects Tab */}
+        <TabsContent value="projects" className="p-0">
+          <section className="bg-slate-50 dark:bg-slate-800 rounded-md shadow-sm p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Building2 className="w-6 h-6" /> Projects</h2>
+            {/* Show a summary table of projects */}
+            {stats?.projectsList && stats.projectsList.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="px-2 py-1 text-left">Name</th>
+                      <th className="px-2 py-1 text-left">Status</th>
+                      <th className="px-2 py-1 text-left">Budget</th>
+                      <th className="px-2 py-1 text-left">Client</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.projectsList.map((project: any) => (
+                      <tr key={project.id} className="border-b hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <td className="px-2 py-1 font-medium">{project.name}</td>
+                        <td className="px-2 py-1">{project.status}</td>
+                        <td className="px-2 py-1">{project.budget?.toLocaleString?.() ?? '-'}</td>
+                        <td className="px-2 py-1">{project.client?.name ?? '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-center text-slate-500 py-10">No projects found.</p>
+            )}
+            <Button variant="outline" className="mt-4" asChild>
+              <Link href="/projects">View All Projects</Link>
+            </Button>
+          </section>
+        </TabsContent>
+
+        {/* Equipment Tab */}
+        <TabsContent value="equipment" className="p-0">
+          <section className="bg-slate-50 dark:bg-slate-800 rounded-md shadow-sm p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Wrench className="w-6 h-6" /> Equipment</h2>
+            {stats?.equipmentList && stats.equipmentList.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="px-2 py-1 text-left">Name</th>
+                      <th className="px-2 py-1 text-left">Type</th>
+                      <th className="px-2 py-1 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stats.equipmentList.map((eq: any) => (
+                      <tr key={eq.id} className="border-b hover:bg-slate-100 dark:hover:bg-slate-700">
+                        <td className="px-2 py-1 font-medium">{eq.name}</td>
+                        <td className="px-2 py-1">{eq.type}</td>
+                        <td className="px-2 py-1">{eq.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-center text-slate-500 py-10">No equipment found.</p>
+            )}
+            <Button variant="outline" className="mt-4" asChild>
+              <Link href="/equipment">View All Equipment</Link>
+            </Button>
+          </section>
+        </TabsContent>
+
+        {/* Activity Tab */}
+        <TabsContent value="activity" className="p-0">
+          <section className="bg-slate-50 dark:bg-slate-800 rounded-md shadow-sm p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2"><Activity className="w-6 h-6" /> Recent Activities</h2>
+            {stats?.recentActivities && stats.recentActivities.length > 0 ? (
+              <ul className="space-y-3">
+                {stats.recentActivities.map((act: any, i: number) => (
+                  <li key={i} className="flex items-start gap-3 p-3 rounded bg-slate-50 dark:bg-slate-800">
+                    <ActivityIcon status={act.type} />
+                    <div>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{act.description}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{act.timestamp}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-center text-slate-500 py-10">No recent activities found.</p>
+            )}
+            <Button variant="outline" className="mt-4" asChild>
+              <Link href="/activities">View All Activities</Link>
+            </Button>
+          </section>
+        </TabsContent>
       </Tabs>
     </main>
   )

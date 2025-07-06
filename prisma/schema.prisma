@@ -220,6 +220,7 @@ model FuelRequest {
   issuedById              Int?
   issuanceDate            DateTime?
   issuedQuantity          Float?
+  issuedTo                String? // Name of the person fuel is issued to
   issuanceComments        String?
   
   // Acknowledgment fields

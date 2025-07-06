@@ -62,8 +62,9 @@ export interface ApprovalData {
 }
 
 export interface IssueData {
-  issuedQuantity: number
-  issuanceComments?: string
+  issuedQuantity: number;
+  issuedTo: string;
+  issuanceComments?: string;
 }
 
 export interface AcknowledgeData {

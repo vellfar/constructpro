@@ -582,6 +582,7 @@ async function generateFuelReport(dateFrom: string, dateTo: string, projectId: s
         approvedOrRejectedBy: req.approvedBy && typeof req.approvedBy === 'object' ? `${req.approvedBy.firstName} ${req.approvedBy.lastName}` : "N/A",
         issuedBy: req.issuedBy ? `${req.issuedBy.firstName} ${req.issuedBy.lastName}` : "N/A",
         receivedBy: req.acknowledgedBy ? `${req.acknowledgedBy.firstName} ${req.acknowledgedBy.lastName}` : "N/A",
+        issuedTo: req.issuedTo || "N/A",
       })),
     }
   } catch (error) {
