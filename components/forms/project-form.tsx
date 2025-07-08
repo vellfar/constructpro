@@ -470,6 +470,16 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
             defaultValue={initialData?.endDate ? new Date(initialData.endDate).toISOString().split("T")[0] : ""}
             disabled={isFormLoading}
           />
+        </div> {/*if status changed to completed. put actual end date */}
+        <div className="space-y-2">
+          <Label htmlFor="endDate">Actual End Date</Label>
+          <Input
+            id="endDate"
+            name="endDate"
+            type="date"
+            defaultValue={initialData?.endDate ? new Date(initialData.endDate).toISOString().split("T")[0] : ""}
+            disabled={isFormLoading}
+          />
         </div>
       </div>
 

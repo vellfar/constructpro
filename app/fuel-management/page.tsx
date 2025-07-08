@@ -40,15 +40,21 @@ import {
   Fuel,
   Search,
   Loader2,
+  Download,
+  Filter,
+  Menu,
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
 import type { FuelType, FuelUrgency } from "@prisma/client"
+import { exportToCSV, exportToExcel, formatDataForExport } from "@/lib/export-utils"
+
 export const viewport = {
-  width: 'device-width',
+  width: "device-width",
   initialScale: 1,
   maximumScale: 1,
 }
+
 // Local types for this component
 interface FuelRequestWithRelations {
   id: number
@@ -162,6 +168,8 @@ export default function FuelManagementPage() {
   const [selectedRequest, setSelectedRequest] = useState<FuelRequestWithRelations | null>(null)
   const [showApprovalDialog, setShowApprovalDialog] = useState<boolean>(false)
   const [showIssueDialog, setShowIssueDialog] = useState<boolean>(false)
+  const [showFilters, setShowFilters] = useState<boolean>(false)
+  const [showMobileActions, setShowMobileActions] = useState<boolean>(false)
 
   // Data state
   const [fuelRequests, setFuelRequests] = useState<FuelRequestWithRelations[]>([])
@@ -323,8 +331,7 @@ export default function FuelManagementPage() {
     if (session?.user) {
       fetchData()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, session?.user])
+  }, [fetchData, session])
 
   // Permission checks
   const canCreateRequest = !!session?.user
@@ -445,6 +452,16 @@ export default function FuelManagementPage() {
     }
   }
 
+  const handleExportCSV = () => {
+    const exportData = formatDataForExport(filteredRequests, "fuel-requests")
+    exportToCSV(exportData, `fuel-requests-${new Date().toISOString().split("T")[0]}`)
+  }
+
+  const handleExportExcel = () => {
+    const exportData = formatDataForExport(filteredRequests, "fuel-requests")
+    exportToExcel(exportData, `fuel-requests-${new Date().toISOString().split("T")[0]}`, "Fuel Requests")
+  }
+
   // Validation functions
   const validateCreateForm = (): boolean => {
     if (createForm.projectId === EMPTY_VALUE) {
@@ -534,8 +551,38 @@ export default function FuelManagementPage() {
 
   // Filter functions
   const filteredRequests = fuelRequests.filter((request) => {
-    if (activeTab === "all") return true
-    return request.status === activeTab.toUpperCase()
+    // Search filter
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase()
+      const matchesSearch =
+        request.requestNumber?.toLowerCase().includes(searchTerm) ||
+        request.equipment?.name.toLowerCase().includes(searchTerm) ||
+        request.project?.name.toLowerCase().includes(searchTerm) ||
+        request.fuelType.toLowerCase().includes(searchTerm) ||
+        `${request.requestedBy?.firstName} ${request.requestedBy?.lastName}`.toLowerCase().includes(searchTerm)
+
+      if (!matchesSearch) return false
+    }
+
+    // Tab filter
+    if (activeTab !== "all" && request.status !== activeTab.toUpperCase()) {
+      return false
+    }
+
+    // Additional filters
+    if (
+      filters.projectId &&
+      filters.projectId !== EMPTY_VALUE &&
+      request.project?.id.toString() !== filters.projectId
+    ) {
+      return false
+    }
+
+    if (filters.fuelType && filters.fuelType !== EMPTY_VALUE && request.fuelType !== filters.fuelType) {
+      return false
+    }
+
+    return true
   })
 
   // Tab counts
@@ -550,8 +597,11 @@ export default function FuelManagementPage() {
   // Loading state
   if (status === "loading") {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-screen bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading fuel management...</p>
+        </div>
       </div>
     )
   }
@@ -559,17 +609,20 @@ export default function FuelManagementPage() {
   // Not authenticated
   if (!session) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Card className="w-96">
-          <CardHeader>
-            <CardTitle className="flex items-center">
+      <div className="flex items-center justify-center min-h-screen px-4 bg-white">
+        <Card className="w-full max-w-md bg-white border border-gray-200 shadow-lg">
+          <CardHeader className="bg-white">
+            <CardTitle className="flex items-center text-gray-900">
               <AlertCircle className="h-5 w-5 mr-2 text-yellow-500" />
               Authentication Required
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground mb-4">You need to be logged in to access fuel management.</p>
-            <Button onClick={() => (window.location.href = "/auth/login")} className="w-full">
+          <CardContent className="bg-white">
+            <p className="text-gray-600 mb-4">You need to be logged in to access fuel management.</p>
+            <Button
+              onClick={() => (window.location.href = "/auth/login")}
+              className="w-full bg-blue-600 hover:bg-blue-700"
+            >
               Go to Login
             </Button>
           </CardContent>
@@ -578,47 +631,216 @@ export default function FuelManagementPage() {
     )
   }
 
+  // Mobile Request Card Component
+  const MobileRequestCard = ({ request }: { request: FuelRequestWithRelations }) => {
+    const status = REQUEST_STATUSES.find((s) => s.value === request.status)
+    const StatusIcon = status?.icon || Clock
+    const urgency = URGENCY_LEVELS.find((u) => u.value === request.urgency)
+
+    return (
+      <Card key={request.id} className="bg-white border border-gray-200 hover:shadow-md transition-shadow duration-200">
+        <CardContent className="p-4">
+          <div className="space-y-3">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900">{request.requestNumber || `FR-${request.id}`}</h3>
+                <p className="text-sm text-gray-600">{new Date(request.createdAt).toLocaleDateString()}</p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Badge variant={request.status === "APPROVED" ? "default" : "secondary"} className="bg-white border">
+                  <StatusIcon className="h-3 w-3 mr-1" />
+                  {status?.label || request.status}
+                </Badge>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-white">
+                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                    <DropdownMenuItem>
+                      <Eye className="mr-2 h-4 w-4" />
+                      View Details
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {request.status === "PENDING" && canApproveRequest && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setSelectedRequest(request)
+                          setApprovalForm((prev) => ({
+                            ...prev,
+                            approvedQuantity: request.requestedQuantity,
+                          }))
+                          setShowApprovalDialog(true)
+                        }}
+                      >
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Approve/Reject
+                      </DropdownMenuItem>
+                    )}
+                    {request.status === "APPROVED" && canIssueRequest && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setSelectedRequest(request)
+                          setIssueForm((prev) => ({
+                            ...prev,
+                            issuedQuantity: request.approvedQuantity || 0,
+                          }))
+                          setShowIssueDialog(true)
+                        }}
+                      >
+                        <Send className="mr-2 h-4 w-4" />
+                        Issue Fuel
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            {/* Equipment & Project */}
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <p className="text-gray-500 font-medium">Equipment</p>
+                <p className="text-gray-900">{request.equipment?.name || "N/A"}</p>
+                <p className="text-gray-500 text-xs">{request.equipment?.equipmentCode}</p>
+              </div>
+              <div>
+                <p className="text-gray-500 font-medium">Project</p>
+                <p className="text-gray-900">{request.project?.name || "N/A"}</p>
+                <p className="text-gray-500 text-xs">{request.project?.projectCode}</p>
+              </div>
+            </div>
+
+            {/* Fuel Details */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Badge variant="outline" className="bg-white">
+                  {FUEL_TYPES.find((t) => t.value === request.fuelType)?.label || request.fuelType}
+                </Badge>
+                {urgency && (
+                  <div className="flex items-center">
+                    <div className={`w-2 h-2 rounded-full ${urgency.color} mr-1`} />
+                    <span className="text-xs text-gray-600">{urgency.label}</span>
+                  </div>
+                )}
+              </div>
+              <div className="text-right text-sm">
+                <p className="font-medium text-gray-900">{request.requestedQuantity}L</p>
+                <p className="text-gray-500">Requested</p>
+              </div>
+            </div>
+
+            {/* Requested By */}
+            <div className="text-sm">
+              <p className="text-gray-500">Requested by</p>
+              <p className="text-gray-900">
+                {request.requestedBy?.firstName} {request.requestedBy?.lastName}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
-    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight flex items-center">
-            <Fuel className="h-8 w-8 mr-3 text-blue-600" />
-            Fuel Management
-          </h2>
-          <p className="text-muted-foreground">Manage fuel requests and track consumption across projects</p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button onClick={fetchData} variant="outline" size="sm" disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-          {canCreateRequest && (
-            <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Request
+    <div className="min-h-screen bg-white">
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-4">
+        {/* Mobile Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Fuel className="h-6 w-6 text-blue-600" />
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">Fuel Management</h1>
+              <p className="text-xs text-gray-600 hidden sm:block">Track fuel requests and consumption</p>
+            </div>
+          </div>
+
+          {/* Mobile Actions */}
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="lg:hidden bg-white border-gray-300"
+            >
+              <Filter className="h-4 w-4" />
+            </Button>
+
+            <DropdownMenu open={showMobileActions} onOpenChange={setShowMobileActions}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="lg:hidden bg-white border-gray-300">
+                  <Menu className="h-4 w-4" />
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>Create Fuel Request</DialogTitle>
-                  <DialogDescription>Submit a new fuel request for equipment</DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label className="text-right text-sm font-medium">Project *</label>
-                    <div className="col-span-3">
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-white">
+                <DropdownMenuItem onClick={fetchData} disabled={loading}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                  Refresh
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportCSV}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Desktop Actions */}
+            <div className="hidden lg:flex items-center space-x-2">
+              <Button
+                onClick={fetchData}
+                variant="outline"
+                size="sm"
+                disabled={loading}
+                className="bg-white border-gray-300"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExportCSV} className="bg-white border-gray-300">
+                <Download className="mr-2 h-4 w-4" />
+                CSV
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExportExcel} className="bg-white border-gray-300">
+                <Download className="mr-2 h-4 w-4" />
+                Excel
+              </Button>
+            </div>
+
+            {canCreateRequest && (
+              <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                    <Plus className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">New Request</span>
+                    <span className="sm:hidden">New</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="w-[95vw] max-w-md mx-auto bg-white">
+                  <DialogHeader>
+                    <DialogTitle className="text-gray-900">Create Fuel Request</DialogTitle>
+                    <DialogDescription className="text-gray-600">
+                      Submit a new fuel request for equipment
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Project *</label>
                       <Select
                         value={createForm.projectId}
                         onValueChange={(value) => setCreateForm((prev) => ({ ...prev, projectId: value }))}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-white border-gray-300">
                           <SelectValue placeholder="Select project" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white">
                           <SelectItem value={EMPTY_VALUE}>Select project</SelectItem>
                           {projects.map((project) => (
                             <SelectItem key={project.id} value={project.id.toString()}>
@@ -628,18 +850,17 @@ export default function FuelManagementPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label className="text-right text-sm font-medium">Equipment *</label>
-                    <div className="col-span-3">
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Equipment *</label>
                       <Select
                         value={createForm.equipmentId}
                         onValueChange={(value) => setCreateForm((prev) => ({ ...prev, equipmentId: value }))}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-white border-gray-300">
                           <SelectValue placeholder="Select equipment" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white">
                           <SelectItem value={EMPTY_VALUE}>Select equipment</SelectItem>
                           {equipment.map((item) => (
                             <SelectItem key={item.id} value={item.id.toString()}>
@@ -649,53 +870,53 @@ export default function FuelManagementPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label className="text-right text-sm font-medium">Fuel Type *</label>
-                    <div className="col-span-3">
-                      <Select
-                        value={createForm.fuelType}
-                        onValueChange={(value) => setCreateForm((prev) => ({ ...prev, fuelType: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select fuel type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={EMPTY_VALUE}>Select fuel type</SelectItem>
-                          {FUEL_TYPES.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Fuel Type *</label>
+                        <Select
+                          value={createForm.fuelType}
+                          onValueChange={(value) => setCreateForm((prev) => ({ ...prev, fuelType: value }))}
+                        >
+                          <SelectTrigger className="bg-white border-gray-300">
+                            <SelectValue placeholder="Type" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white">
+                            <SelectItem value={EMPTY_VALUE}>Select type</SelectItem>
+                            {FUEL_TYPES.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Quantity (L) *</label>
+                        <Input
+                          type="number"
+                          placeholder="0.0"
+                          value={createForm.requestedQuantity}
+                          onChange={(e) => setCreateForm((prev) => ({ ...prev, requestedQuantity: e.target.value }))}
+                          min="0"
+                          step="0.1"
+                          className="bg-white border-gray-300"
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label className="text-right text-sm font-medium">Quantity (L) *</label>
-                    <div className="col-span-3">
-                      <Input
-                        type="number"
-                        placeholder="Enter quantity in liters"
-                        value={createForm.requestedQuantity}
-                        onChange={(e) => setCreateForm((prev) => ({ ...prev, requestedQuantity: e.target.value }))}
-                        min="0"
-                        step="0.1"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label className="text-right text-sm font-medium">Urgency *</label>
-                    <div className="col-span-3">
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Urgency *</label>
                       <Select
                         value={createForm.urgency}
                         onValueChange={(value) => setCreateForm((prev) => ({ ...prev, urgency: value }))}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-white border-gray-300">
                           <SelectValue placeholder="Select urgency level" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value={EMPTY_VALUE}>Select urgency level</SelectItem>
+                        <SelectContent className="bg-white">
+                          <SelectItem value={EMPTY_VALUE}>Select urgency</SelectItem>
                           {URGENCY_LEVELS.map((level) => (
                             <SelectItem key={level.value} value={level.value}>
                               <div className="flex items-center">
@@ -707,276 +928,380 @@ export default function FuelManagementPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <label className="text-right text-sm font-medium">Justification *</label>
-                    <div className="col-span-3">
+
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Justification *</label>
                       <Textarea
                         placeholder="Explain why this fuel is needed..."
                         value={createForm.justification}
                         onChange={(e) => setCreateForm((prev) => ({ ...prev, justification: e.target.value }))}
                         rows={3}
+                        className="bg-white border-gray-300"
                       />
                     </div>
                   </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setShowCreateDialog(false)}
-                    disabled={submitting}
-                  >
-                    Cancel
-                  </Button>
-                  <Button onClick={handleCreateRequest} disabled={submitting}>
-                    {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Create Request
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          )}
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowCreateDialog(false)}
+                      disabled={submitting}
+                      className="bg-white border-gray-300"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleCreateRequest}
+                      disabled={submitting}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Create Request
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Error Display */}
-      {error && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <AlertCircle className="h-4 w-4 text-red-500 mr-2" />
-              <p className="text-red-700">Error: {error}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <div className="px-4 py-6 max-w-7xl mx-auto">
+        {/* Error Display */}
+        {error && (
+          <Card className="mb-6 border-red-200 bg-red-50">
+            <CardContent className="pt-6">
+              <div className="flex items-center">
+                <AlertCircle className="h-4 w-4 text-red-500 mr-2" />
+                <p className="text-red-700">Error: {error}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Filters 
-      <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
+        {/* Filters - Mobile Collapsible */}
+        {showFilters && (
+          <Card className="mb-6 lg:hidden bg-white border-gray-200">
+            <CardHeader className="bg-white">
+              <CardTitle className="text-gray-900">Filters</CardTitle>
+            </CardHeader>
+            <CardContent className="bg-white space-y-4">
               <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Search requests..."
                   value={filters.search}
                   onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-                  className="pl-8"
+                  className="pl-10 bg-white border-gray-300"
                 />
               </div>
-            </div>
-            <Select
-              value={filters.projectId || EMPTY_VALUE}
-              onValueChange={(value) =>
-                setFilters((prev) => ({ ...prev, projectId: value === EMPTY_VALUE ? "" : value }))
-              }
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="All Projects" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={EMPTY_VALUE}>All Projects</SelectItem>
-                {projects.map((project) => (
-                  <SelectItem key={project.id} value={project.id.toString()}>
-                    {project.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={filters.fuelType || EMPTY_VALUE}
-              onValueChange={(value) =>
-                setFilters((prev) => ({ ...prev, fuelType: value === EMPTY_VALUE ? "" : value }))
-              }
-            >
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Fuel Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={EMPTY_VALUE}>All Types</SelectItem>
-                {FUEL_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card> */}
-
-      {/* Dynamic Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="all">All ({tabCounts.all})</TabsTrigger>
-          <TabsTrigger value="pending">Pending ({tabCounts.pending})</TabsTrigger>
-          <TabsTrigger value="approved">Approved ({tabCounts.approved})</TabsTrigger>
-          <TabsTrigger value="issued">Issued ({tabCounts.issued})</TabsTrigger>
-          <TabsTrigger value="completed">Completed ({tabCounts.completed})</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value={activeTab} className="space-y-4">
-          {/* Requests Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Fuel Requests ({filteredRequests.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Loading requests...
-                </div>
-              ) : filteredRequests.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Truck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No fuel requests found</p>
-                  {canCreateRequest && (
-                    <Button onClick={() => setShowCreateDialog(true)} className="mt-4">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create First Request
-                    </Button>
-                  )}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Request #</TableHead>
-                      <TableHead>Equipment</TableHead>
-                      <TableHead>Project</TableHead>
-                      <TableHead>Fuel Type</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Requested By</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRequests.map((request) => {
-                      const status = REQUEST_STATUSES.find((s) => s.value === request.status)
-                      const StatusIcon = status?.icon || Clock
-
-                      return (
-                        <TableRow key={request.id}>
-                          <TableCell className="font-medium">{request.requestNumber || `FR-${request.id}`}</TableCell>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{request.equipment?.name || "N/A"}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {request.equipment?.equipmentCode || ""}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{request.project?.name || "N/A"}</div>
-                              <div className="text-sm text-muted-foreground">{request.project?.projectCode || ""}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">
-                              {FUEL_TYPES.find((t) => t.value === request.fuelType)?.label || request.fuelType}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              <div>Requested: {request.requestedQuantity}L</div>
-                              {request.approvedQuantity && (
-                                <div className="text-muted-foreground">Approved: {request.approvedQuantity}L</div>
-                              )}
-                              {request.issuedQuantity && (
-                                <div className="text-muted-foreground">Issued: {request.issuedQuantity}L</div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <StatusIcon className="h-4 w-4 mr-2" />
-                              <Badge variant={request.status === "APPROVED" ? "default" : "secondary"}>
-                                {status?.label || request.status}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              {request.requestedBy?.firstName} {request.requestedBy?.lastName}
-                            </div>
-                          </TableCell>
-                          <TableCell>{new Date(request.createdAt).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-
-                                {/* Role-based actions */}
-                                {request.status === "PENDING" && canApproveRequest && (
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      setSelectedRequest(request)
-                                      setApprovalForm((prev) => ({
-                                        ...prev,
-                                        approvedQuantity: request.requestedQuantity,
-                                      }))
-                                      setShowApprovalDialog(true)
-                                    }}
-                                  >
-                                    <CheckCircle className="mr-2 h-4 w-4" />
-                                    Approve/Reject
-                                  </DropdownMenuItem>
-                                )}
-
-                                {request.status === "APPROVED" && canIssueRequest && (
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      setSelectedRequest(request)
-                                      setIssueForm((prev) => ({
-                                        ...prev,
-                                        issuedQuantity: request.approvedQuantity || 0,
-                                      }))
-                                      setShowIssueDialog(true)
-                                    }}
-                                  >
-                                    <Send className="mr-2 h-4 w-4" />
-                                    Issue Fuel
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              )}
+              <div className="grid grid-cols-2 gap-4">
+                <Select
+                  value={filters.projectId || EMPTY_VALUE}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({ ...prev, projectId: value === EMPTY_VALUE ? "" : value }))
+                  }
+                >
+                  <SelectTrigger className="bg-white border-gray-300">
+                    <SelectValue placeholder="All Projects" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value={EMPTY_VALUE}>All Projects</SelectItem>
+                    {projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id.toString()}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={filters.fuelType || EMPTY_VALUE}
+                  onValueChange={(value) =>
+                    setFilters((prev) => ({ ...prev, fuelType: value === EMPTY_VALUE ? "" : value }))
+                  }
+                >
+                  <SelectTrigger className="bg-white border-gray-300">
+                    <SelectValue placeholder="Fuel Type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value={EMPTY_VALUE}>All Types</SelectItem>
+                    {FUEL_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        )}
+
+        {/* Desktop Filters */}
+        <Card className="mb-6 hidden lg:block bg-white border-gray-200">
+          <CardHeader className="bg-white">
+            <CardTitle className="text-gray-900">Filters</CardTitle>
+          </CardHeader>
+          <CardContent className="bg-white">
+            <div className="flex flex-wrap gap-4">
+              <div className="flex-1 min-w-[200px]">
+                <div className="relative">
+                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search requests..."
+                    value={filters.search}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+                    className="pl-10 bg-white border-gray-300"
+                  />
+                </div>
+              </div>
+              <Select
+                value={filters.projectId || EMPTY_VALUE}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, projectId: value === EMPTY_VALUE ? "" : value }))
+                }
+              >
+                <SelectTrigger className="w-[180px] bg-white border-gray-300">
+                  <SelectValue placeholder="All Projects" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value={EMPTY_VALUE}>All Projects</SelectItem>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id.toString()}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={filters.fuelType || EMPTY_VALUE}
+                onValueChange={(value) =>
+                  setFilters((prev) => ({ ...prev, fuelType: value === EMPTY_VALUE ? "" : value }))
+                }
+              >
+                <SelectTrigger className="w-[150px] bg-white border-gray-300">
+                  <SelectValue placeholder="Fuel Type" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value={EMPTY_VALUE}>All Types</SelectItem>
+                  {FUEL_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="overflow-x-auto">
+            <TabsList className="grid w-full grid-cols-5 min-w-[500px] bg-gray-100">
+              <TabsTrigger value="all" className="data-[state=active]:bg-white">
+                All ({tabCounts.all})
+              </TabsTrigger>
+              <TabsTrigger value="pending" className="data-[state=active]:bg-white">
+                Pending ({tabCounts.pending})
+              </TabsTrigger>
+              <TabsTrigger value="approved" className="data-[state=active]:bg-white">
+                Approved ({tabCounts.approved})
+              </TabsTrigger>
+              <TabsTrigger value="issued" className="data-[state=active]:bg-white">
+                Issued ({tabCounts.issued})
+              </TabsTrigger>
+              <TabsTrigger value="completed" className="data-[state=active]:bg-white">
+                Completed ({tabCounts.completed})
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value={activeTab} className="mt-6">
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+                  <p className="text-gray-600">Loading requests...</p>
+                </div>
+              </div>
+            ) : filteredRequests.length === 0 ? (
+              <Card className="bg-white border-gray-200">
+                <CardContent className="py-12">
+                  <div className="text-center text-gray-500">
+                    <Truck className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No fuel requests found</h3>
+                    <p className="text-gray-600 mb-4">
+                      {activeTab === "all" ? "No requests have been created yet." : `No ${activeTab} requests found.`}
+                    </p>
+                    {canCreateRequest && activeTab === "all" && (
+                      <Button onClick={() => setShowCreateDialog(true)} className="bg-blue-600 hover:bg-blue-700">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create First Request
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <>
+                {/* Mobile View - Cards */}
+                <div className="lg:hidden space-y-4">
+                  {filteredRequests.map((request) => (
+                    <MobileRequestCard key={request.id} request={request} />
+                  ))}
+                </div>
+
+                {/* Desktop View - Table */}
+                <Card className="hidden lg:block bg-white border-gray-200">
+                  <CardHeader className="bg-white">
+                    <CardTitle className="text-gray-900">Fuel Requests ({filteredRequests.length})</CardTitle>
+                  </CardHeader>
+                  <CardContent className="bg-white">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-gray-200">
+                            <TableHead className="text-gray-700">Request #</TableHead>
+                            <TableHead className="text-gray-700">Equipment</TableHead>
+                            <TableHead className="text-gray-700">Project</TableHead>
+                            <TableHead className="text-gray-700">Fuel Type</TableHead>
+                            <TableHead className="text-gray-700">Quantity</TableHead>
+                            <TableHead className="text-gray-700">Status</TableHead>
+                            <TableHead className="text-gray-700">Requested By</TableHead>
+                            <TableHead className="text-gray-700">Date</TableHead>
+                            <TableHead className="text-gray-700">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredRequests.map((request) => {
+                            const status = REQUEST_STATUSES.find((s) => s.value === request.status)
+                            const StatusIcon = status?.icon || Clock
+
+                            return (
+                              <TableRow key={request.id} className="border-gray-200 hover:bg-gray-50">
+                                <TableCell className="font-medium text-gray-900">
+                                  {request.requestNumber || `FR-${request.id}`}
+                                </TableCell>
+                                <TableCell>
+                                  <div>
+                                    <div className="font-medium text-gray-900">{request.equipment?.name || "N/A"}</div>
+                                    <div className="text-sm text-gray-500">
+                                      {request.equipment?.equipmentCode || ""}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div>
+                                    <div className="font-medium text-gray-900">{request.project?.name || "N/A"}</div>
+                                    <div className="text-sm text-gray-500">{request.project?.projectCode || ""}</div>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="bg-white border-gray-300">
+                                    {FUEL_TYPES.find((t) => t.value === request.fuelType)?.label || request.fuelType}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm">
+                                    <div className="text-gray-900">Requested: {request.requestedQuantity}L</div>
+                                    {request.approvedQuantity && (
+                                      <div className="text-gray-500">Approved: {request.approvedQuantity}L</div>
+                                    )}
+                                    {request.issuedQuantity && (
+                                      <div className="text-gray-500">Issued: {request.issuedQuantity}L</div>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center">
+                                    <StatusIcon className="h-4 w-4 mr-2 text-gray-600" />
+                                    <Badge
+                                      variant={request.status === "APPROVED" ? "default" : "secondary"}
+                                      className="bg-white border"
+                                    >
+                                      {status?.label || request.status}
+                                    </Badge>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm text-gray-900">
+                                    {request.requestedBy?.firstName} {request.requestedBy?.lastName}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-gray-900">
+                                  {new Date(request.createdAt).toLocaleDateString()}
+                                </TableCell>
+                                <TableCell>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" className="h-8 w-8 p-0">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="bg-white">
+                                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                      <DropdownMenuItem>
+                                        <Eye className="mr-2 h-4 w-4" />
+                                        View Details
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+
+                                      {/* Role-based actions */}
+                                      {request.status === "PENDING" && canApproveRequest && (
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setSelectedRequest(request)
+                                            setApprovalForm((prev) => ({
+                                              ...prev,
+                                              approvedQuantity: request.requestedQuantity,
+                                            }))
+                                            setShowApprovalDialog(true)
+                                          }}
+                                        >
+                                          <CheckCircle className="mr-2 h-4 w-4" />
+                                          Approve/Reject
+                                        </DropdownMenuItem>
+                                      )}
+
+                                      {request.status === "APPROVED" && canIssueRequest && (
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            setSelectedRequest(request)
+                                            setIssueForm((prev) => ({
+                                              ...prev,
+                                              issuedQuantity: request.approvedQuantity || 0,
+                                            }))
+                                            setShowIssueDialog(true)
+                                          }}
+                                        >
+                                          <Send className="mr-2 h-4 w-4" />
+                                          Issue Fuel
+                                        </DropdownMenuItem>
+                                      )}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
 
       {/* Approval Dialog */}
       <Dialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="w-[95vw] max-w-lg mx-auto bg-white">
           <DialogHeader>
-            <DialogTitle>Review Fuel Request</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-gray-900">Review Fuel Request</DialogTitle>
+            <DialogDescription className="text-gray-600">
               {selectedRequest && (
                 <>
                   Request #{selectedRequest.requestNumber} - {selectedRequest.requestedQuantity}L of{" "}
@@ -986,11 +1311,13 @@ export default function FuelManagementPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="flex gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <Button
                 variant={approvalForm.action === "approve" ? "default" : "outline"}
                 onClick={() => setApprovalForm((prev) => ({ ...prev, action: "approve", approved: true }))}
-                className="flex-1"
+                className={
+                  approvalForm.action === "approve" ? "bg-green-600 hover:bg-green-700" : "bg-white border-gray-300"
+                }
               >
                 <CheckCircle className="mr-2 h-4 w-4" />
                 Approve
@@ -998,7 +1325,7 @@ export default function FuelManagementPage() {
               <Button
                 variant={approvalForm.action === "reject" ? "destructive" : "outline"}
                 onClick={() => setApprovalForm((prev) => ({ ...prev, action: "reject", approved: false }))}
-                className="flex-1"
+                className={approvalForm.action === "reject" ? "" : "bg-white border-gray-300"}
               >
                 <XCircle className="mr-2 h-4 w-4" />
                 Reject
@@ -1008,7 +1335,7 @@ export default function FuelManagementPage() {
             {approvalForm.approved ? (
               <>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Approved Quantity (L) *</label>
+                  <label className="text-sm font-medium text-gray-700">Approved Quantity (L) *</label>
                   <Input
                     type="number"
                     value={approvalForm.approvedQuantity || ""}
@@ -1018,38 +1345,46 @@ export default function FuelManagementPage() {
                     min="0"
                     step="0.1"
                     max={selectedRequest?.requestedQuantity}
+                    className="bg-white border-gray-300"
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Approval Comments</label>
+                  <label className="text-sm font-medium text-gray-700">Approval Comments</label>
                   <Textarea
                     value={approvalForm.approvalComments || ""}
                     onChange={(e) => setApprovalForm((prev) => ({ ...prev, approvalComments: e.target.value }))}
                     placeholder="Optional comments about the approval..."
                     rows={3}
+                    className="bg-white border-gray-300"
                   />
                 </div>
               </>
             ) : (
               <div className="space-y-2">
-                <label className="text-sm font-medium">Rejection Reason *</label>
+                <label className="text-sm font-medium text-gray-700">Rejection Reason *</label>
                 <Textarea
                   value={approvalForm.rejectionReason || ""}
                   onChange={(e) => setApprovalForm((prev) => ({ ...prev, rejectionReason: e.target.value }))}
                   placeholder="Explain why this request is being rejected..."
                   rows={3}
+                  className="bg-white border-gray-300"
                 />
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowApprovalDialog(false)} disabled={submitting}>
+            <Button
+              variant="outline"
+              onClick={() => setShowApprovalDialog(false)}
+              disabled={submitting}
+              className="bg-white border-gray-300"
+            >
               Cancel
             </Button>
             <Button
               onClick={handleApproveRequest}
               disabled={submitting}
-              variant={approvalForm.approved ? "default" : "destructive"}
+              className={approvalForm.approved ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
             >
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {approvalForm.approved ? "Approve" : "Reject"}
@@ -1060,10 +1395,10 @@ export default function FuelManagementPage() {
 
       {/* Issue Dialog */}
       <Dialog open={showIssueDialog} onOpenChange={setShowIssueDialog}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="w-[95vw] max-w-lg mx-auto bg-white">
           <DialogHeader>
-            <DialogTitle>Issue Fuel</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-gray-900">Issue Fuel</DialogTitle>
+            <DialogDescription className="text-gray-600">
               {selectedRequest && (
                 <>
                   Issue fuel for Request #{selectedRequest.requestNumber} - Approved: {selectedRequest.approvedQuantity}
@@ -1074,7 +1409,7 @@ export default function FuelManagementPage() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Issued Quantity (L) *</label>
+              <label className="text-sm font-medium text-gray-700">Issued Quantity (L) *</label>
               <Input
                 type="number"
                 value={issueForm.issuedQuantity || ""}
@@ -1084,35 +1419,43 @@ export default function FuelManagementPage() {
                 min="0"
                 step="0.1"
                 max={selectedRequest?.approvedQuantity || 0}
+                className="bg-white border-gray-300"
               />
               {selectedRequest?.approvedQuantity && (
-                <p className="text-sm text-muted-foreground">Maximum: {selectedRequest.approvedQuantity}L</p>
+                <p className="text-sm text-gray-500">Maximum: {selectedRequest.approvedQuantity}L</p>
               )}
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Issued To *</label>
+              <label className="text-sm font-medium text-gray-700">Issued To *</label>
               <Input
                 type="text"
                 placeholder="Enter recipient's name"
                 value={issueForm.issuedTo}
                 onChange={(e) => setIssueForm((prev) => ({ ...prev, issuedTo: e.target.value }))}
+                className="bg-white border-gray-300"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Issuance Comments</label>
+              <label className="text-sm font-medium text-gray-700">Issuance Comments</label>
               <Textarea
                 value={issueForm.issuanceComments || ""}
                 onChange={(e) => setIssueForm((prev) => ({ ...prev, issuanceComments: e.target.value }))}
                 placeholder="Optional comments about the fuel issuance..."
                 rows={3}
+                className="bg-white border-gray-300"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowIssueDialog(false)} disabled={submitting}>
+            <Button
+              variant="outline"
+              onClick={() => setShowIssueDialog(false)}
+              disabled={submitting}
+              className="bg-white border-gray-300"
+            >
               Cancel
             </Button>
-            <Button onClick={handleIssueRequest} disabled={submitting}>
+            <Button onClick={handleIssueRequest} disabled={submitting} className="bg-blue-600 hover:bg-blue-700">
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Issue Fuel
             </Button>

@@ -7,16 +7,19 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Filter, Plus, Search, Truck, Loader2, Download } from "lucide-react"
+import { Plus, Search, Truck, Loader2, Download, MoreVertical } from "lucide-react"
 import Link from "next/link"
 import { getEquipment } from "@/app/actions/equipment-actions"
 import { EquipmentActions } from "@/components/equipment-actions"
 import { exportToCSV, exportToExcel, formatDataForExport } from "@/lib/export-utils"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+
 export const viewport = {
-  width: 'device-width',
+  width: "device-width",
   initialScale: 1,
   maximumScale: 1,
 }
+
 interface Equipment {
   id: number
   name: string
@@ -35,13 +38,21 @@ export default function EquipmentPage() {
   const [equipment, setEquipment] = useState<Equipment[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [typeFilter, setTypeFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
 
   useEffect(() => {
     const fetchEquipment = async () => {
       try {
         const result = await getEquipment()
         if (result.success && result.data) {
-          setEquipment(result.data)
+          setEquipment(
+            result.data.map((item: any) => ({
+              ...item,
+              size: item.size !== null && item.size !== undefined ? String(item.size) : null,
+            })),
+          )
         } else {
           setError(result.error || "Failed to load equipment")
         }
@@ -65,18 +76,67 @@ export default function EquipmentPage() {
     exportToExcel(exportData, `equipment-${new Date().toISOString().split("T")[0]}`, "Equipment")
   }
 
-  const operationalEquipment = equipment?.filter((e) => e.status === "OPERATIONAL") || []
-  const maintenanceEquipment = equipment?.filter((e) => e.status === "UNDER_MAINTENANCE") || []
-  const outOfServiceEquipment = equipment?.filter((e) => e.status === "OUT_OF_SERVICE") || []
+  // Filter equipment based on search and filters
+  const filteredEquipment =
+    equipment?.filter((item) => {
+      const matchesSearch =
+        searchTerm === "" ||
+        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.equipmentCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.model.toLowerCase().includes(searchTerm.toLowerCase())
+
+      const matchesType = typeFilter === "all" || item.type.toLowerCase() === typeFilter.toLowerCase()
+      const matchesStatus = statusFilter === "all" || item.status.toLowerCase() === statusFilter.toLowerCase()
+
+      return matchesSearch && matchesType && matchesStatus
+    }) || []
+
+  const operationalEquipment = filteredEquipment.filter((e) => e.status === "OPERATIONAL")
+  const maintenanceEquipment = filteredEquipment.filter((e) => e.status === "UNDER_MAINTENANCE")
+  const outOfServiceEquipment = filteredEquipment.filter((e) => e.status === "OUT_OF_SERVICE")
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "OPERATIONAL":
+        return "bg-green-100 text-green-800 border-green-200"
+      case "UNDER_MAINTENANCE":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200"
+      case "OUT_OF_SERVICE":
+        return "bg-red-100 text-red-800 border-red-200"
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200"
+    }
+  }
+
+  const getOwnershipColor = (ownership: string) => {
+    switch (ownership) {
+      case "OWNED":
+        return "bg-blue-100 text-blue-800 border-blue-200"
+      case "RENTED":
+        return "bg-orange-100 text-orange-800 border-orange-200"
+      case "LEASED":
+        return "bg-purple-100 text-purple-800 border-purple-200"
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200"
+    }
+  }
 
   function EquipmentGrid({ equipment: equipmentList }: { equipment: Equipment[] }) {
     if (!equipmentList || equipmentList.length === 0) {
       return (
-        <div className="empty-state">
-          <Truck className="h-12 w-12 text-muted-foreground" />
-          <h3 className="text-lg font-semibold">No equipment found</h3>
-          <p className="text-sm text-muted-foreground">Get started by adding your first piece of equipment.</p>
-          <Button asChild className="mt-4">
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-white rounded-lg border border-gray-200">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <Truck className="h-8 w-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No equipment found</h3>
+          <p className="text-sm text-gray-600 mb-6 max-w-sm">
+            {searchTerm || typeFilter !== "all" || statusFilter !== "all"
+              ? "No equipment matches your current filters. Try adjusting your search criteria."
+              : "Get started by adding your first piece of equipment to track and manage your construction assets."}
+          </p>
+          <Button asChild className="bg-blue-600 hover:bg-blue-700">
             <Link href="/equipment/new">
               <Plus className="mr-2 h-4 w-4" />
               Add Equipment
@@ -87,57 +147,66 @@ export default function EquipmentPage() {
     }
 
     return (
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {equipmentList.map((item) => (
           <Card
             key={item.id}
-            className="card-enhanced overflow-hidden hover:shadow-lg transition-all duration-300 animate-fade-in"
+            className="bg-white border border-gray-200 hover:shadow-lg transition-all duration-300 overflow-hidden group"
           >
-            <div className="aspect-video bg-gradient-to-br from-primary/10 to-primary/5 relative">
+            {/* Card Header with Image Placeholder */}
+            <div className="aspect-video bg-gradient-to-br from-gray-50 to-gray-100 relative border-b border-gray-200">
               <div className="absolute inset-0 flex items-center justify-center">
-                <Truck className="h-10 w-10 text-primary/40" />
+                <Truck className="h-12 w-12 text-gray-300 group-hover:text-blue-400 transition-colors" />
               </div>
-              <Badge
-                className="absolute right-2 top-2"
-                variant={
-                  item.status === "OPERATIONAL"
-                    ? "default"
-                    : item.status === "UNDER_MAINTENANCE"
-                      ? "secondary"
-                      : "destructive"
-                }
-              >
-                {item.status.replace("_", " ")}
-              </Badge>
-              <div className="absolute left-2 top-2">
+
+              {/* Status Badge */}
+              <div className="absolute top-3 right-3">
+                <Badge className={`text-xs font-medium border ${getStatusColor(item.status)}`}>
+                  {item.status.replace("_", " ")}
+                </Badge>
+              </div>
+
+              {/* Actions Menu */}
+              <div className="absolute top-3 left-3">
                 <EquipmentActions equipment={item} />
               </div>
             </div>
-            <CardContent className="p-4">
-              <div className="space-y-3">
-                <div>
-                    <h3 className="font-semibold truncate text-foreground">{item.name}</h3>
-                  <p className="text-sm text-muted-foreground">
+
+            {/* Card Content */}
+            <CardContent className="p-4 sm:p-5">
+              <div className="space-y-4">
+                {/* Equipment Name and Type */}
+                <div className="space-y-1">
+                  <Link href={`/equipment/${item.id}`}>
+                    <h3 className="font-semibold text-gray-900 hover:text-blue-600 transition-colors line-clamp-1">
+                      {item.name}
+                    </h3>
+                  </Link>
+                  <p className="text-sm text-gray-600 line-clamp-1">
                     {item.type} • {item.make} {item.model}
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Code</p>
-                    <p className="font-medium">{item.equipmentCode}</p>
+
+                {/* Equipment Details Grid */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="space-y-1">
+                    <p className="text-gray-500 text-xs font-medium uppercase tracking-wide">Code</p>
+                    <p className="font-medium text-gray-900 truncate">{item.equipmentCode}</p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Year</p>
-                    <p className="font-medium">{item.yearOfManufacture || "N/A"}</p>
+                  <div className="space-y-1">
+                    <p className="text-gray-500 text-xs font-medium uppercase tracking-wide">Year</p>
+                    <p className="font-medium text-gray-900">{item.yearOfManufacture || "N/A"}</p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Ownership</p>
-                    <p className="font-medium">{item.ownership}</p>
+                  <div className="space-y-1">
+                    <p className="text-gray-500 text-xs font-medium uppercase tracking-wide">Ownership</p>
+                    <Badge variant="outline" className={`text-xs ${getOwnershipColor(item.ownership)} w-fit`}>
+                      {item.ownership}
+                    </Badge>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Size</p>
-                    <p className="font-medium">
-                      {item.size || "N/A"} {item.unit || ""}
+                  <div className="space-y-1">
+                    <p className="text-gray-500 text-xs font-medium uppercase tracking-wide">Size</p>
+                    <p className="font-medium text-gray-900 truncate">
+                      {item.size ? `${item.size} ${item.unit || ""}`.trim() : "N/A"}
                     </p>
                   </div>
                 </div>
@@ -151,17 +220,30 @@ export default function EquipmentPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col">
-        <header className="dashboard-header">
-          <div className="flex items-center gap-2 font-semibold">
-            <Truck className="h-5 w-5" />
-            Equipment
+      <div className="flex flex-col min-h-screen bg-white">
+        {/* Mobile-optimized header */}
+        <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 sm:px-6">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Truck className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">Equipment</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">Manage construction equipment</p>
+              </div>
+            </div>
           </div>
         </header>
-        <div className="loading-spinner">
+
+        {/* Loading State */}
+        <div className="flex-1 flex items-center justify-center p-6">
           <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-            <p className="text-muted-foreground">Loading equipment...</p>
+            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+            </div>
+            <p className="text-gray-600 font-medium">Loading equipment...</p>
+            <p className="text-sm text-gray-500 mt-1">Please wait while we fetch your data</p>
           </div>
         </div>
       </div>
@@ -170,16 +252,37 @@ export default function EquipmentPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col">
-        <header className="dashboard-header">
-          <div className="flex items-center gap-2 font-semibold">
-            <Truck className="h-5 w-5" />
-            Equipment
+      <div className="flex flex-col min-h-screen bg-white">
+        {/* Mobile-optimized header */}
+        <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 sm:px-6">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Truck className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-lg font-semibold text-gray-900">Equipment</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">Manage construction equipment</p>
+              </div>
+            </div>
           </div>
         </header>
-        <div className="p-6">
-          <div className="error-state">
-            <p className="text-destructive font-medium">Error: {error}</p>
+
+        {/* Error State */}
+        <div className="flex-1 flex items-center justify-center p-6">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md w-full text-center">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4 mx-auto">
+              <Truck className="h-6 w-6 text-red-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-red-900 mb-2">Error Loading Equipment</h3>
+            <p className="text-red-700 mb-4">{error}</p>
+            <Button
+              onClick={() => window.location.reload()}
+              variant="outline"
+              className="border-red-300 text-red-700 hover:bg-red-50"
+            >
+              Try Again
+            </Button>
           </div>
         </div>
       </div>
@@ -187,75 +290,163 @@ export default function EquipmentPage() {
   }
 
   return (
-    <div className="flex flex-col">
-      <header className="dashboard-header">
-        <div className="flex items-center gap-2 font-semibold">
-          <Truck className="h-5 w-5" />
-          Equipment
-        </div>
-        <div className="ml-auto flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={handleExportCSV}>
-            <Download className="mr-2 h-4 w-4" />
-            Export CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExportExcel}>
-            <Download className="mr-2 h-4 w-4" />
-            Export Excel
-          </Button>
-          <Button size="sm" asChild>
-            <Link href="/equipment/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Equipment
-            </Link>
-          </Button>
+    <div className="flex flex-col min-h-screen bg-white">
+      {/* Mobile-optimized header */}
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 sm:px-6">
+        <div className="flex items-center justify-between h-16">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Truck className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900">Equipment</h1>
+              <p className="text-xs text-gray-500 hidden sm:block">{equipment?.length || 0} total items</p>
+            </div>
+          </div>
+
+          {/* Desktop Actions */}
+          <div className="hidden sm:flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="border-gray-300 bg-transparent">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-white">
+                <DropdownMenuItem onClick={handleExportCSV} className="hover:bg-gray-50">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel} className="hover:bg-gray-50">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export as Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button size="sm" asChild className="bg-blue-600 hover:bg-blue-700">
+              <Link href="/equipment/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Equipment
+              </Link>
+            </Button>
+          </div>
+
+          {/* Mobile Actions */}
+          <div className="flex sm:hidden items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-white">
+                <DropdownMenuItem onClick={handleExportCSV} className="hover:bg-gray-50">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel} className="hover:bg-gray-50">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button size="sm" asChild className="bg-blue-600 hover:bg-blue-700">
+              <Link href="/equipment/new">
+                <Plus className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </header>
 
-      <div className="p-6">
-        <div className="flex flex-col gap-6 animate-fade-in">
-          {/* 
-          <div className="flex flex-col gap-4 md:flex-row md:items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Search equipment..." className="w-full bg-background pl-8" />
-            </div>
-            <div className="flex items-center gap-2">
-              <Select defaultValue="all">
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Equipment type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="excavator">Excavator</SelectItem>
-                  <SelectItem value="bulldozer">Bulldozer</SelectItem>
-                  <SelectItem value="dumptruck">Dump Truck</SelectItem>
-                  <SelectItem value="crane">Crane</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select defaultValue="all">
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="operational">Operational</SelectItem>
-                  <SelectItem value="maintenance">Under Maintenance</SelectItem>
-                  <SelectItem value="outofservice">Out of Service</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div> */}
+      {/* Main Content */}
+      <div className="flex-1 p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Search and Filters */}
+          <Card className="bg-white border border-gray-200">
+            <CardContent className="p-4 sm:p-6">
+              <div className="space-y-4">
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    type="search"
+                    placeholder="Search equipment by name, code, type, or model..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 bg-white border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  />
+                </div>
 
+                {/* Filters */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger className="bg-white border-gray-300">
+                      <SelectValue placeholder="Filter by type" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="excavator">Excavator</SelectItem>
+                      <SelectItem value="bulldozer">Bulldozer</SelectItem>
+                      <SelectItem value="dumptruck">Dump Truck</SelectItem>
+                      <SelectItem value="crane">Crane</SelectItem>
+                      <SelectItem value="loader">Loader</SelectItem>
+                      <SelectItem value="grader">Grader</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="bg-white border-gray-300">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="operational">Operational</SelectItem>
+                      <SelectItem value="under_maintenance">Under Maintenance</SelectItem>
+                      <SelectItem value="out_of_service">Out of Service</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Equipment Tabs */}
           <Tabs defaultValue="all" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="all">All Equipment ({equipment?.length || 0})</TabsTrigger>
-              <TabsTrigger value="operational">Operational ({operationalEquipment.length})</TabsTrigger>
-              <TabsTrigger value="maintenance">Under Maintenance ({maintenanceEquipment.length})</TabsTrigger>
-              <TabsTrigger value="outofservice">Out of Service ({outOfServiceEquipment.length})</TabsTrigger>
-            </TabsList>
+            {/* Mobile-optimized tab list */}
+            <div className="overflow-x-auto">
+              <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 min-w-max sm:min-w-0">
+                <TabsTrigger
+                  value="all"
+                  className="text-xs sm:text-sm whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-blue-600"
+                >
+                  All ({filteredEquipment.length})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="operational"
+                  className="text-xs sm:text-sm whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-green-600"
+                >
+                  Operational ({operationalEquipment.length})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="maintenance"
+                  className="text-xs sm:text-sm whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-yellow-600"
+                >
+                  <span className="hidden sm:inline">Under </span>Maintenance ({maintenanceEquipment.length})
+                </TabsTrigger>
+                <TabsTrigger
+                  value="outofservice"
+                  className="text-xs sm:text-sm whitespace-nowrap data-[state=active]:bg-white data-[state=active]:text-red-600"
+                >
+                  Out of Service ({outOfServiceEquipment.length})
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
+            {/* Tab Content */}
             <TabsContent value="all" className="mt-6">
-              <EquipmentGrid equipment={equipment || []} />
+              <EquipmentGrid equipment={filteredEquipment} />
             </TabsContent>
             <TabsContent value="operational" className="mt-6">
               <EquipmentGrid equipment={operationalEquipment} />

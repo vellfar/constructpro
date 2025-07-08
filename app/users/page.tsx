@@ -79,7 +79,7 @@ export default function UsersPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col">
+      <div className="flex flex-col min-h-screen p-2 sm:p-4 md:p-6 w-full max-w-7xl mx-auto">
         <header className="dashboard-header">
           <div className="flex items-center gap-2 font-semibold">
             <Users className="h-5 w-5" />
