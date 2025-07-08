@@ -103,9 +103,11 @@ function SheetMenu() {
           <Link href="/clients" className="py-2 px-3 rounded hover:bg-muted transition-colors">Clients</Link>
           <Link href="/invoices" className="py-2 px-3 rounded hover:bg-muted transition-colors">Invoices</Link>
           <Link href="/reports" className="py-2 px-3 rounded hover:bg-muted transition-colors">Reports</Link>
+          {/*}
           <Link href="/users" className="py-2 px-3 rounded hover:bg-muted transition-colors">Users</Link>
           <Link href="/settings" className="py-2 px-3 rounded hover:bg-muted transition-colors">Settings</Link>
-        </nav>
+*/}        
+          </nav>
       </SheetContent>
     </Sheet>
   )
