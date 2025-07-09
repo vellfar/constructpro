@@ -64,26 +64,49 @@ export default function InvoicesPage() {
   const [showMobileFilters, setShowMobileFilters] = useState(false)
 
   const fetchInvoices = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      const response = await fetch("/api/invoices")
-      if (!response.ok) {
-        throw new Error("Failed to fetch invoices")
+    let attempts = 0;
+    const maxAttempts = 3;
+    const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+    while (attempts < maxAttempts) {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await fetch("/api/invoices").catch(() => null);
+        if (response?.status === 401) {
+          setError("Session expired. Please log in again.");
+          setInvoices([]);
+          setFilteredInvoices([]);
+          setLoading(false);
+          return;
+        }
+        if (!response) {
+          throw new Error("Network error. Please check your connection.");
+        }
+        if (!response.ok) {
+          throw new Error("Failed to fetch invoices");
+        }
+        const data = await response.json();
+        setInvoices(data);
+        setFilteredInvoices(data);
+        setLoading(false);
+        return;
+      } catch (err: any) {
+        attempts++;
+        if (attempts >= maxAttempts) {
+          setError(err?.message || "An unexpected error occurred");
+          setInvoices([]);
+          setFilteredInvoices([]);
+          setLoading(false);
+          return;
+        }
+        await delay(1000 * attempts);
       }
-      const data = await response.json()
-      setInvoices(data)
-      setFilteredInvoices(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred")
-    } finally {
-      setLoading(false)
     }
-  }
+  };
 
   useEffect(() => {
-    fetchInvoices()
-  }, [])
+    fetchInvoices();
+  }, []);
 
   // Filter invoices based on search and status
   useEffect(() => {

@@ -56,61 +56,118 @@ export default function ProjectsPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
 
-  useEffect(() => {
-    fetchProjects()
-  }, [currentPage, searchTerm, statusFilter])
 
-  async function fetchProjects() {
-    try {
-      console.log("🔍 Fetching projects...")
-      setLoading(true)
-      setError(null)
-
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: "10",
-        search: searchTerm,
-        status: statusFilter === "ALL_STATUS" ? "" : statusFilter,
-      })
-
-      console.log("📋 Request params:", params.toString())
-      const response = await fetch(`/api/projects?${params}`)
-      console.log("📡 Response status:", response.status)
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+  // Move fetchProjects to be a stable function so it can be used in event handlers
+  const fetchProjects = async () => {
+    let attempts = 0;
+    const maxAttempts = 3;
+    const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+    setLoading(true);
+    setError(null);
+    const params = new URLSearchParams({
+      page: currentPage.toString(),
+      limit: "10",
+      search: searchTerm,
+      status: statusFilter === "ALL_STATUS" ? "" : statusFilter,
+    });
+    while (attempts < maxAttempts) {
+      try {
+        const response = await fetch(`/api/projects?${params}`).catch(() => null);
+        if (response?.status === 401) {
+          setError("Session expired. Please log in again.");
+          setProjects([]);
+          setTotal(0);
+          setTotalPages(1);
+          setLoading(false);
+          return;
+        }
+        if (!response) {
+          throw new Error("Network error. Please check your connection.");
+        }
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        const projectsArray = data.data || data.projects || [];
+        const totalCount = data.total || data.pagination?.total || 0;
+        setProjects(projectsArray || []);
+        setTotal(totalCount);
+        setTotalPages(Math.ceil(totalCount / 10));
+        setLoading(false);
+        return;
+      } catch (error: any) {
+        attempts++;
+        if (attempts >= maxAttempts) {
+          setError(error instanceof Error ? error.message : "Failed to load projects");
+          setProjects([]);
+          setTotal(0);
+          setTotalPages(1);
+          setLoading(false);
+          return;
+        }
+        await delay(1000 * attempts);
       }
-
-      const data = await response.json()
-      console.log("📦 API Response:", data)
-
-      // Handle different response formats
-      const projectsArray = data.data || data.projects || []
-      const totalCount = data.total || data.pagination?.total || 0
-
-      console.log("📊 Processed data:", {
-        projectsCount: projectsArray.length,
-        total: totalCount,
-        firstProject: projectsArray[0],
-      })
-
-      setProjects(projectsArray || [])
-      setTotal(totalCount)
-      setTotalPages(Math.ceil(totalCount / 10))
-
-      if (projectsArray.length === 0 && totalCount === 0) {
-        console.log("⚠️ No projects found in database")
-      }
-    } catch (error) {
-      console.error("💥 Failed to fetch projects:", error)
-      setError(error instanceof Error ? error.message : "Failed to load projects")
-      setProjects([])
-      setTotal(0)
-      setTotalPages(1)
-    } finally {
-      setLoading(false)
     }
-  }
+  };
+
+  useEffect(() => {
+    let ignore = false;
+    const fetchAndSet = async () => {
+      let attempts = 0;
+      const maxAttempts = 3;
+      const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+      while (attempts < maxAttempts) {
+        try {
+          setLoading(true);
+          setError(null);
+          const params = new URLSearchParams({
+            page: currentPage.toString(),
+            limit: "10",
+            search: searchTerm,
+            status: statusFilter === "ALL_STATUS" ? "" : statusFilter,
+          });
+          const response = await fetch(`/api/projects?${params}`).catch(() => null);
+          if (response?.status === 401) {
+            setError("Session expired. Please log in again.");
+            setProjects([]);
+            setTotal(0);
+            setTotalPages(1);
+            setLoading(false);
+            return;
+          }
+          if (!response) {
+            throw new Error("Network error. Please check your connection.");
+          }
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const data = await response.json();
+          const projectsArray = data.data || data.projects || [];
+          const totalCount = data.total || data.pagination?.total || 0;
+          if (!ignore) {
+            setProjects(projectsArray || []);
+            setTotal(totalCount);
+            setTotalPages(Math.ceil(totalCount / 10));
+          }
+          setLoading(false);
+          return;
+        } catch (error) {
+          attempts++;
+          if (attempts >= maxAttempts) {
+            setError(error instanceof Error ? error.message : "Failed to load projects");
+            setProjects([]);
+            setTotal(0);
+            setTotalPages(1);
+            setLoading(false);
+            return;
+          }
+          await delay(1000 * attempts);
+        }
+      }
+    };
+    fetchAndSet();
+    return () => { ignore = true; };
+  }, [currentPage, searchTerm, statusFilter]);
 
   const getStatusColor = (status: string) => {
     switch (status) {

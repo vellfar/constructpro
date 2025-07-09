@@ -219,112 +219,108 @@ export default function FuelManagementPage() {
     issuanceComments: "",
   })
 
-  // Fetch data function
+  // Fetch data function with retry and session error handling
   const fetchData = useCallback(async () => {
-    try {
-      setLoading(true)
-      setError(null)
-      console.log("🔍 Fetching fuel management data...")
-
-      // Build query parameters
-      const queryParams = new URLSearchParams({
-        page: filters.page.toString(),
-        limit: filters.pageSize.toString(),
-        ...(filters.search && { search: filters.search }),
-        ...(filters.status && filters.status !== EMPTY_VALUE && { status: filters.status }),
-        ...(filters.projectId && filters.projectId !== EMPTY_VALUE && { projectId: filters.projectId }),
-        ...(filters.equipmentId && filters.equipmentId !== EMPTY_VALUE && { equipmentId: filters.equipmentId }),
-      })
-
-      // Fetch all data in parallel
-      const [fuelResponse, projectsResponse, equipmentResponse] = await Promise.all([
-        fetch(`/api/fuel-requests?${queryParams}`).catch(() => null),
-        fetch("/api/projects").catch(() => null),
-        fetch("/api/equipment").catch(() => null),
-      ])
-
-      // Handle fuel requests
-      if (fuelResponse?.ok) {
-        try {
-          const fuelData = await fuelResponse.json()
-          // Handle both direct array and wrapped response formats
-          const requestsArray = Array.isArray(fuelData)
-            ? fuelData
-            : fuelData.data
-              ? fuelData.data
-              : fuelData.success && Array.isArray(fuelData.data)
+    let attempts = 0;
+    const maxAttempts = 3;
+    const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+    while (attempts < maxAttempts) {
+      try {
+        setLoading(true);
+        setError(null);
+        // Build query parameters
+        const queryParams = new URLSearchParams({
+          page: filters.page.toString(),
+          limit: filters.pageSize.toString(),
+          ...(filters.search && { search: filters.search }),
+          ...(filters.status && filters.status !== EMPTY_VALUE && { status: filters.status }),
+          ...(filters.projectId && filters.projectId !== EMPTY_VALUE && { projectId: filters.projectId }),
+          ...(filters.equipmentId && filters.equipmentId !== EMPTY_VALUE && { equipmentId: filters.equipmentId }),
+        });
+        // Fetch all data in parallel
+        const [fuelResponse, projectsResponse, equipmentResponse] = await Promise.all([
+          fetch(`/api/fuel-requests?${queryParams}`).catch(() => null),
+          fetch("/api/projects").catch(() => null),
+          fetch("/api/equipment").catch(() => null),
+        ]);
+        // Handle session/network errors
+        if (fuelResponse?.status === 401 || projectsResponse?.status === 401 || equipmentResponse?.status === 401) {
+          setError("Session expired. Please log in again.");
+          return;
+        }
+        if (!fuelResponse || !projectsResponse || !equipmentResponse) {
+          throw new Error("Network error. Please check your connection.");
+        }
+        // Handle fuel requests
+        if (fuelResponse.ok) {
+          try {
+            const fuelData = await fuelResponse.json();
+            const requestsArray = Array.isArray(fuelData)
+              ? fuelData
+              : fuelData.data
                 ? fuelData.data
-                : []
-
-          setFuelRequests(requestsArray)
-          console.log("✅ Fuel requests loaded:", requestsArray.length)
-        } catch (parseError) {
-          console.warn("⚠️ Failed to parse fuel requests response")
-          setFuelRequests([])
+                : fuelData.success && Array.isArray(fuelData.data)
+                  ? fuelData.data
+                  : [];
+            setFuelRequests(requestsArray);
+          } catch {
+            setFuelRequests([]);
+          }
+        } else {
+          setFuelRequests([]);
         }
-      } else {
-        console.warn("⚠️ Failed to fetch fuel requests")
-        setFuelRequests([])
-      }
-
-      // Handle projects
-      if (projectsResponse?.ok) {
-        try {
-          const projectsData = await projectsResponse.json()
-          // Handle both direct array and wrapped response formats
-          const projectsArray = Array.isArray(projectsData)
-            ? projectsData
-            : projectsData.data
-              ? projectsData.data
-              : projectsData.success && Array.isArray(projectsData.data)
+        // Handle projects
+        if (projectsResponse.ok) {
+          try {
+            const projectsData = await projectsResponse.json();
+            const projectsArray = Array.isArray(projectsData)
+              ? projectsData
+              : projectsData.data
                 ? projectsData.data
-                : []
-
-          setProjects(projectsArray)
-          console.log("✅ Projects loaded:", projectsArray.length)
-        } catch (parseError) {
-          console.warn("⚠️ Failed to parse projects response")
-          setProjects([])
+                : projectsData.success && Array.isArray(projectsData.data)
+                  ? projectsData.data
+                  : [];
+            setProjects(projectsArray);
+          } catch {
+            setProjects([]);
+          }
+        } else {
+          setProjects([]);
         }
-      } else {
-        console.warn("⚠️ Failed to fetch projects")
-        setProjects([])
-      }
-
-      // Handle equipment
-      if (equipmentResponse?.ok) {
-        try {
-          const equipmentData = await equipmentResponse.json()
-          // Handle both direct array and wrapped response formats
-          const equipmentArray = Array.isArray(equipmentData)
-            ? equipmentData
-            : equipmentData.data
-              ? equipmentData.data
-              : equipmentData.success && Array.isArray(equipmentData.data)
+        // Handle equipment
+        if (equipmentResponse.ok) {
+          try {
+            const equipmentData = await equipmentResponse.json();
+            const equipmentArray = Array.isArray(equipmentData)
+              ? equipmentData
+              : equipmentData.data
                 ? equipmentData.data
-                : []
-
-          setEquipment(equipmentArray)
-          console.log("✅ Equipment loaded:", equipmentArray.length)
-        } catch (parseError) {
-          console.warn("⚠️ Failed to parse equipment response")
-          setEquipment([])
+                : equipmentData.success && Array.isArray(equipmentData.data)
+                  ? equipmentData.data
+                  : [];
+            setEquipment(equipmentArray);
+          } catch {
+            setEquipment([]);
+          }
+        } else {
+          setEquipment([]);
         }
-      } else {
-        console.warn("⚠️ Failed to fetch equipment")
-        setEquipment([])
+        setLoading(false);
+        return;
+      } catch (error: any) {
+        attempts++;
+        if (attempts >= maxAttempts) {
+          setError(error?.message || "Failed to fetch data");
+          setFuelRequests([]);
+          setProjects([]);
+          setEquipment([]);
+          setLoading(false);
+          return;
+        }
+        await delay(1000 * attempts); // Exponential backoff
       }
-    } catch (error) {
-      console.error("❌ Error fetching data:", error)
-      setError(error instanceof Error ? error.message : "Failed to fetch data")
-      // Set empty arrays as fallback
-      setFuelRequests([])
-      setProjects([])
-      setEquipment([])
-    } finally {
-      setLoading(false)
     }
-  }, [filters])
+  }, [filters]);
 
   // Load data on mount and filter changes
   useEffect(() => {

@@ -86,7 +86,10 @@ export function NavUser({
                 // fallback: clear localStorage/sessionStorage and reload
                 window.localStorage.clear();
                 window.sessionStorage.clear();
-                window.location.href = '/login';
+                // Use Next.js router for SPA navigation
+                if (typeof window !== 'undefined' && window.history) {
+                  window.history.pushState({}, '', '/login');
+                }
               }
             }}>
               <LogOut />

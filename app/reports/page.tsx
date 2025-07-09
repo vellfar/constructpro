@@ -133,43 +133,69 @@ export default function ReportsPage() {
   }
 
   const loadReports = async () => {
-    try {
-      setError(null)
-      const reportsData = await getReports()
-      setReports(
-        (reportsData || []).map((report: any) => ({
-          id: report.id,
-          name: report.title,
-          type: report.type,
-          data: report.data,
-          status: report.status || "COMPLETED", // Default or map as needed
-          createdAt: typeof report.createdAt === "string" ? report.createdAt : report.createdAt?.toISOString?.() ?? "",
-          user: report.user
-            ? {
-                firstName: report.user.firstName,
-                lastName: report.user.lastName,
-              }
-            : undefined,
-        }))
-      )
-    } catch (error) {
-      console.error("Failed to load reports:", error)
-      setError("Failed to load reports")
-      setReports([])
-    } finally {
-      setIsLoading(false)
+    let attempts = 0;
+    const maxAttempts = 3;
+    const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+    while (attempts < maxAttempts) {
+      try {
+        setError(null);
+        const reportsData = await getReports().catch(() => null);
+        if (reportsData === null) {
+          throw new Error("Network error. Please check your connection.");
+        }
+        setReports(
+          (reportsData || []).map((report: any) => ({
+            id: report.id,
+            name: report.title,
+            type: report.type,
+            data: report.data,
+            status: report.status || "COMPLETED",
+            createdAt: typeof report.createdAt === "string" ? report.createdAt : report.createdAt?.toISOString?.() ?? "",
+            user: report.user
+              ? {
+                  firstName: report.user.firstName,
+                  lastName: report.user.lastName,
+                }
+              : undefined,
+          }))
+        );
+        setIsLoading(false);
+        return;
+      } catch (error: any) {
+        attempts++;
+        if (attempts >= maxAttempts) {
+          setError(error?.message || "Failed to load reports");
+          setReports([]);
+          setIsLoading(false);
+          return;
+        }
+        await delay(1000 * attempts);
+      }
     }
   }
 
   const loadProjects = async () => {
-    try {
-      const projectsData = await getAllProjects()
-      setProjects(projectsData || [])
-    } catch (error) {
-      console.error("Failed to load projects:", error)
-      setProjects([])
-    } finally {
-      setIsProjectsLoading(false)
+    let attempts = 0;
+    const maxAttempts = 3;
+    const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+    while (attempts < maxAttempts) {
+      try {
+        const projectsData = await getAllProjects().catch(() => null);
+        if (projectsData === null) {
+          throw new Error("Network error. Please check your connection.");
+        }
+        setProjects(projectsData || []);
+        setIsProjectsLoading(false);
+        return;
+      } catch (error) {
+        attempts++;
+        if (attempts >= maxAttempts) {
+          setProjects([]);
+          setIsProjectsLoading(false);
+          return;
+        }
+        await delay(1000 * attempts);
+      }
     }
   }
 

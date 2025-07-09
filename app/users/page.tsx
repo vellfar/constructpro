@@ -35,24 +35,49 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch("/api/users")
-        if (!response.ok) {
-          throw new Error("Failed to fetch users")
-        }
-        const data = await response.json()
-        setUsers(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An unexpected error occurred")
-      } finally {
-        setLoading(false)
-      }
-    }
 
-    fetchUsers()
-  }, [])
+  useEffect(() => {
+    let ignore = false;
+    const fetchUsers = async () => {
+      let attempts = 0;
+      const maxAttempts = 3;
+      const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+      while (attempts < maxAttempts) {
+        try {
+          setLoading(true);
+          setError(null);
+          const response = await fetch("/api/users").catch(() => null);
+          if (response?.status === 401) {
+            setError("Session expired. Please log in again.");
+            setUsers([]);
+            setLoading(false);
+            return;
+          }
+          if (!response) {
+            throw new Error("Network error. Please check your connection.");
+          }
+          if (!response.ok) {
+            throw new Error("Failed to fetch users");
+          }
+          const data = await response.json();
+          if (!ignore) setUsers(data);
+          setLoading(false);
+          return;
+        } catch (err) {
+          attempts++;
+          if (attempts >= maxAttempts) {
+            setError(err instanceof Error ? err.message : "An unexpected error occurred");
+            setUsers([]);
+            setLoading(false);
+            return;
+          }
+          await delay(1000 * attempts);
+        }
+      }
+    };
+    fetchUsers();
+    return () => { ignore = true; };
+  }, []);
 
   const totalUsers = users.length
   const activeUsers = users.filter((user) => user.isActive).length

@@ -50,24 +50,47 @@ export default function EmployeesPage() {
   const [viewMode, setViewMode] = useState<"table" | "cards">("table")
 
   useEffect(() => {
+    let ignore = false;
     const fetchEmployees = async () => {
-      try {
-        const result = await getEmployees()
-        if (result.success && result.data) {
-          setEmployees(result.data)
-          setFilteredEmployees(result.data)
-        } else {
-          setError(result.error || "Failed to load employees")
+      let attempts = 0;
+      const maxAttempts = 3;
+      const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+      while (attempts < maxAttempts) {
+        try {
+          setLoading(true);
+          setError(null);
+          const result = await getEmployees().catch(() => null);
+          if (result === null) {
+            throw new Error("Network error. Please check your connection.");
+          }
+          if (result.success && result.data) {
+            if (!ignore) {
+              setEmployees(result.data);
+              setFilteredEmployees(result.data);
+            }
+          } else {
+            setError(result.error || "Failed to load employees");
+            setEmployees([]);
+            setFilteredEmployees([]);
+          }
+          setLoading(false);
+          return;
+        } catch (err: any) {
+          attempts++;
+          if (attempts >= maxAttempts) {
+            setError(err?.message || "An unexpected error occurred");
+            setEmployees([]);
+            setFilteredEmployees([]);
+            setLoading(false);
+            return;
+          }
+          await delay(1000 * attempts);
         }
-      } catch (err) {
-        setError("An unexpected error occurred")
-      } finally {
-        setLoading(false)
       }
-    }
-
-    fetchEmployees()
-  }, [])
+    };
+    fetchEmployees();
+    return () => { ignore = true; };
+  }, []);
 
   // Filter employees based on search and filters
   useEffect(() => {

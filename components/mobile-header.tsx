@@ -69,7 +69,9 @@ export function MobileHeader() {
           </SheetHeader>
           <div className="flex flex-col py-2">
             <Button variant="ghost" className="justify-start w-full rounded-none" onClick={() => (window.location.href = "/profile")}>Profile</Button>
-            <Button variant="ghost" className="justify-start w-full rounded-none" onClick={() => (window.location.href = "/settings")}>Settings</Button>
+            <Button variant="ghost" className="justify-start w-full rounded-none" onClick={() => window.history.pushState({}, '', '/profile')}>Profile</Button>
+            <Button variant="ghost" className="justify-start w-full rounded-none" onClick={() => window.history.pushState({}, '', '/settings')}>Settings</Button>
+            {/* Use Next.js router for navigation instead of window.location for best SPA performance */}
             <div className="border-t my-2" />
             <Button variant="ghost" className="justify-start w-full rounded-none text-red-600" onClick={() => signOut()}>Sign out</Button>
           </div>
