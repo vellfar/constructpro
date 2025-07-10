@@ -13,7 +13,7 @@ This project uses [NextAuth.js](https://next-auth.js.org/) for authentication an
 
 2. Set up your environment variables in `.env.local`:
    \`\`\`
-   NEXTAUTH_URL=http://localhost:3000
+   NEXTAUTH_URL=https://constructmaster.net
    NEXTAUTH_SECRET=your-secret-key-here-make-it-long-and-random
    DATABASE_URL="postgresql://username:password@localhost:5432/constructpro?schema=public"
    \`\`\`

@@ -22,7 +22,7 @@ This error typically indicates a database connection issue. Here are the steps t
 #### Test Database Connection
 Run the health check endpoint:
 \`\`\`bash
-curl http://localhost:3000/api/health/database
+curl https://constructmaster.net/api/health/database
 \`\`\`
 
 ### 2. Connection Timeout Issues
@@ -44,7 +44,7 @@ For secure connections:
 Make sure these are set in your `.env.local`:
 \`\`\`
 DATABASE_URL=your_database_connection_string
-NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_URL=https://constructmaster.net
 NEXTAUTH_SECRET=your_secret_key
 \`\`\`
 
