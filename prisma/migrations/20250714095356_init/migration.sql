@@ -49,6 +49,15 @@ CREATE TABLE "Role" (
 );
 
 -- CreateTable
+CREATE TABLE "RolePermission" (
+    "id" SERIAL NOT NULL,
+    "roleId" INTEGER NOT NULL,
+    "permissionId" INTEGER NOT NULL,
+
+    CONSTRAINT "RolePermission_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Permission" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
@@ -103,7 +112,8 @@ CREATE TABLE "Project" (
     "description" TEXT,
     "location" TEXT,
     "startDate" TIMESTAMP(3) NOT NULL,
-    "endDate" TIMESTAMP(3),
+    "plannedEndDate" TIMESTAMP(3),
+    "actualEndDate" TIMESTAMP(3),
     "budget" DOUBLE PRECISION NOT NULL,
     "status" "ProjectStatus" NOT NULL DEFAULT 'PLANNING',
     "projectCode" TEXT NOT NULL,
@@ -122,7 +132,6 @@ CREATE TABLE "ProjectAssignment" (
     "userId" INTEGER NOT NULL,
     "role" TEXT NOT NULL,
     "startDate" TIMESTAMP(3) NOT NULL,
-    "endDate" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -169,6 +178,33 @@ CREATE TABLE "Equipment" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Equipment_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EquipmentAssessment" (
+    "id" SERIAL NOT NULL,
+    "equipmentId" INTEGER NOT NULL,
+    "assessmentDate" TIMESTAMP(3) NOT NULL,
+    "assessor" TEXT NOT NULL,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "EquipmentAssessment_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "EquipmentLocation" (
+    "id" SERIAL NOT NULL,
+    "equipmentId" INTEGER NOT NULL,
+    "location" TEXT NOT NULL,
+    "startDate" TIMESTAMP(3) NOT NULL,
+    "endDate" TIMESTAMP(3),
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "EquipmentLocation_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -293,6 +329,9 @@ CREATE UNIQUE INDEX "User_employeeId_key" ON "User"("employeeId");
 CREATE UNIQUE INDEX "Role_name_key" ON "Role"("name");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "RolePermission_roleId_permissionId_key" ON "RolePermission"("roleId", "permissionId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Permission_name_key" ON "Permission"("name");
 
 -- CreateIndex
@@ -323,6 +362,12 @@ ALTER TABLE "User" ADD CONSTRAINT "User_roleId_fkey" FOREIGN KEY ("roleId") REFE
 ALTER TABLE "User" ADD CONSTRAINT "User_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "RolePermission" ADD CONSTRAINT "RolePermission_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RolePermission" ADD CONSTRAINT "RolePermission_permissionId_fkey" FOREIGN KEY ("permissionId") REFERENCES "Permission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Project" ADD CONSTRAINT "Project_clientId_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -339,6 +384,12 @@ ALTER TABLE "Activity" ADD CONSTRAINT "Activity_projectId_fkey" FOREIGN KEY ("pr
 
 -- AddForeignKey
 ALTER TABLE "Activity" ADD CONSTRAINT "Activity_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EquipmentAssessment" ADD CONSTRAINT "EquipmentAssessment_equipmentId_fkey" FOREIGN KEY ("equipmentId") REFERENCES "Equipment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EquipmentLocation" ADD CONSTRAINT "EquipmentLocation_equipmentId_fkey" FOREIGN KEY ("equipmentId") REFERENCES "Equipment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "EquipmentAssignment" ADD CONSTRAINT "EquipmentAssignment_equipmentId_fkey" FOREIGN KEY ("equipmentId") REFERENCES "Equipment"("id") ON DELETE CASCADE ON UPDATE CASCADE;

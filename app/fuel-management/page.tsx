@@ -103,6 +103,7 @@ interface FuelRequestFormData {
   equipmentId: string
   fuelType: string
   requestedQuantity: string
+  odometerKm: string
   urgency: string
   justification: string
 }
@@ -199,6 +200,7 @@ export default function FuelManagementPage() {
     equipmentId: EMPTY_VALUE,
     fuelType: EMPTY_VALUE,
     requestedQuantity: "",
+    odometerKm: "",
     urgency: EMPTY_VALUE,
     justification: "",
   })
@@ -347,6 +349,7 @@ export default function FuelManagementPage() {
         equipmentId: createForm.equipmentId === EMPTY_VALUE ? null : Number.parseInt(createForm.equipmentId),
         fuelType: createForm.fuelType as FuelType,
         requestedQuantity: Number.parseFloat(createForm.requestedQuantity),
+        odometerKm: createForm.odometerKm ? Number.parseFloat(createForm.odometerKm) : null,
         urgency: createForm.urgency as FuelUrgency,
         justification: createForm.justification,
       }
@@ -363,7 +366,6 @@ export default function FuelManagementPage() {
         toast.success("Fuel request created successfully")
         setShowCreateDialog(false)
         resetCreateForm()
-        fetchData() // Refresh data
       } else {
         toast.error(result.error || result.message || "Failed to create fuel request")
       }
@@ -402,7 +404,6 @@ export default function FuelManagementPage() {
         setShowApprovalDialog(false)
         setSelectedRequest(null)
         resetApprovalForm()
-        fetchData() // Refresh data
       } else {
         toast.error(result.error || result.message || "Failed to process request")
       }
@@ -436,7 +437,6 @@ export default function FuelManagementPage() {
         setShowIssueDialog(false)
         setSelectedRequest(null)
         resetIssueForm()
-        fetchData() // Refresh data
       } else {
         toast.error(result.error || result.message || "Failed to issue fuel")
       }
@@ -478,6 +478,10 @@ export default function FuelManagementPage() {
     }
     if (createForm.urgency === EMPTY_VALUE) {
       toast.error("Please select urgency level")
+      return false
+    }
+    if (!createForm.odometerKm || Number.parseFloat(createForm.odometerKm) < 0) {
+      toast.error("Please enter a valid odometer reading (km)")
       return false
     }
     if (!createForm.justification.trim()) {
@@ -522,6 +526,7 @@ export default function FuelManagementPage() {
       equipmentId: EMPTY_VALUE,
       fuelType: EMPTY_VALUE,
       requestedQuantity: "",
+      odometerKm: "",
       urgency: EMPTY_VALUE,
       justification: "",
     })
@@ -900,6 +905,19 @@ export default function FuelManagementPage() {
                           className="bg-white border-gray-300"
                         />
                       </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Odometer (km) *</label>
+                        <Input
+                          type="number"
+                          placeholder="Enter odometer reading in km"
+                          value={createForm.odometerKm}
+                          onChange={(e) => setCreateForm((prev) => ({ ...prev, odometerKm: e.target.value }))}
+                          min="0"
+                          step="1"
+                          className="bg-white border-gray-300"
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -1273,6 +1291,41 @@ export default function FuelManagementPage() {
                                         >
                                           <Send className="mr-2 h-4 w-4" />
                                           Issue Fuel
+                                        </DropdownMenuItem>
+                                      )}
+
+                                      {/* Acknowledge Receipt: Only requester, status ISSUED */}
+                                      {request.status === "ISSUED" && session?.user?.id === String(request.requestedBy?.id) && (
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            // Call acknowledgeFuelRequest action here
+                                            // You may want to show a dialog for quantity/comments
+                                            // For now, just acknowledge full issued quantity
+                                            fetch(`/api/fuel-requests/${request.id}/acknowledge`, {
+                                              method: "PATCH",
+                                              headers: { "Content-Type": "application/json" },
+                                              body: JSON.stringify({ acknowledgedQuantity: request.issuedQuantity, acknowledgmentComments: "Received in full" }),
+                                            }).then(() => fetchData())
+                                          }}
+                                        >
+                                          <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                                          Acknowledge Receipt
+                                        </DropdownMenuItem>
+                                      )}
+
+                                      {/* Complete Request: Only Admin, status ACKNOWLEDGED */}
+                                      {request.status === "ACKNOWLEDGED" && session?.user?.role === "Admin" && (
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            fetch(`/api/fuel-requests/${request.id}/complete`, {
+                                              method: "PATCH",
+                                              headers: { "Content-Type": "application/json" },
+                                              body: JSON.stringify({ completionComments: "Request completed" }),
+                                            }).then(() => fetchData())
+                                          }}
+                                        >
+                                          <CheckCircle className="mr-2 h-4 w-4 text-blue-600" />
+                                          Complete Request
                                         </DropdownMenuItem>
                                       )}
                                     </DropdownMenuContent>

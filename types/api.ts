@@ -313,6 +313,7 @@ export interface CreateFuelRequestRequest {
   requestedQuantity: number
   justification: string
   urgency: FuelUrgency
+  odometerKm: number
 }
 
 export interface ApproveFuelRequestRequest {

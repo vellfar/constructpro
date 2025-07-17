@@ -10,6 +10,7 @@ declare module "next-auth" {
       firstName: string
       lastName: string
       role: string
+      isActive?: boolean
       employeeId?: string
     } & DefaultSession["user"]
   }

@@ -95,10 +95,22 @@ export async function GET(request: NextRequest) {
       ]
     }
 
-    const total = await prisma.project.count({ where })
+    // Assignment-based filtering for non-Admins
+    let filteredWhere = { ...where }
+    if (session.user.role !== "Admin") {
+      // Get assigned project IDs
+      const assignments = await prisma.projectAssignment.findMany({
+        where: { userId: Number(session.user.id) },
+        select: { projectId: true },
+      })
+      const assignedProjectIds = assignments.map(a => a.projectId)
+      filteredWhere.id = { in: assignedProjectIds }
+    }
+
+    const total = await prisma.project.count({ where: filteredWhere })
 
     const projects = await prisma.project.findMany({
-      where,
+      where: filteredWhere,
       skip,
       take: pageSize,
       orderBy: { [sortBy]: sortOrder },
@@ -177,13 +189,13 @@ export async function POST(request: NextRequest) {
         name,
         description,
         location,
-        budget: budget ? Number.parseFloat(budget) : null,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
+        budget: budget ? Number.parseFloat(budget) : 0,
+        startDate: startDate ? new Date(startDate) : new Date(),
+        plannedEndDate: endDate ? new Date(endDate) : null,
         clientId: Number.parseInt(clientId),
         projectCode,
         status,
-        createdById: session.user.id,
+        createdById: Number(session.user.id),
       },
       include: {
         client: {
@@ -202,12 +214,13 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Format name from firstName + lastName if createdBy exists
     const formattedProject = {
       ...project,
-      createdBy: {
-        ...project.createdBy,
-        name: `${project.createdBy.firstName} ${project.createdBy.lastName}`,
-      },
+      createdByName:
+        project.createdBy && typeof project.createdBy === "object"
+          ? `${project.createdBy.firstName} ${project.createdBy.lastName}`
+          : undefined,
     }
 
     return NextResponse.json({

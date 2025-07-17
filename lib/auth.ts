@@ -68,11 +68,20 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user, trigger, session }) {
       if (user) {
-        token.role = user.role
-        token.firstName = user.firstName
-        token.lastName = user.lastName
-        token.employeeId = user.employeeId
-        token.isActive = user.isActive
+        // Defensive: ensure role is a string
+        if (typeof user.role === "string") {
+          token.role = user.role;
+        } else if (user.role && typeof user.role === "object" && user.role !== null && typeof (user.role as any).name === "string") {
+          token.role = (user.role as any).name;
+        } else {
+          token.role = "USER";
+        }
+        token.firstName = user.firstName;
+        token.lastName = user.lastName;
+        token.employeeId = user.employeeId;
+        if ('isActive' in user) {
+          token.isActive = user.isActive;
+        }
       }
 
       if (trigger === "update" && session) {
@@ -83,14 +92,20 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.sub!
-        session.user.role = token.role as string
-        session.user.firstName = token.firstName as string
-        session.user.lastName = token.lastName as string
-        session.user.employeeId = token.employeeId as string
-        session.user.isActive = token.isActive as boolean
+        session.user.id = token.sub!;
+        session.user.role = typeof token.role === "string" ? token.role : "USER";
+        session.user.firstName = token.firstName as string;
+        session.user.lastName = token.lastName as string;
+        session.user.employeeId = token.employeeId as string;
+        if (typeof token.isActive === "boolean") {
+          session.user.isActive = token.isActive;
+        }
+        if (process.env.NODE_ENV === "development") {
+          // eslint-disable-next-line no-console
+          console.log("[NextAuth session callback] user role:", session.user.role);
+        }
       }
-      return session
+      return session;
     },
     async redirect({ url, baseUrl }) {
       if (url.startsWith("/")) return `${baseUrl}${url}`
@@ -100,7 +115,6 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/auth/login",
-    signUp: "/auth/register",
     error: "/auth/error",
   },
   events: {

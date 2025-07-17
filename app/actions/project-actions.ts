@@ -57,19 +57,35 @@ export async function getActiveProjects() {
 export async function createProject(formData: FormData) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user) return { success: false, error: "Please log in to create projects" }
+    if (!session?.user?.email) {
+      return { success: false, error: "Please log in to create projects" }
+    }
 
     const name = formData.get("name") as string
     const description = formData.get("description") as string
     const location = formData.get("location") as string
     const budget = formData.get("budget") as string
     const startDate = formData.get("startDate") as string
-    const endDate = formData.get("endDate") as string
+    const plannedEndDate = formData.get("plannedEndDate") as string
+    const actualEndDate = formData.get("actualEndDate") as string
     const clientId = formData.get("clientId") as string
     let projectCode = formData.get("projectCode") as string
 
-    if (!name || !budget) return { success: false, error: "Project name and budget are required" }
+    if (!name || !budget) {
+      return { success: false, error: "Project name and budget are required" }
+    }
 
+    // ✅ Fetch the user ID
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true },
+    })
+
+    if (!user) {
+      return { success: false, error: "User not found" }
+    }
+
+    // ✅ Generate unique project code if not provided
     if (!projectCode) {
       const last = await prisma.project.findFirst({
         where: { projectCode: { startsWith: "PRJ-" } },
@@ -87,6 +103,7 @@ export async function createProject(formData: FormData) {
       projectCode = `PRJ-${String(next).padStart(4, "0")}`
     }
 
+    // ✅ Check if the generated project code already exists
     const existing = await prisma.project.findUnique({ where: { projectCode } })
     if (existing) {
       return {
@@ -95,31 +112,43 @@ export async function createProject(formData: FormData) {
       }
     }
 
+    // ✅ Prepare data for creation
     const data: any = {
       name,
       description: description || null,
       location: location || null,
       budget: parseFloat(budget),
       startDate: startDate ? new Date(startDate) : new Date(),
-      endDate: endDate ? new Date(endDate) : null,
+      plannedEndDate: plannedEndDate ? new Date(plannedEndDate) : null,
+      actualEndDate: actualEndDate ? new Date(actualEndDate) : null,
       projectCode,
       status: ProjectStatus.PLANNING,
-      createdById: Number(session.user.id),
+      createdAt: new Date(),
+      createdBy: {
+        connect: { id: user.id },
+      },
     }
 
     if (clientId && clientId !== "NO_CLIENT") {
-      data.clientId = Number(clientId)
+      data.client = {
+        connect: { id: Number(clientId) },
+      }
     }
 
     const project = await prisma.project.create({ data })
 
     revalidatePath("/projects")
+
     return { success: true, data: project }
   } catch (error) {
     console.error("❌ Failed to create project:", error)
-    return { success: false, error: "Failed to create project. Please try again." }
+    return {
+      success: false,
+      error: "Failed to create project. Please try again.",
+    }
   }
 }
+
 
 // Update project — safe for internal usage (returns result)
 export async function updateProject(
@@ -135,7 +164,8 @@ export async function updateProject(
     const location = formData.get("location") as string
     const budget = formData.get("budget") as string
     const startDate = formData.get("startDate") as string
-    const endDate = formData.get("endDate") as string
+    const plannedEndDate = formData.get("plannedEndDate") as string
+    const actualEndDate = formData.get("actualEndDate") as string
     const clientId = formData.get("clientId") as string
     const status = formData.get("status") as string
     const projectCode = formData.get("projectCode") as string
@@ -155,10 +185,13 @@ export async function updateProject(
       location: location || null,
       budget: parseFloat(budget),
       startDate: startDate ? new Date(startDate) : new Date(),
-      endDate: endDate ? new Date(endDate) : null,
+      plannedEndDate: plannedEndDate ? new Date(plannedEndDate) : null,
+      actualEndDate: actualEndDate ? new Date(actualEndDate) : null,
       status: status as ProjectStatus,
       projectCode,
       clientId: clientId && clientId !== "NO_CLIENT" ? Number(clientId) : null,
+      updatedAt: new Date(),
+      updatedBy: session.user.email,
     }
 
     const updated = await prisma.project.update({

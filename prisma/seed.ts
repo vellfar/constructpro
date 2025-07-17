@@ -45,26 +45,6 @@ async function main() {
       },
     })
 
-    const supervisorRole = await prisma.role.upsert({
-      where: { name: "Supervisor" },
-      update: {},
-      create: {
-        name: "Supervisor",
-        description: "Supervises field operations and manages team activities",
-      },
-    })
-
-    const operatorRole = await prisma.role.upsert({
-      where: { name: "Operator" },
-      update: {},
-      create: {
-        name: "Operator",
-        description: "Equipment operator with access to equipment-related features",
-      },
-    })
-
-    console.log("✅ Roles created successfully!")
-
     // Create basic permissions
     console.log("Creating basic permissions...")
 
@@ -143,7 +123,58 @@ async function main() {
       })
     }
 
-    console.log("✅ Permissions created successfully!")
+
+    // Assign permissions to roles
+    // Define which permissions each role should have
+    const rolePermissionsMap: Record<string, string[]> = {
+      "Admin": permissions.map(p => p.name), // Admin gets all permissions
+      "Project Manager": [
+        "project.create", "project.read", "project.update", "project.delete", "project.manage",
+        "equipment.read", "equipment.assign", "equipment.use",
+        "fuel.request", "fuel.approve", "fuel.issue", "fuel.manage",
+        "employee.read", "employee.update",
+        "client.read", "client.update",
+        "activity.create", "activity.read", "activity.update",
+        "invoice.create", "invoice.read", "invoice.update",
+        "report.view", "report.generate", "report.export",
+        "analytics.view",
+      ],
+      "Employee": [
+        "project.read",
+        "equipment.read", "equipment.use",
+        "fuel.request",
+        "employee.read",
+        "client.read",
+        "activity.read",
+        "invoice.read",
+        "report.view",
+      ],
+      "Store Manager": [
+        "equipment.read", "equipment.update", "equipment.assign", "equipment.use",
+        "fuel.request", "fuel.approve", "fuel.issue", "fuel.manage",
+        "report.view",
+      ],
+    };
+
+    // Fetch all roles and permissions from DB
+    const allRoles = await prisma.role.findMany();
+    const allPermissions = await prisma.permission.findMany();
+
+    for (const role of allRoles) {
+      const perms = rolePermissionsMap[role.name] || [];
+      for (const permName of perms) {
+        const perm = allPermissions.find(p => p.name === permName);
+        if (perm) {
+          await prisma.rolePermission.upsert({
+            where: { roleId_permissionId: { roleId: role.id, permissionId: perm.id } },
+            update: {},
+            create: { roleId: role.id, permissionId: perm.id },
+          });
+        }
+      }
+    }
+
+    console.log("✅ Permissions assigned to roles successfully!")
 
     console.log("\n🎉 Minimal database seeding completed successfully!")
     console.log("\n📋 Summary:")

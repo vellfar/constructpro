@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
 import { SessionProvider } from "next-auth/react"
 import { useSession } from "next-auth/react"
@@ -8,7 +8,8 @@ import { useRouter, usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 
 interface AuthProviderProps {
-  children: React.ReactNode
+  children: React.ReactNode;
+  session?: any;
 }
 
 // Public routes that don't require authentication
@@ -83,10 +84,10 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children, session }: AuthProviderProps) {
   return (
-    <SessionProvider>
+    <SessionProvider session={session}>
       <AuthGuard>{children}</AuthGuard>
     </SessionProvider>
-  )
+  );
 }

@@ -18,14 +18,19 @@ model User {
   isActive              Boolean               @default(true)
   createdAt             DateTime              @default(now())
   updatedAt             DateTime              @updatedAt
+  deletedAt             DateTime?
+  createdBy             String?
+  updatedBy             String?
+  deletedBy             String?
   roleId                Int
   employeeId            Int?                  @unique
 
   // Relations
-  role                  Role                  @relation(fields: [roleId], references: [id])
+  role                  Role                  @relation(fields: [roleId], references: [id], onDelete: Restrict)
   employee              Employee?             @relation(fields: [employeeId], references: [id])
   createdProjects       Project[]             @relation("ProjectCreatedBy")
   projectAssignments    ProjectAssignment[]
+  equipmentAssignments  EquipmentAssignment[]
   fuelRequestsRequested FuelRequest[]         @relation("RequestedBy")
   fuelRequestsApproved  FuelRequest[]         @relation("ApprovedBy")
   fuelRequestsIssued    FuelRequest[]         @relation("IssuedBy")
@@ -43,6 +48,20 @@ model Role {
   // Relations
   users       User[]
   permissions Permission[]
+  rolePermissions RolePermission[]
+}
+
+// Granular permission assignment for roles
+model RolePermission {
+  id           Int         @id @default(autoincrement())
+  roleId       Int
+  permissionId Int
+
+  // Relations
+  role         Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
 }
 
 model Permission {
@@ -54,6 +73,7 @@ model Permission {
 
   // Relations
   roles       Role[]
+  rolePermissions RolePermission[]
 }
 
 model Employee {
@@ -100,7 +120,8 @@ model Project {
   description           String?
   location              String?
   startDate             DateTime
-  endDate               DateTime?
+  plannedEndDate        DateTime?
+  actualEndDate         DateTime?
   budget                Float
   status                ProjectStatus         @default(PLANNING)
   projectCode           String                @unique
@@ -125,7 +146,10 @@ model ProjectAssignment {
   userId    Int
   role      String
   startDate DateTime
-  endDate   DateTime?
+  endDate     DateTime?
+  status      String   @default("ACTIVE")
+  assignedBy String?
+  assignedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -147,6 +171,10 @@ model Activity {
   status      ActivityStatus @default(PLANNED)
   quantity    Float?         // Added for cost calculations
   unitCost    Float?         // Added for cost calculations
+  assignedBy  String?
+  assignedAt  DateTime?
+  completedBy String?
+  completedAt DateTime?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
@@ -178,15 +206,44 @@ model Equipment {
   // Relations
   assignments         EquipmentAssignment[]
   fuelRequests        FuelRequest[]
+  assessments         EquipmentAssessment[]
+  locations           EquipmentLocation[]
+}
+model EquipmentAssessment {
+  id            Int        @id @default(autoincrement())
+  equipmentId   Int
+  assessmentDate DateTime
+  assessor      String
+  notes         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  equipment     Equipment  @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+}
+
+model EquipmentLocation {
+  id            Int        @id @default(autoincrement())
+  equipmentId   Int
+  location      String
+  startDate     DateTime
+  endDate       DateTime?
+  notes         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  equipment     Equipment  @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
 }
 
 model EquipmentAssignment {
   id          Int       @id @default(autoincrement())
   equipmentId Int
+  userId      Int?
   projectId   Int
   startDate   DateTime
   endDate     DateTime?
   assignedBy  String
+  assignedAt  DateTime?
+  status      String   @default("ACTIVE")
   notes       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -194,6 +251,7 @@ model EquipmentAssignment {
   // Relations
   equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User?     @relation(fields: [userId], references: [id])
 }
 
 model FuelRequest {
@@ -233,6 +291,9 @@ model FuelRequest {
   completedById           Int?
   completionDate          DateTime?
   completionComments      String?
+
+  // Odometer reading (km)
+  odometerKm             Float?
   
   createdAt               DateTime          @default(now())
   updatedAt               DateTime          @updatedAt

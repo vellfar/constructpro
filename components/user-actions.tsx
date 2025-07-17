@@ -25,7 +25,7 @@ export function UserActions({ user, currentUserRole }: UserActionsProps) {
     if (confirm(`Are you sure you want to delete ${user.firstName} ${user.lastName}?`)) {
       try {
         await deleteUser(user.id)
-        router.refresh()
+        window.location.href = "/users"
       } catch (error) {
         alert("Failed to delete user")
       }
@@ -35,7 +35,7 @@ export function UserActions({ user, currentUserRole }: UserActionsProps) {
   const handleToggleStatus = async () => {
     try {
       await toggleUserStatus(user.id)
-      router.refresh()
+      window.location.href = "/users"
     } catch (error) {
       alert("Failed to update user status")
     }

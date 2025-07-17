@@ -179,68 +179,55 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
 
-    const formData = new FormData(event.currentTarget)
-
-    console.log("📝 Form submitted with data:")
-    for (const [key, value] of formData.entries()) {
-      console.log(`  ${key}: ${value}`)
+    // Clean and format budget before submit
+    const budgetRaw = formData.get("budget") as string;
+    if (budgetRaw) {
+      formData.set("budget", budgetRaw.replace(/,/g, ""));
     }
 
-    setIsSubmitting(true)
+    // Handle client selection
+    if (selectedClientId && selectedClientId !== "NO_CLIENT") {
+      formData.set("clientId", selectedClientId);
+    } else {
+      formData.delete("clientId");
+    }
 
+    // Handle status
+    formData.set("status", selectedStatus);
+    // Ensure project code is included
+    formData.set("projectCode", projectCode);
+
+    setIsSubmitting(true);
     try {
-      // Handle client selection
-      if (selectedClientId && selectedClientId !== "NO_CLIENT") {
-        formData.set("clientId", selectedClientId)
-        console.log("👤 Client ID set to:", selectedClientId)
-      } else {
-        formData.delete("clientId")
-        console.log("👤 No client selected")
-      }
-
-      // Handle status
-      formData.set("status", selectedStatus)
-      console.log("📊 Status set to:", selectedStatus)
-
-      // Ensure project code is included
-      formData.set("projectCode", projectCode)
-      console.log("🏷️ Project code set to:", projectCode)
-
-      console.log("🚀 Calling onSubmit...")
-      const result = await onSubmit(formData)
-
+      const result = await onSubmit(formData);
       if (result?.success) {
         toast({
           title: "Success!",
           description: result.message || "Operation completed successfully",
           duration: 3000,
-        })
-
-        // Navigate immediately after success
-        console.log("🎯 Navigating to projects page...")
-        router.push("/projects")
-        router.refresh() // Force refresh to show updated data
+        });
+        router.push("/projects");
+        router.refresh();
       } else {
-        console.error("❌ Operation failed:", result)
         toast({
           title: "Error",
           description: result?.error || "An error occurred",
           variant: "destructive",
           duration: 5000,
-        })
+        });
       }
     } catch (error) {
-      console.error("❌ Form submission error:", error)
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
         duration: 5000,
-      })
+      });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   }
 
@@ -436,17 +423,28 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="budget">Project Budget / contract price *</Label>
-          <Input
-            id="budget"
-            name="budget"
-            type="number" /* put commas */
-            step="0.01"
-            placeholder="0.00"
-            defaultValue={initialData?.budget?.toString() || ""}
-            required
-            disabled={isFormLoading}
-          />
+          <Label htmlFor="budget">Project Budget / contract price (UGX) *</Label>
+          <div className="relative">
+            <Input
+              id="budget"
+              name="budget"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9,]*"
+              placeholder="0.00"
+              defaultValue={initialData?.budget ? initialData.budget.toLocaleString("en-US") : ""}
+              required
+              disabled={isFormLoading}
+              onChange={e => {
+                // Format with commas as user types
+                const raw = e.target.value.replace(/,/g, "");
+                if (!isNaN(Number(raw))) {
+                  e.target.value = Number(raw).toLocaleString("en-US");
+                }
+              }}
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">UGX</span>
+          </div>
         </div>
       </div>
 
@@ -462,22 +460,22 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="endDate">Planned End Date</Label>
+          <Label htmlFor="plannedEndDate">Planned End Date</Label>
           <Input
-            id="endDate"
-            name="endDate"
+            id="plannedEndDate"
+            name="plannedEndDate"
             type="date"
-            defaultValue={initialData?.endDate ? new Date(initialData.endDate).toISOString().split("T")[0] : ""}
+            defaultValue={initialData?.plannedEndDate ? new Date(initialData.plannedEndDate).toISOString().split("T")[0] : ""}
             disabled={isFormLoading}
           />
-        </div> {/*if status changed to completed. put actual end date */}
+        </div>
         <div className="space-y-2">
-          <Label htmlFor="endDate">Actual End Date</Label>
+          <Label htmlFor="actualEndDate">Actual End Date</Label>
           <Input
-            id="endDate"
-            name="endDate"
+            id="actualEndDate"
+            name="actualEndDate"
             type="date"
-            defaultValue={initialData?.endDate ? new Date(initialData.endDate).toISOString().split("T")[0] : ""}
+            defaultValue={initialData?.actualEndDate ? new Date(initialData.actualEndDate).toISOString().split("T")[0] : ""}
             disabled={isFormLoading}
           />
         </div>

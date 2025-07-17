@@ -160,21 +160,21 @@ export default async function EditProjectPage({ params }: { params: { id: string
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="startDate">Start Date</Label>
+                  <Label htmlFor="plannedEndDate">Planned End Date</Label>
                   <Input
-                    id="startDate"
-                    name="startDate"
+                    id="plannedEndDate"
+                    name="plannedEndDate"
                     type="date"
-                    defaultValue={project.startDate ? project.startDate.toISOString().split("T")[0] : ""}
+                    defaultValue={project.plannedEndDate ? new Date(project.plannedEndDate).toISOString().split("T")[0] : ""}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="endDate">Expected End Date</Label>
+                  <Label htmlFor="actualEndDate">Actual End Date</Label>
                   <Input
-                    id="endDate"
-                    name="endDate"
+                    id="actualEndDate"
+                    name="actualEndDate"
                     type="date"
-                    defaultValue={project.endDate ? project.endDate.toISOString().split("T")[0] : ""}
+                    defaultValue={project.actualEndDate ? new Date(project.actualEndDate).toISOString().split("T")[0] : ""}
                   />
                 </div>
               </div>

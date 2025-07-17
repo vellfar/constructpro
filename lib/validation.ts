@@ -249,6 +249,7 @@ export const fuelRequestSchema = z.object({
   requestedQuantity: z.number().positive().max(10000),
   justification: z.string().min(1).max(VALIDATION_CONFIG.maxStringLength),
   urgency: z.enum(["LOW", "NORMAL", "HIGH", "URGENT"]).default("NORMAL"),
+  odometerKm: z.number().min(0),
 })
 
 // Generic validation function

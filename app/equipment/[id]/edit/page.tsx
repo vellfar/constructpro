@@ -24,6 +24,14 @@ export default async function EditEquipmentPage({ params }: { params: { id: stri
   const equipmentId = Number.parseInt(params.id)
   const equipment = await prisma.equipment.findUnique({
     where: { id: equipmentId },
+    include: {
+      assessments: {
+        orderBy: { assessmentDate: "desc" },
+      },
+      locations: {
+        orderBy: { startDate: "desc" },
+      },
+    },
   })
 
   if (!equipment) {
@@ -49,7 +57,10 @@ export default async function EditEquipmentPage({ params }: { params: { id: stri
             <CardDescription>Update equipment information</CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={updateEquipment.bind(null, equipment.id)} className="space-y-6">
+            <form action={async (formData: FormData) => {
+              await updateEquipment(equipment.id, formData)
+              redirect(`/equipment/${equipment.id}`)
+            }} className="space-y-6">
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="equipmentCode">Equipment Code *</Label>
@@ -199,6 +210,69 @@ export default async function EditEquipmentPage({ params }: { params: { id: stri
                 <Button type="button" variant="outline" asChild>
                   <Link href={`/equipment/${equipment.id}`}>Cancel</Link>
                 </Button>
+              </div>
+
+              {/* Assessments Section */}
+              <div className="pt-8">
+                <h3 className="font-semibold mb-2">Assessments</h3>
+                <ul className="mb-4">
+                  {equipment.assessments?.map((a: any) => (
+                    <li key={a.id} className="mb-2">
+                      <span className="font-medium">{new Date(a.assessmentDate).toLocaleDateString()}</span>: {a.assessor} - {a.notes}
+                    </li>
+                  ))}
+                </ul>
+                {/* Add Assessment Form */}
+                <form action={async (formData: FormData) => {
+                  const res = await fetch(`/api/equipment/${equipment.id}`, {
+                    method: "POST",
+                    body: new FormData(formData as any),
+                  })
+                  if (res.ok) {
+                    redirect("/equipment")
+                  }
+                }}>
+                  <input type="hidden" name="type" value="assessment" />
+                  <input type="hidden" name="equipmentId" value={equipment.id} />
+                  <div className="grid grid-cols-3 gap-4 mb-2">
+                    <Input type="date" name="assessmentDate" required />
+                    <Input type="text" name="assessor" placeholder="Assessor" required />
+                    <Input type="text" name="notes" placeholder="Notes" />
+                  </div>
+                  <Button type="submit" size="sm">Add Assessment</Button>
+                </form>
+              </div>
+
+              {/* Locations Section */}
+              <div className="pt-8">
+                <h3 className="font-semibold mb-2">Locations</h3>
+                <ul className="mb-4">
+                  {equipment.locations?.map((l: any) => (
+                    <li key={l.id} className="mb-2">
+                      <span className="font-medium">{l.location}</span> ({new Date(l.startDate).toLocaleDateString()} - {l.endDate ? new Date(l.endDate).toLocaleDateString() : "Current"}) {l.notes}
+                    </li>
+                  ))}
+                </ul>
+                {/* Add Location Form */}
+                <form action={async (formData: FormData) => {
+                  const res = await fetch(`/api/equipment/${equipment.id}`, {
+                    method: "POST",
+                    body: new FormData(formData as any),
+                  })
+                  if (res.ok) {
+                    redirect("/equipment")
+                  }
+                }}>
+                  <input type="hidden" name="type" value="location" />
+                  <input type="hidden" name="equipmentId" value={equipment.id} />
+                  <div className="grid grid-cols-4 gap-4 mb-2">
+                    <Input type="text" name="location" placeholder="Location" required />
+                    <Input type="date" name="startDate" required />
+                    <Input type="date" name="endDate" />
+                    <Input type="text" name="notes" placeholder="Notes" />
+                  </div>
+                  <Button type="submit" size="sm">Add Location</Button>
+                </form>
               </div>
             </form>
           </CardContent>

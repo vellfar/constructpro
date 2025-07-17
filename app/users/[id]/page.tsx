@@ -62,7 +62,11 @@ export default async function UserPage({ params }: UserPageProps) {
                 Edit
               </Link>
             </Button>
-            <form action={deleteUser.bind(null, user.id)}>
+            <form action={async () => {
+              "use server"
+              await deleteUser(user.id)
+              redirect("/users")
+            }}>
               <Button variant="destructive" size="sm" type="submit">
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete
@@ -127,20 +131,20 @@ export default async function UserPage({ params }: UserPageProps) {
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <p className="text-sm text-muted-foreground">Employee Code</p>
-                    <p className="font-medium">{user.employee.employeeCode}</p>
+                    <p className="text-sm text-muted-foreground">Employee Number</p>
+                    <p className="font-medium">{user.employee.employeeNumber}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Department</p>
-                    <p className="font-medium">{user.employee.department}</p>
+                    <p className="text-sm text-muted-foreground">Section</p>
+                    <p className="font-medium">{user.employee.section}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Position</p>
-                    <p className="font-medium">{user.employee.position}</p>
+                    <p className="text-sm text-muted-foreground">Designation</p>
+                    <p className="font-medium">{user.employee.designation}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Hire Date</p>
-                    <p className="font-medium">{new Date(user.employee.hireDate).toLocaleDateString()}</p>
+                    <p className="text-sm text-muted-foreground">Date of Appointment</p>
+                    <p className="font-medium">{new Date(user.employee.dateOfAppointment).toLocaleDateString()}</p>
                   </div>
                 </div>
               </CardContent>

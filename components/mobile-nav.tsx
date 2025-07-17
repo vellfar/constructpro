@@ -160,7 +160,7 @@ export function MobileNav() {
                 <Building2 className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-white">ConstructPro</h2>
+                <h2 className="text-lg font-semibold text-white">Construct Master</h2>
                 <p className="text-sm text-blue-100">Construction Management</p>
               </div>
             </div>

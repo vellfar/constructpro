@@ -56,7 +56,7 @@ export function Logo({ size = "md", showText = true, className }: LogoProps) {
               textSizeClasses[size],
             )}
           >
-            ConstructPro
+            Construct Master
           </h1>
           <p className="text-xs text-muted-foreground -mt-1">Construction Management</p>
         </div>

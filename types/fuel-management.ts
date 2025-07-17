@@ -49,6 +49,7 @@ export interface CreateFuelRequestData {
   projectId: number
   equipmentId: number
   fuelType: FuelType
+  odometerKm: number
   requestedQuantity: number
   urgency: FuelUrgency
   justification: string
@@ -92,6 +93,7 @@ export interface FuelRequestFormData {
   equipmentId: string
   fuelType: string
   requestedQuantity: string
+  odometerKm: string
   urgency: string
   justification: string
 }

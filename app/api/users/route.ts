@@ -20,7 +20,10 @@ export async function GET(request: NextRequest) {
         select: {
           id: true,
           email: true,
-          name: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          phoneNumber: true,
           role: true,
           isActive: true,
           createdAt: true,
@@ -48,19 +51,24 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { email, name, password, role = "USER" } = body
+    const { email, username, firstName, lastName, phoneNumber, password, role = "USER" } = body
 
-    if (!email || !name || !password) {
-      return NextResponse.json({ error: "Email, name, and password are required" }, { status: 400 })
+    if (!email || !username || !firstName || !lastName || !password) {
+      return NextResponse.json({ error: "Email, username, firstName, lastName, and password are required" }, { status: 400 })
     }
 
-    // Check if user already exists
-    const existingUser = await db.user.findUnique({
-      where: { email },
+    // Check if user already exists (by email or username)
+    const existingUser = await db.user.findFirst({
+      where: {
+        OR: [
+          { email },
+          { username },
+        ],
+      },
     })
 
     if (existingUser) {
-      return NextResponse.json({ error: "User with this email already exists" }, { status: 400 })
+      return NextResponse.json({ error: "User with this email or username already exists" }, { status: 400 })
     }
 
     const hashedPassword = await bcrypt.hash(password, 12)
@@ -69,7 +77,10 @@ export async function POST(request: NextRequest) {
       return await db.user.create({
         data: {
           email,
-          name,
+          username,
+          firstName,
+          lastName,
+          phoneNumber: phoneNumber || null,
           password: hashedPassword,
           role,
           isActive: true,
@@ -77,7 +88,10 @@ export async function POST(request: NextRequest) {
         select: {
           id: true,
           email: true,
-          name: true,
+          username: true,
+          firstName: true,
+          lastName: true,
+          phoneNumber: true,
           role: true,
           isActive: true,
           createdAt: true,

@@ -42,13 +42,31 @@ export async function GET(request: NextRequest) {
       where.type = { contains: type, mode: "insensitive" }
     }
 
+    // Assignment-based filtering for non-Admins
+    let filteredWhere = { ...where }
+    if (session.user.role !== "Admin") {
+      // Get project IDs assigned to the user
+      const userAssignments = await prisma.projectAssignment.findMany({
+        where: { userId: Number(session.user.id) },
+        select: { projectId: true },
+      })
+      const assignedProjectIds = userAssignments.map(a => a.projectId)
+      // Get equipment IDs assigned to those projects
+      const eqAssignments = await prisma.equipmentAssignment.findMany({
+        where: { projectId: { in: assignedProjectIds } },
+        select: { equipmentId: true },
+      })
+      const assignedEquipmentIds = eqAssignments.map(a => a.equipmentId)
+      filteredWhere.id = { in: assignedEquipmentIds }
+    }
+
     // Get total count - handle empty database
-    const total = await prisma.equipment.count({ where }).catch(() => 0)
+    const total = await prisma.equipment.count({ where: filteredWhere }).catch(() => 0)
 
     // Get equipment - handle empty database
     const equipment = await prisma.equipment
       .findMany({
-        where,
+        where: filteredWhere,
         skip,
         take: pageSize,
         orderBy: { [sortBy]: sortOrder },

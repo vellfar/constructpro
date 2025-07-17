@@ -34,56 +34,68 @@ import {
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
-// Simplified navigation data
+// Role-based navigation data (refactored for dynamic roles)
+const NAV_ITEMS = [
+  { title: "Dashboard", url: "/", icon: Home, roles: ["Admin", "Project Manager", "Employee", "Store Manager"] },
+  { title: "Projects", url: "/projects", icon: Building2, roles: ["Admin", "Project Manager", "Employee"] },
+  { title: "Activities", url: "/activities", icon: Activity, roles: ["Admin", "Project Manager", "Employee"] },
+  { title: "Employees", url: "/employees", icon: Users, roles: ["Admin", "Project Manager"] },
+  { title: "Equipment", url: "/equipment", icon: Wrench, roles: ["Admin", "Project Manager", "Store Manager"] },
+  { title: "Fuel Management", url: "/fuel-management", icon: Fuel, roles: ["Admin", "Project Manager", "Store Manager", "Employee"] },
+  { title: "Clients", url: "/clients", icon: UserCircle, roles: ["Admin", "Project Manager"] },
+  { title: "Invoices", url: "/invoices", icon: Receipt, roles: ["Admin"] },
+  { title: "Reports", url: "/reports", icon: FileText, roles: ["Admin"] },
+  { title: "Users", url: "/users", icon: Shield, roles: ["Admin"] },
+  { title: "Settings", url: "/settings", icon: Settings, roles: ["Admin"] },
+];
+
 const getNavigationItems = (userRole?: string) => {
-  const isAdmin = userRole === "ADMIN"
-  const isManager = userRole === "PROJECT_MANAGER" || userRole === "ADMIN"
-
-  const baseItems = [
-    { title: "Dashboard", url: "/", icon: Home },
-    { title: "Projects", url: "/projects", icon: Building2 },
-    { title: "Activities", url: "/activities", icon: Activity },
-    { title: "Employees", url: "/employees", icon: Users },
-    { title: "Equipment", url: "/equipment", icon: Wrench },
-    { title: "Fuel Management", url: "/fuel-management", icon: Fuel },
-    { title: "Clients", url: "/clients", icon: UserCircle },
-    { title: "Invoices", url: "/invoices", icon: Receipt },
-   /* { title: "Calendar", url: "/calendar", icon: Calendar },
-    { title: "Analytics", url: "/analytics", icon: TrendingUp },*/
-    { title: "Reports", url: "/reports", icon: FileText },
-  ]
-
-  const adminItems = [
-    { title: "Users", url: "/users", icon: Shield },
-    { title: "Settings", url: "/settings", icon: Settings },
-  ]
-
-  return isAdmin ? [...baseItems, ...adminItems] : baseItems
-}
+  const role = userRole || "Employee";
+  return NAV_ITEMS.filter((item) => item.roles.includes(role));
+};
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-  isMobile?: boolean
-  onNavigate?: () => void
+  isMobile?: boolean;
+  onNavigate?: () => void;
 }
 
 export function AppSidebar({ isMobile = false, onNavigate, ...props }: AppSidebarProps) {
-  const { data: session } = useSession()
-  const pathname = usePathname()
+  const { data: session, status } = useSession();
+  const pathname = usePathname();
 
-  const navigationItems = getNavigationItems(session?.user?.role)
+  const userRole = session?.user?.role || "USER";
+  const navigationItems = getNavigationItems(userRole);
 
   const user = {
     name: session?.user?.name || "Construction Manager",
     email: session?.user?.email || "manager@construction.com",
     avatar: session?.user?.image || "/placeholder.svg?height=32&width=32",
-    role: session?.user?.role || "USER",
+    role: userRole,
+  };
+
+  if (process.env.NODE_ENV === "development") {
+    console.log("[Sidebar] Session:", session);
+    console.log("[Sidebar] Role:", userRole);
+    console.log("[Sidebar] Navigation Items:", navigationItems);
+  }
+
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated" || !session) {
+    return null;
   }
 
   const handleNavigation = () => {
-    if (onNavigate) {
-      onNavigate()
+    if (typeof onNavigate === "function") {
+      onNavigate();
     }
-  }
+  };
 
   return (
     <Sidebar collapsible={isMobile ? "none" : "icon"} className={cn("border-r", isMobile && "border-r-0")} {...props}>
@@ -122,5 +134,5 @@ export function AppSidebar({ isMobile = false, onNavigate, ...props }: AppSideba
 
       {!isMobile && <SidebarRail />}
     </Sidebar>
-  )
+  );
 }

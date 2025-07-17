@@ -34,6 +34,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState("")
 
 
   useEffect(() => {
@@ -79,9 +80,19 @@ export default function UsersPage() {
     return () => { ignore = true; };
   }, []);
 
-  const totalUsers = users.length
-  const activeUsers = users.filter((user) => user.isActive).length
-  const inactiveUsers = users.filter((user) => !user.isActive).length
+  const filteredUsers = users.filter((user) => {
+    const term = search.toLowerCase()
+    return (
+      user.firstName.toLowerCase().includes(term) ||
+      user.lastName.toLowerCase().includes(term) ||
+      user.email.toLowerCase().includes(term) ||
+      (user.phoneNumber ? user.phoneNumber.toLowerCase().includes(term) : false) ||
+      user.role.name.toLowerCase().includes(term)
+    )
+  })
+  const totalUsers = filteredUsers.length
+  const activeUsers = filteredUsers.filter((user) => user.isActive).length
+  const inactiveUsers = filteredUsers.filter((user) => !user.isActive).length
 
   if (loading) {
     return (
@@ -130,14 +141,20 @@ export default function UsersPage() {
         <div className="ml-auto flex items-center gap-4">
           <div className="relative hidden sm:block">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input type="search" placeholder="Search users..." className="w-[300px] pl-8" />
+            <Input
+              type="search"
+              placeholder="Search users..."
+              className="w-[300px] pl-8"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
           <Button variant="outline" size="sm" className="hidden sm:inline-flex">
             <Filter className="mr-2 h-4 w-4" />
             Filter
           </Button>
           <Button size="sm" asChild>
-            <Link href="/users/new">
+            <Link href="/users/new" prefetch={true} passHref>
               <Plus className="mr-2 h-4 w-4" />
               Add User
             </Link>
@@ -206,20 +223,20 @@ export default function UsersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.length === 0 ? (
+                  {filteredUsers.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8">
                         <div className="empty-state">
                           <Users className="h-12 w-12 text-muted-foreground" />
                           <p className="text-muted-foreground">No users found. Add your first user to get started.</p>
                           <Button asChild className="mt-4">
-                            <Link href="/users/new">Add First User</Link>
+                            <Link href="/users/new" prefetch={true} passHref>Add First User</Link>
                           </Button>
                         </div>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    users.map((user) => (
+                    filteredUsers.map((user) => (
                       <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="font-medium">
                           <Link href={`/users/${user.id}`} className="hover:underline text-foreground">

@@ -14,13 +14,14 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       throw new AppError("Unauthorized", 401, "AUTH_REQUIRED")
     }
 
-    const projectId = Number.parseInt(params.id)
+    const projectId = Number(params.id)
     if (isNaN(projectId)) {
       throw new AppError("Invalid project ID", 400, "INVALID_ID")
     }
 
     const cacheKey = cacheKeys.project(projectId)
     const cachedProject = cache.get(cacheKey)
+    // const cachedProject = await cache.get(cacheKey) // use this if cache is async
 
     if (cachedProject) {
       return NextResponse.json(cachedProject)
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
             },
           },
           orderBy: { requestDate: "desc" },
-          take: 10, // Latest 10 requests
+          take: 10,
         },
         invoices: {
           orderBy: { issueDate: "desc" },
@@ -93,8 +94,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       throw new AppError("Project not found", 404, "PROJECT_NOT_FOUND")
     }
 
-    // Cache for 10 minutes
-    cache.set(cacheKey, project, 600)
+    cache.set(cacheKey, project, 600) // Cache for 10 minutes
 
     return NextResponse.json(project)
   } catch (error) {
@@ -105,11 +105,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    if (!session?.user?.id) {
       throw new AppError("Unauthorized", 401, "AUTH_REQUIRED")
     }
 
-    const projectId = Number.parseInt(params.id)
+    const projectId = Number(params.id)
     if (isNaN(projectId)) {
       throw new AppError("Invalid project ID", 400, "INVALID_ID")
     }
@@ -123,7 +123,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     const { id, ...updateData } = validation.data
 
-    // Check if project exists
     const existingProject = await prisma.project.findUnique({
       where: { id: projectId },
     })
@@ -132,7 +131,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       throw new AppError("Project not found", 404, "PROJECT_NOT_FOUND")
     }
 
-    // Check if client exists if provided
     if (updateData.clientId) {
       const client = await prisma.client.findUnique({
         where: { id: updateData.clientId },
@@ -165,16 +163,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       },
     })
 
-    // Audit log
     await auditLog({
       action: "UPDATE",
       resource: "PROJECT",
       resourceId: projectId.toString(),
-      userId: Number.parseInt(session.user.id),
+      userId: session.user.id,
       details: { changes: updateData },
     })
 
-    // Invalidate cache
     cache.delete(cacheKeys.project(projectId))
     cache.delete(cacheKeys.dashboardStats())
 
@@ -187,16 +183,15 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    if (!session?.user?.id) {
       throw new AppError("Unauthorized", 401, "AUTH_REQUIRED")
     }
 
-    const projectId = Number.parseInt(params.id)
+    const projectId = Number(params.id)
     if (isNaN(projectId)) {
       throw new AppError("Invalid project ID", 400, "INVALID_ID")
     }
 
-    // Check if project exists and has dependencies
     const project = await prisma.project.findUnique({
       where: { id: projectId },
       include: {
@@ -211,7 +206,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       throw new AppError("Project not found", 404, "PROJECT_NOT_FOUND")
     }
 
-    // Check for dependencies
     const hasDependencies =
       project.activities.length > 0 ||
       project.equipmentAssignments.length > 0 ||
@@ -222,7 +216,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       throw new AppError(
         "Cannot delete project with existing activities, equipment assignments, fuel requests, or invoices",
         400,
-        "PROJECT_HAS_DEPENDENCIES",
+        "PROJECT_HAS_DEPENDENCIES"
       )
     }
 
@@ -230,16 +224,14 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       where: { id: projectId },
     })
 
-    // Audit log
     await auditLog({
       action: "DELETE",
       resource: "PROJECT",
       resourceId: projectId.toString(),
-      userId: Number.parseInt(session.user.id),
+      userId: session.user.id,
       details: { projectCode: project.projectCode, name: project.name },
     })
 
-    // Invalidate cache
     cache.delete(cacheKeys.project(projectId))
     cache.delete(cacheKeys.dashboardStats())
 

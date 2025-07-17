@@ -158,16 +158,22 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
     const body: CreateFuelRequestData = await request.json()
     console.log("📝 Request data:", body)
 
-    // Validate required fields
+    // Validate required fields and types
     if (
-      !body.projectId ||
-      !body.equipmentId ||
+      typeof body.projectId !== "number" ||
+      typeof body.equipmentId !== "number" ||
       !body.fuelType ||
-      !body.requestedQuantity ||
+      typeof body.requestedQuantity !== "number" ||
       !body.urgency ||
       !body.justification
     ) {
-      return NextResponse.json({ success: false, error: "Missing required fields" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "Missing or invalid required fields" }, { status: 400 })
+    }
+
+    // Validate odometerKm
+    const odometerKm = Number(body.odometerKm)
+    if (isNaN(odometerKm) || odometerKm < 0) {
+      return NextResponse.json({ success: false, error: "Missing or invalid odometer reading (km)" }, { status: 400 })
     }
 
     // Validate equipment and project exist
@@ -203,8 +209,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<ApiRespon
         requestedQuantity: body.requestedQuantity,
         justification: body.justification,
         urgency: body.urgency,
-        requestedById: Number.parseInt(session.user.id),
+        requestedById: typeof session.user.id === "number" ? session.user.id : Number(session.user.id),
         status: FuelRequestStatus.PENDING,
+        odometerKm,
       },
       include: {
         equipment: {

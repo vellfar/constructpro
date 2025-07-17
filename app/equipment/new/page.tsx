@@ -115,8 +115,11 @@ export default function NewEquipmentPage() {
                 <div className="space-y-2">
                   <Label htmlFor="type">Type *</Label>
                   <Select
-                    value={formData.type || "__NONE__"}
-                    onValueChange={(value) => setFormData({ ...formData, type: value === "__NONE__" ? "" : value })}
+                    value={formData.type && ["Excavator","Bulldozer","Dump Truck","Crane","Loader","Grader","Compactor"].includes(formData.type) ? formData.type : "__CUSTOM__"}
+                    onValueChange={(value) => {
+                      if (value === "__CUSTOM__") return;
+                      setFormData({ ...formData, type: value });
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select type or enter custom" />
@@ -132,6 +135,7 @@ export default function NewEquipmentPage() {
                       <SelectItem value="Loader">Loader</SelectItem>
                       <SelectItem value="Grader">Grader</SelectItem>
                       <SelectItem value="Compactor">Compactor</SelectItem>
+                      <SelectItem value="__CUSTOM__">Other (enter below)</SelectItem>
                     </SelectContent>
                   </Select>
                   <Input
@@ -177,7 +181,7 @@ export default function NewEquipmentPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ownership">Ownership *</Label>
+                  <Label htmlFor="ownership">Ownership</Label>
                   <Select
                     value={formData.ownership || "__NONE__"}
                     onValueChange={(value) =>

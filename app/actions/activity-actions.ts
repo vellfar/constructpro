@@ -79,6 +79,23 @@ export async function updateActivity(id: number, formData: FormData) {
   }
 
   try {
+    // Permission check: only Admin or assigned user
+    const activity = await prisma.activity.findUnique({
+      where: { id },
+      select: { projectId: true },
+    })
+    if (!activity) {
+      return { success: false, error: "Activity not found" }
+    }
+    if (session.user.role !== "Admin") {
+      const assignment = await prisma.projectAssignment.findFirst({
+        where: { userId: Number(session.user.id), projectId: activity.projectId },
+      })
+      if (!assignment) {
+        return { success: false, error: "Forbidden: You are not assigned to this project" }
+      }
+    }
+
     const name = formData.get("name") as string
     const description = formData.get("description") as string
     const projectId = Number.parseInt(formData.get("projectId") as string)
@@ -113,8 +130,30 @@ export async function deleteActivity(id: number) {
   }
 
   try {
-    await prisma.activity.delete({
+    // Permission check: only Admin or assigned user
+    const activity = await prisma.activity.findUnique({
       where: { id },
+      select: { projectId: true },
+    })
+    if (!activity) {
+      return { success: false, error: "Activity not found" }
+    }
+    if (session.user.role !== "Admin") {
+      const assignment = await prisma.projectAssignment.findFirst({
+        where: { userId: Number(session.user.id), projectId: activity.projectId },
+      })
+      if (!assignment) {
+        return { success: false, error: "Forbidden: You are not assigned to this project" }
+      }
+    }
+
+    // Use type assertion to avoid TypeScript errors if Prisma types are not up-to-date
+    await prisma.activity.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        deletedBy: session.user.email,
+      } as any,
     })
 
     revalidatePath("/activities")

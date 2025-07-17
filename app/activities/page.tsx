@@ -49,29 +49,63 @@ export default async function ActivitiesPage() {
 
   try {
     activities = await withRetry(async () => {
-      const dbActivities = await db.activity.findMany({
-        include: {
-          project: {
-            select: {
-              id: true,
-              name: true,
-              projectCode: true,
-              location: true,
-              status: true,
+      let dbActivities
+      if (session.user.role === "Admin") {
+        dbActivities = await db.activity.findMany({
+          include: {
+            project: {
+              select: {
+                id: true,
+                name: true,
+                projectCode: true,
+                location: true,
+                status: true,
+              },
+            },
+            employee: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
             },
           },
-          employee: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
+          orderBy: {
+            createdAt: "desc",
+          },
+        })
+      } else {
+        // Only show activities for projects assigned to the user
+        const assignments = await db.projectAssignment.findMany({
+          where: { userId: Number(session.user.id) },
+          select: { projectId: true },
+        })
+        const assignedProjectIds = assignments.map(a => a.projectId)
+        dbActivities = await db.activity.findMany({
+          where: { projectId: { in: assignedProjectIds } },
+          include: {
+            project: {
+              select: {
+                id: true,
+                name: true,
+                projectCode: true,
+                location: true,
+                status: true,
+              },
+            },
+            employee: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
             },
           },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      })
+          orderBy: {
+            createdAt: "desc",
+          },
+        })
+      }
 
       // Convert all id fields to string to match the Activity, Project, and Employee interfaces
       return dbActivities.map((activity) => ({

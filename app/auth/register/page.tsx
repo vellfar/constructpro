@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -31,6 +31,19 @@ export default function RegisterPage() {
     confirmPassword: "",
     role: "",
   })
+  const [roles, setRoles] = useState<string[]>([])
+
+  useEffect(() => {
+    // Fetch roles from API
+    fetch("/api/roles")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.roles) {
+          setRoles(data.roles.map((r: { name: string }) => r.name))
+        }
+      })
+      .catch(() => setRoles(["Employee", "Project Manager", "Store Manager", "Admin"]))
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -91,7 +104,7 @@ export default function RegisterPage() {
                 <Construction className="h-7 w-7 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">ConstructPro</h1>
+                <h1 className="text-3xl font-bold text-gray-900">Construct Master</h1>
                 <p className="text-gray-600">Project Management System</p>
               </div>
             </div>
@@ -138,7 +151,7 @@ export default function RegisterPage() {
               </div>
               <div className="space-y-2">
                 <CardTitle className="text-2xl font-bold text-gray-900">Create your account</CardTitle>
-                <CardDescription className="text-gray-600">Get started with ConstructPro today</CardDescription>
+                <CardDescription className="text-gray-600">Get started with Construct Master today</CardDescription>
               </div>
             </CardHeader>
 
@@ -213,11 +226,11 @@ export default function RegisterPage() {
                       <SelectTrigger className="h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500">
                         <SelectValue placeholder="Select your role" />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Employee">Employee</SelectItem>
-                        <SelectItem value="Project Manager">Project Manager</SelectItem>
-                        <SelectItem value="Admin">Administrator</SelectItem>
-                      </SelectContent>
+                    <SelectContent>
+                      {roles.map((role) => (
+                        <SelectItem key={role} value={role}>{role}</SelectItem>
+                      ))}
+                    </SelectContent>
                     </Select>
                   </div>
 

@@ -207,6 +207,7 @@ export async function createFuelRequest(
           urgency: data.urgency,
           requestedById: Number.parseInt(session.user.id),
           status: FuelRequestStatus.PENDING,
+          odometerKm: data.odometerKm,
         },
         include: {
           equipment: {

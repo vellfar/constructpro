@@ -1,5 +1,97 @@
 "use server"
+// Create Equipment Assessment
+export async function createEquipmentAssessment(equipmentId: number, assessmentDate: string, assessor: string, notes?: string) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+  try {
+    await prisma.equipmentAssessment.create({
+      data: {
+        equipmentId,
+        assessmentDate: new Date(assessmentDate),
+        assessor,
+        notes: notes || null,
+      },
+    })
+    revalidatePath(`/equipment/${equipmentId}`)
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to create assessment:", error)
+    return { success: false, error: "Failed to create assessment" }
+  }
+}
 
+// Update Equipment Assessment
+export async function updateEquipmentAssessment(id: number, assessmentDate: string, assessor: string, notes?: string) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+  try {
+    await prisma.equipmentAssessment.update({
+      where: { id },
+      data: {
+        assessmentDate: new Date(assessmentDate),
+        assessor,
+        notes: notes || null,
+      },
+    })
+    // Optionally revalidate equipment detail page if needed
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to update assessment:", error)
+    return { success: false, error: "Failed to update assessment" }
+  }
+}
+
+// Create Equipment Location
+export async function createEquipmentLocation(equipmentId: number, location: string, startDate: string, endDate?: string, notes?: string) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+  try {
+    await prisma.equipmentLocation.create({
+      data: {
+        equipmentId,
+        location,
+        startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : null,
+        notes: notes || null,
+      },
+    })
+    revalidatePath(`/equipment/${equipmentId}`)
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to create location:", error)
+    return { success: false, error: "Failed to create location" }
+  }
+}
+
+// Update Equipment Location
+export async function updateEquipmentLocation(id: number, location: string, startDate: string, endDate?: string, notes?: string) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+  try {
+    await prisma.equipmentLocation.update({
+      where: { id },
+      data: {
+        location,
+        startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : null,
+        notes: notes || null,
+      },
+    })
+    // Optionally revalidate equipment detail page if needed
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to update location:", error)
+    return { success: false, error: "Failed to update location" }
+  }
+}
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/db"
 import { getServerSession } from "next-auth/next"
@@ -13,11 +105,32 @@ export async function getEquipment() {
   }
 
   try {
-    const equipment = await prisma.equipment.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
-    })
+    let equipment
+    if (session.user.role === "Admin") {
+      equipment = await prisma.equipment.findMany({
+        orderBy: {
+          createdAt: "desc",
+        },
+      })
+    } else {
+      // Only show equipment assigned to projects the user is assigned to
+      const userAssignments = await prisma.projectAssignment.findMany({
+        where: { userId: Number(session.user.id) },
+        select: { projectId: true },
+      })
+      const assignedProjectIds = userAssignments.map(a => a.projectId)
+      const eqAssignments = await prisma.equipmentAssignment.findMany({
+        where: { projectId: { in: assignedProjectIds } },
+        select: { equipmentId: true },
+      })
+      const assignedEquipmentIds = eqAssignments.map(a => a.equipmentId)
+      equipment = await prisma.equipment.findMany({
+        where: { id: { in: assignedEquipmentIds } },
+        orderBy: {
+          createdAt: "desc",
+        },
+      })
+    }
 
     return { success: true, data: equipment }
   } catch (error) {
@@ -59,7 +172,7 @@ export async function getEquipmentById(id: number) {
             },
           },
           orderBy: {
-            requestDate: "desc",
+            createdAt: "desc",
           },
         },
         assessments: {
@@ -69,7 +182,7 @@ export async function getEquipmentById(id: number) {
         },
         locations: {
           orderBy: {
-            dateMoved: "desc",
+            startDate: "desc",
           },
         },
       },
@@ -182,6 +295,26 @@ export async function updateEquipment(id: number, formData: FormData) {
     const dateReceived = formData.get("dateReceived") as string
     const status = formData.get("status") as string
 
+    // Permission check: only Admin or user assigned to the equipment's project
+    const isAdmin = session.user.role === "Admin"
+    if (!isAdmin) {
+      // Find equipment assignment
+      const eqAssignment = await prisma.equipmentAssignment.findFirst({
+        where: { equipmentId: id },
+        select: { projectId: true },
+      })
+      if (!eqAssignment) {
+        return { success: false, error: "Forbidden: No project assignment for this equipment" }
+      }
+      // Check if user is assigned to the project
+      const userAssignment = await prisma.projectAssignment.findFirst({
+        where: { userId: Number(session.user.id), projectId: eqAssignment.projectId },
+      })
+      if (!userAssignment) {
+        return { success: false, error: "Forbidden: You are not assigned to the equipment's project" }
+      }
+    }
+
     await prisma.equipment.update({
       where: { id },
       data: {
@@ -219,8 +352,33 @@ export async function deleteEquipment(id: number) {
   }
 
   try {
-    await prisma.equipment.delete({
+    // Permission check: only Admin or user assigned to the equipment's project
+    const isAdmin = session.user.role === "Admin"
+    if (!isAdmin) {
+      // Find equipment assignment
+      const eqAssignment = await prisma.equipmentAssignment.findFirst({
+        where: { equipmentId: id },
+        select: { projectId: true },
+      })
+      if (!eqAssignment) {
+        return { success: false, error: "Forbidden: No project assignment for this equipment" }
+      }
+      // Check if user is assigned to the project
+      const userAssignment = await prisma.projectAssignment.findFirst({
+        where: { userId: Number(session.user.id), projectId: eqAssignment.projectId },
+      })
+      if (!userAssignment) {
+        return { success: false, error: "Forbidden: You are not assigned to the equipment's project" }
+      }
+    }
+
+    // If TypeScript complains about deletedAt/deletedBy, use type assertion as any
+    await prisma.equipment.update({
       where: { id },
+      data: {
+        deletedAt: new Date(),
+        deletedBy: session.user.email,
+      } as any,
     })
 
     revalidatePath("/equipment")

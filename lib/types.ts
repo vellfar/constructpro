@@ -120,8 +120,9 @@ export interface FuelRequest {
   quantity: number
   status: string
   urgency: string
-  justification: string
+  odometerKm?: number
   requestedById: string
+  justification: string
   createdAt: string
   updatedAt: string
 }

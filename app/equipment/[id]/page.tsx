@@ -200,7 +200,7 @@ export default async function EquipmentDetailPage({ params }: { params: { id: st
                           equipment.fuelRequests.map((request) => (
                             <TableRow key={request.id}>
                               <TableCell className="font-medium">{request.requestNumber}</TableCell>
-                              <TableCell>{new Date(request.requestDate).toLocaleDateString()}</TableCell>
+                              <TableCell>{new Date(request.createdAt).toLocaleDateString()}</TableCell>
                               <TableCell>{request.fuelType}</TableCell>
                               <TableCell>{request.quantity}L</TableCell>
                               <TableCell>
@@ -256,31 +256,15 @@ export default async function EquipmentDetailPage({ params }: { params: { id: st
                             <TableRow key={assessment.id}>
                               <TableCell>{new Date(assessment.assessmentDate).toLocaleDateString()}</TableCell>
                               <TableCell>
-                                <Badge
-                                  variant={assessment.functionality === "FULLY_FUNCTIONAL" ? "default" : "secondary"}
-                                >
-                                  {assessment.functionality.replace("_", " ")}
-                                </Badge>
+                                <Badge variant="default">Assessment</Badge>
                               </TableCell>
                               <TableCell>
-                                <Badge
-                                  variant={
-                                    assessment.condition === "EXCELLENT"
-                                      ? "default"
-                                      : assessment.condition === "GOOD"
-                                        ? "secondary"
-                                        : "destructive"
-                                  }
-                                >
-                                  {assessment.condition}
-                                </Badge>
+                                <Badge variant="secondary">N/A</Badge>
                               </TableCell>
                               <TableCell>
-                                <Badge variant={assessment.insurance ? "default" : "destructive"}>
-                                  {assessment.insurance ? "Yes" : "No"}
-                                </Badge>
+                                <Badge variant="secondary">N/A</Badge>
                               </TableCell>
-                              <TableCell>{assessment.assessedBy}</TableCell>
+                              <TableCell>{assessment.assessor}</TableCell>
                               <TableCell className="max-w-xs truncate">{assessment.notes || "N/A"}</TableCell>
                             </TableRow>
                           ))
@@ -318,10 +302,10 @@ export default async function EquipmentDetailPage({ params }: { params: { id: st
                         {equipment.locations && equipment.locations.length > 0 ? (
                           equipment.locations.map((location) => (
                             <TableRow key={location.id}>
-                              <TableCell>{new Date(location.dateMoved).toLocaleDateString()}</TableCell>
-                              <TableCell className="font-medium">{location.currentLocation}</TableCell>
-                              <TableCell>{location.officer}</TableCell>
-                              <TableCell>{location.authorizingOfficer}</TableCell>
+                              <TableCell>{new Date(location.startDate).toLocaleDateString()}</TableCell>
+                              <TableCell className="font-medium">{location.location}</TableCell>
+                              <TableCell>N/A</TableCell>
+                              <TableCell>N/A</TableCell>
                               <TableCell className="max-w-xs truncate">{location.notes || "N/A"}</TableCell>
                             </TableRow>
                           ))
@@ -351,7 +335,7 @@ export default async function EquipmentDetailPage({ params }: { params: { id: st
               <CardContent>
                 <p className="text-sm">
                   {equipment.locations && equipment.locations.length > 0
-                    ? equipment.locations[0].currentLocation
+                    ? equipment.locations[0].location
                     : "Location not tracked"}
                 </p>
               </CardContent>
@@ -396,10 +380,10 @@ export default async function EquipmentDetailPage({ params }: { params: { id: st
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Condition:</span>
+                    <span>Last Assessor:</span>
                     <span className="font-medium">
                       {equipment.assessments && equipment.assessments.length > 0
-                        ? equipment.assessments[0].condition
+                        ? equipment.assessments[0].assessor
                         : "Unknown"}
                     </span>
                   </div>
