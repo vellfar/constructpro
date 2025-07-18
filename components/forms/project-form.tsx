@@ -1,9 +1,7 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, AlertCircle, RefreshCw, Hash, Calendar } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { toast } from "@/hooks/use-toast"
 
 interface Client {
   id: number
@@ -39,8 +36,6 @@ interface ProjectFormProps {
 }
 
 export function ProjectForm({ initialData, onSubmit, isLoading = false, submitButtonText }: ProjectFormProps) {
-  const router = useRouter()
-
   // Data states
   const [clients, setClients] = useState<Client[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -48,13 +43,13 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
   // Loading states
   const [loadingClients, setLoadingClients] = useState(true)
   const [loadingEmployees, setLoadingEmployees] = useState(true)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [loadingProjectCode, setLoadingProjectCode] = useState(false)
 
   // Error states
   const [clientsError, setClientsError] = useState<string | null>(null)
   const [employeesError, setEmployeesError] = useState<string | null>(null)
   const [projectCodeError, setProjectCodeError] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
 
   // Form states
   const [selectedClientId, setSelectedClientId] = useState<string>(
@@ -215,15 +210,13 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
+    // Clear previous form errors
+    setFormError(null)
+
     // Validate dates before submission
     const dateError = validateDates(startDate, plannedEndDate, actualEndDate)
     if (dateError) {
-      toast({
-        title: "Invalid Dates",
-        description: dateError,
-        variant: "destructive",
-        duration: 5000,
-      })
+      setFormError(dateError)
       return
     }
 
@@ -247,35 +240,10 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
     // Ensure project code is included
     formData.set("projectCode", projectCode)
 
-    setIsSubmitting(true)
-    try {
-      const result = await onSubmit(formData)
-      if (result?.success) {
-        toast({
-          title: "Success!",
-          description: result.message || "Operation completed successfully",
-          duration: 3000,
-        })
-        router.push("/projects")
-        router.refresh()
-      } else {
-        toast({
-          title: "Error",
-          description: result?.error || "An error occurred",
-          variant: "destructive",
-          duration: 5000,
-        })
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-        duration: 5000,
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
+    console.log("🚀 Form submitting with data:", Object.fromEntries(formData.entries()))
+
+    // Call the parent's onSubmit function
+    await onSubmit(formData)
   }
 
   function renderClientSelect() {
@@ -400,11 +368,19 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
     )
   }
 
-  const isFormLoading = isLoading || isSubmitting || loadingClients || loadingEmployees
+  const isFormLoading = isLoading || loadingClients || loadingEmployees
   const dateValidationError = validateDates(startDate, plannedEndDate, actualEndDate)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Show form validation errors */}
+      {formError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{formError}</AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="name">Project Name *</Label>
@@ -550,7 +526,7 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
           disabled={isFormLoading || !projectCode || !!dateValidationError}
           className="w-full md:w-auto min-w-[200px]"
         >
-          {isSubmitting ? (
+          {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               {initialData ? "Updating Project..." : "Creating Project..."}

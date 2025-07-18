@@ -153,10 +153,7 @@ export async function createProject(formData: FormData) {
       actualEndDate: actualEndDateObj,
       projectCode,
       status: ProjectStatus.PLANNING,
-      createdAt: new Date(),
-      createdBy: {
-        connect: { id: user.id },
-      },
+      createdById: user.id,
     }
 
     if (clientId && clientId !== "NO_CLIENT") {
@@ -180,11 +177,18 @@ export async function createProject(formData: FormData) {
       },
     })
 
+    console.log("✅ Project created successfully:", project.id, project.name)
+
     revalidatePath("/projects")
 
     return { success: true, data: project, message: "Project created successfully" }
   } catch (error) {
     console.error("❌ Failed to create project:", error)
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      formData: Object.fromEntries(formData.entries()),
+    })
     return {
       success: false,
       error: "Failed to create project. Please try again.",

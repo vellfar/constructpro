@@ -4,15 +4,18 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, CheckCircle } from "lucide-react"
+import { ArrowLeft, CheckCircle, AlertCircle } from "lucide-react"
 import Link from "next/link"
 import { createProject } from "@/app/actions/project-actions"
 import { ProjectForm } from "@/components/forms/project-form"
+import { toast } from "@/hooks/use-toast"
+
 export const viewport = {
-  width: 'device-width',
+  width: "device-width",
   initialScale: 1,
   maximumScale: 1,
 }
+
 export default function NewProjectPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
@@ -25,24 +28,72 @@ export default function NewProjectPage() {
     setSuccess("")
 
     try {
-      console.log("🚀 Submitting form...")
+      console.log("🚀 Submitting form with data:", Object.fromEntries(formData.entries()))
+
       const result = await createProject(formData)
 
-      // If we get here, it means there was an error (redirect would have happened)
-      if (result && !result.success) {
-        console.log("❌ Error:", result.error)
-        setError(result.error || "Failed to create project")
+      console.log("📝 Server action result:", result)
+
+      if (result?.success) {
+        console.log("✅ Project created successfully!")
+
+        setSuccess(result.message || "Project created successfully!")
+
+        toast({
+          title: "Success!",
+          description: result.message || "Project created successfully",
+          duration: 3000,
+        })
+
+        // Redirect after a short delay to show success message
+        setTimeout(() => {
+          router.push("/projects")
+          router.refresh()
+        }, 1500)
+      } else {
+        console.log("❌ Server action returned error:", result?.error)
+        const errorMessage = result?.error || "Failed to create project"
+        setError(errorMessage)
+
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+          duration: 5000,
+        })
       }
     } catch (error) {
-      console.error("💥 Unexpected error:", error)
+      console.error("💥 Unexpected error during submission:", error)
 
-      // Check if this is a redirect error (which means success)
-      if (error instanceof Error && error.message.includes("NEXT_REDIRECT")) {
+      // Check if this is a redirect error (which means success in Next.js server actions)
+      if (
+        error instanceof Error &&
+        (error.message.includes("NEXT_REDIRECT") ||
+          error.message.includes("redirect") ||
+          error.digest?.includes("NEXT_REDIRECT"))
+      ) {
         console.log("✅ Redirect detected - project was created successfully!")
-        // The redirect will handle navigation, so we don't need to do anything
+
+        setSuccess("Project created successfully! Redirecting...")
+
+        toast({
+          title: "Success!",
+          description: "Project created successfully",
+          duration: 3000,
+        })
+
+        // The redirect will handle navigation automatically
         return
       } else {
-        setError("An unexpected error occurred")
+        const errorMessage = "An unexpected error occurred. Please try again."
+        setError(errorMessage)
+
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+          duration: 5000,
+        })
       }
     } finally {
       setIsLoading(false)
@@ -71,6 +122,7 @@ export default function NewProjectPage() {
             {error && (
               <div className="rounded-md bg-destructive/10 p-4 mb-6 border border-destructive/20">
                 <div className="flex">
+                  <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
                   <div className="ml-3">
                     <h3 className="text-sm font-medium text-destructive">Error</h3>
                     <div className="mt-2 text-sm text-destructive">
@@ -84,7 +136,7 @@ export default function NewProjectPage() {
             {success && (
               <div className="rounded-md bg-green-50 p-4 mb-6 border border-green-200">
                 <div className="flex">
-                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <CheckCircle className="h-5 w-5 text-green-400 flex-shrink-0" />
                   <div className="ml-3">
                     <h3 className="text-sm font-medium text-green-800">Success!</h3>
                     <div className="mt-2 text-sm text-green-700">
@@ -96,7 +148,7 @@ export default function NewProjectPage() {
               </div>
             )}
 
-            <ProjectForm onSubmit={handleSubmit} isLoading={isLoading} />
+            <ProjectForm onSubmit={handleSubmit} isLoading={isLoading} submitButtonText="Create Project" />
           </CardContent>
         </Card>
       </div>
