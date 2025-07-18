@@ -101,6 +101,14 @@ export function EditProjectForm({ project, clients }: EditProjectFormProps) {
         return
       }
 
+      // Clean and format budget before submit
+      const budgetRaw = formData.get("budget") as string
+      if (budgetRaw) {
+        // Remove commas and convert to number
+        const cleanBudget = budgetRaw.replace(/,/g, "")
+        formData.set("budget", cleanBudget)
+      }
+
       // Handle client selection
       if (selectedClientId && selectedClientId !== "__NONE__") {
         formData.set("clientId", selectedClientId)
@@ -329,9 +337,9 @@ export function EditProjectForm({ project, clients }: EditProjectFormProps) {
                     placeholder="0.00"
                     disabled={isPending}
                     onChange={(e) => {
-                      // Format with commas as user types
+                      // Format with commas as user types, but preserve the raw value
                       const raw = e.target.value.replace(/,/g, "")
-                      if (!isNaN(Number(raw))) {
+                      if (!isNaN(Number(raw)) && raw !== "") {
                         e.target.value = Number(raw).toLocaleString("en-US")
                       }
                     }}
