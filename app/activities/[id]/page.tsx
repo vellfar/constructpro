@@ -38,7 +38,7 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
           name: true,
           status: true,
           startDate: true,
-          endDate: true,
+          plannedEndDate: true,
           location: true,
           projectCode: true,
         },
@@ -201,7 +201,7 @@ export default async function ActivityDetailPage({ params }: ActivityDetailPageP
                   <p className="text-sm font-medium text-muted-foreground">Project Duration</p>
                   <p className="text-sm">
                     {new Date(activity.project.startDate).toLocaleDateString()} -{" "}
-                    {activity.project.endDate ? new Date(activity.project.endDate).toLocaleDateString() : "Ongoing"}
+                    {activity.project.plannedEndDate ? new Date(activity.project.plannedEndDate).toLocaleDateString() : "Ongoing"}
                   </p>
                 </div>
               </div>

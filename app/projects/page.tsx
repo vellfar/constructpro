@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import {
   Plus,
   Search,
@@ -20,6 +22,7 @@ import {
   Wrench,
   Eye,
   Edit,
+  MoreHorizontal,
 } from "lucide-react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -56,118 +59,138 @@ export default function ProjectsPage() {
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
 
-
   // Move fetchProjects to be a stable function so it can be used in event handlers
   const fetchProjects = async () => {
-    let attempts = 0;
-    const maxAttempts = 3;
-    const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
-    setLoading(true);
-    setError(null);
+    let attempts = 0
+    const maxAttempts = 3
+    const delay = (ms: number) => new Promise((res) => setTimeout(res, ms))
+
+    setLoading(true)
+    setError(null)
+
     const params = new URLSearchParams({
       page: currentPage.toString(),
       limit: "10",
       search: searchTerm,
       status: statusFilter === "ALL_STATUS" ? "" : statusFilter,
-    });
+    })
+
     while (attempts < maxAttempts) {
       try {
-        const response = await fetch(`/api/projects?${params}`).catch(() => null);
+        const response = await fetch(`/api/projects?${params}`).catch(() => null)
+
         if (response?.status === 401) {
-          setError("Session expired. Please log in again.");
-          setProjects([]);
-          setTotal(0);
-          setTotalPages(1);
-          setLoading(false);
-          return;
+          setError("Session expired. Please log in again.")
+          setProjects([])
+          setTotal(0)
+          setTotalPages(1)
+          setLoading(false)
+          return
         }
+
         if (!response) {
-          throw new Error("Network error. Please check your connection.");
+          throw new Error("Network error. Please check your connection.")
         }
+
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(`HTTP error! status: ${response.status}`)
         }
-        const data = await response.json();
-        const projectsArray = data.data || data.projects || [];
-        const totalCount = data.total || data.pagination?.total || 0;
-        setProjects(projectsArray || []);
-        setTotal(totalCount);
-        setTotalPages(Math.ceil(totalCount / 10));
-        setLoading(false);
-        return;
+
+        const data = await response.json()
+        const projectsArray = data.data || data.projects || []
+        const totalCount = data.total || data.pagination?.total || 0
+
+        setProjects(projectsArray || [])
+        setTotal(totalCount)
+        setTotalPages(Math.ceil(totalCount / 10))
+        setLoading(false)
+        return
       } catch (error: any) {
-        attempts++;
+        attempts++
         if (attempts >= maxAttempts) {
-          setError(error instanceof Error ? error.message : "Failed to load projects");
-          setProjects([]);
-          setTotal(0);
-          setTotalPages(1);
-          setLoading(false);
-          return;
+          setError(error instanceof Error ? error.message : "Failed to load projects")
+          setProjects([])
+          setTotal(0)
+          setTotalPages(1)
+          setLoading(false)
+          return
         }
-        await delay(1000 * attempts);
+        await delay(1000 * attempts)
       }
     }
-  };
+  }
 
   useEffect(() => {
-    let ignore = false;
+    let ignore = false
+
     const fetchAndSet = async () => {
-      let attempts = 0;
-      const maxAttempts = 3;
-      const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+      let attempts = 0
+      const maxAttempts = 3
+      const delay = (ms: number) => new Promise((res) => setTimeout(res, ms))
+
       while (attempts < maxAttempts) {
         try {
-          setLoading(true);
-          setError(null);
+          setLoading(true)
+          setError(null)
+
           const params = new URLSearchParams({
             page: currentPage.toString(),
             limit: "10",
             search: searchTerm,
             status: statusFilter === "ALL_STATUS" ? "" : statusFilter,
-          });
-          const response = await fetch(`/api/projects?${params}`).catch(() => null);
+          })
+
+          const response = await fetch(`/api/projects?${params}`).catch(() => null)
+
           if (response?.status === 401) {
-            setError("Session expired. Please log in again.");
-            setProjects([]);
-            setTotal(0);
-            setTotalPages(1);
-            setLoading(false);
-            return;
+            setError("Session expired. Please log in again.")
+            setProjects([])
+            setTotal(0)
+            setTotalPages(1)
+            setLoading(false)
+            return
           }
+
           if (!response) {
-            throw new Error("Network error. Please check your connection.");
+            throw new Error("Network error. Please check your connection.")
           }
+
           if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`HTTP error! status: ${response.status}`)
           }
-          const data = await response.json();
-          const projectsArray = data.data || data.projects || [];
-          const totalCount = data.total || data.pagination?.total || 0;
+
+          const data = await response.json()
+          const projectsArray = data.data || data.projects || []
+          const totalCount = data.total || data.pagination?.total || 0
+
           if (!ignore) {
-            setProjects(projectsArray || []);
-            setTotal(totalCount);
-            setTotalPages(Math.ceil(totalCount / 10));
+            setProjects(projectsArray || [])
+            setTotal(totalCount)
+            setTotalPages(Math.ceil(totalCount / 10))
           }
-          setLoading(false);
-          return;
+
+          setLoading(false)
+          return
         } catch (error) {
-          attempts++;
+          attempts++
           if (attempts >= maxAttempts) {
-            setError(error instanceof Error ? error.message : "Failed to load projects");
-            setProjects([]);
-            setTotal(0);
-            setTotalPages(1);
-            setLoading(false);
-            return;
+            setError(error instanceof Error ? error.message : "Failed to load projects")
+            setProjects([])
+            setTotal(0)
+            setTotalPages(1)
+            setLoading(false)
+            return
           }
-          await delay(1000 * attempts);
+          await delay(1000 * attempts)
         }
       }
-    };
-    fetchAndSet();
-    return () => { ignore = true; };
-  }, [currentPage, searchTerm, statusFilter]);
+    }
+
+    fetchAndSet()
+    return () => {
+      ignore = true
+    }
+  }, [currentPage, searchTerm, statusFilter])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -341,114 +364,237 @@ export default function ProjectsPage() {
           </Card>
         )}
 
-        {/* Projects Grid */}
+        {/* Projects Content */}
         {!loading && projects.length > 0 && (
-          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => {
-              const count = project._count || { activities: 0, equipmentAssignments: 0 }
-              return (
-                <Card
-                  key={project.id}
-                  className="border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 hover:border-gray-300"
-                >
-                  <CardHeader className="pb-3 sm:pb-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-2">
-                          <Badge className={cn("text-xs font-medium", getStatusColor(project.status))}>
-                            {project.status.replace("_", " ")}
-                          </Badge>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden lg:block">
+              <Card className="border-gray-200 shadow-sm">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-gray-200">
+                      <TableHead className="font-semibold text-gray-900">Project</TableHead>
+                      <TableHead className="font-semibold text-gray-900">Client</TableHead>
+                      <TableHead className="font-semibold text-gray-900">Status</TableHead>
+                      <TableHead className="font-semibold text-gray-900">Budget</TableHead>
+                      <TableHead className="font-semibold text-gray-900">Timeline</TableHead>
+                      <TableHead className="font-semibold text-gray-900">Activities</TableHead>
+                      <TableHead className="font-semibold text-gray-900">Equipment</TableHead>
+                      <TableHead className="font-semibold text-gray-900 text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {projects.map((project) => {
+                      const count = project._count || { activities: 0, equipmentAssignments: 0 }
+                      return (
+                        <TableRow key={project.id} className="border-gray-200 hover:bg-gray-50">
+                          <TableCell className="py-4">
+                            <div className="min-w-0">
+                              <div className="font-medium text-gray-900 truncate">
+                                <Link
+                                  href={`/projects/${project.id}`}
+                                  className="hover:text-blue-600 transition-colors"
+                                >
+                                  {project.name}
+                                </Link>
+                              </div>
+                              <div className="text-sm text-gray-500 truncate">{project.projectCode}</div>
+                              {project.location && (
+                                <div className="flex items-center mt-1 text-sm text-gray-500">
+                                  <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+                                  <span className="truncate">{project.location}</span>
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-4">
+                            {project.client ? (
+                              <div className="flex items-center">
+                                <Building2 className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
+                                <span className="text-gray-900 truncate">{project.client.name}</span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">No client</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-4">
+                            <Badge className={cn("text-xs font-medium", getStatusColor(project.status))}>
+                              {project.status.replace("_", " ")}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="py-4">
+                            <div className="flex items-center">
+                              <DollarSign className="h-4 w-4 text-gray-400 mr-1 flex-shrink-0" />
+                              <span className="font-medium text-gray-900">{formatCurrency(project.budget)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-4">
+                            {project.startDate && (
+                              <div className="flex items-center text-sm">
+                                <Calendar className="h-4 w-4 text-gray-400 mr-2 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <div className="text-gray-900">{formatDate(project.startDate)}</div>
+                                  {project.endDate && (
+                                    <div className="text-gray-500">to {formatDate(project.endDate)}</div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="py-4">
+                            <div className="flex items-center">
+                              <Users className="h-4 w-4 text-gray-400 mr-2" />
+                              <span className="text-gray-900 font-medium">{count.activities}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-4">
+                            <div className="flex items-center">
+                              <Wrench className="h-4 w-4 text-gray-400 mr-2" />
+                              <span className="text-gray-900 font-medium">{count.equipmentAssignments}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-4 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <span className="sr-only">Open menu</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/projects/${project.id}`} className="flex items-center">
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Details
+                                  </Link>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/projects/${project.id}/edit`} className="flex items-center">
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit Project
+                                  </Link>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </Card>
+            </div>
+
+            {/* Mobile/Tablet Card View */}
+            <div className="lg:hidden">
+              <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2">
+                {projects.map((project) => {
+                  const count = project._count || { activities: 0, equipmentAssignments: 0 }
+                  return (
+                    <Card
+                      key={project.id}
+                      className="border-gray-200 shadow-sm hover:shadow-md transition-all duration-200 hover:border-gray-300"
+                    >
+                      <CardHeader className="pb-3 sm:pb-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="mb-2">
+                              <Badge className={cn("text-xs font-medium", getStatusColor(project.status))}>
+                                {project.status.replace("_", " ")}
+                              </Badge>
+                            </div>
+                            <CardTitle className="text-base sm:text-lg font-medium text-gray-900 mb-1 line-clamp-2">
+                              <Link href={`/projects/${project.id}`} className="hover:text-gray-700 transition-colors">
+                                {project.name}
+                              </Link>
+                            </CardTitle>
+                            <CardDescription className="text-gray-600 text-sm">{project.projectCode}</CardDescription>
+                          </div>
                         </div>
-                        <CardTitle className="text-base sm:text-lg font-medium text-gray-900 mb-1 line-clamp-2">
-                          <Link href={`/projects/${project.id}`} className="hover:text-gray-700 transition-colors">
-                            {project.name}
-                          </Link>
-                        </CardTitle>
-                        <CardDescription className="text-gray-600 text-sm">{project.projectCode}</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
+                      </CardHeader>
 
-                  <CardContent className="space-y-3 sm:space-y-4">
-                    {/* Client */}
-                    {project.client && (
-                      <div className="flex items-center space-x-3 text-sm">
-                        <Building2 className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        <span className="text-gray-900 font-medium truncate">{project.client.name}</span>
-                      </div>
-                    )}
+                      <CardContent className="space-y-3 sm:space-y-4">
+                        {/* Client */}
+                        {project.client && (
+                          <div className="flex items-center space-x-3 text-sm">
+                            <Building2 className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-gray-900 font-medium truncate">{project.client.name}</span>
+                          </div>
+                        )}
 
-                    {/* Location */}
-                    {project.location && (
-                      <div className="flex items-center space-x-3 text-sm">
-                        <MapPin className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        <span className="text-gray-600 truncate">{project.location}</span>
-                      </div>
-                    )}
+                        {/* Location */}
+                        {project.location && (
+                          <div className="flex items-center space-x-3 text-sm">
+                            <MapPin className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-gray-600 truncate">{project.location}</span>
+                          </div>
+                        )}
 
-                    {/* Budget */}
-                    <div className="flex items-center space-x-3 text-sm">
-                      <DollarSign className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                      <span className="text-gray-900 font-medium">{formatCurrency(project.budget)}</span>
-                    </div>
+                        {/* Budget */}
+                        <div className="flex items-center space-x-3 text-sm">
+                          <DollarSign className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                          <span className="text-gray-900 font-medium">{formatCurrency(project.budget)}</span>
+                        </div>
 
-                    {/* Timeline */}
-                    {project.startDate && (
-                      <div className="flex items-center space-x-3 text-sm">
-                        <Calendar className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        <span className="text-gray-600 truncate">
-                          {formatDate(project.startDate)}
-                          {project.endDate && ` - ${formatDate(project.endDate)}`}
-                        </span>
-                      </div>
-                    )}
+                        {/* Timeline */}
+                        {project.startDate && (
+                          <div className="flex items-center space-x-3 text-sm">
+                            <Calendar className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-gray-600 truncate">
+                              {formatDate(project.startDate)}
+                              {project.endDate && ` - ${formatDate(project.endDate)}`}
+                            </span>
+                          </div>
+                        )}
 
-                    {/* Stats */}
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-                      <div className="flex items-center space-x-2 text-sm text-gray-600">
-                        <Users className="h-4 w-4" />
-                        <span className="text-xs sm:text-sm">{count.activities}</span>
-                        <span className="hidden xs:inline text-xs">activities</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-sm text-gray-600">
-                        <Wrench className="h-4 w-4" />
-                        <span className="text-xs sm:text-sm">{count.equipmentAssignments}</span>
-                        <span className="hidden xs:inline text-xs">equipment</span>
-                      </div>
-                    </div>
+                        {/* Stats */}
+                        <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                          <div className="flex items-center space-x-2 text-sm text-gray-600">
+                            <Users className="h-4 w-4" />
+                            <span className="text-xs sm:text-sm">{count.activities}</span>
+                            <span className="hidden xs:inline text-xs">activities</span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm text-gray-600">
+                            <Wrench className="h-4 w-4" />
+                            <span className="text-xs sm:text-sm">{count.equipmentAssignments}</span>
+                            <span className="hidden xs:inline text-xs">equipment</span>
+                          </div>
+                        </div>
 
-                    {/* Actions */}
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        asChild
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 border-gray-300 hover:bg-gray-50 bg-transparent text-xs sm:text-sm"
-                      >
-                        <Link href={`/projects/${project.id}`}>
-                          <Eye className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="hidden xs:inline">View</span>
-                          <span className="xs:hidden">View</span>
-                        </Link>
-                      </Button>
-                      <Button
-                        asChild
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 border-gray-300 hover:bg-gray-50 bg-transparent text-xs sm:text-sm"
-                      >
-                        <Link href={`/projects/${project.id}/edit`}>
-                          <Edit className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="hidden xs:inline">Edit</span>
-                          <span className="xs:hidden">Edit</span>
-                        </Link>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
+                        {/* Actions */}
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 border-gray-300 hover:bg-gray-50 bg-transparent text-xs sm:text-sm"
+                          >
+                            <Link href={`/projects/${project.id}`}>
+                              <Eye className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="hidden xs:inline">View</span>
+                              <span className="xs:hidden">View</span>
+                            </Link>
+                          </Button>
+                          <Button
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 border-gray-300 hover:bg-gray-50 bg-transparent text-xs sm:text-sm"
+                          >
+                            <Link href={`/projects/${project.id}/edit`}>
+                              <Edit className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                              <span className="hidden xs:inline">Edit</span>
+                              <span className="xs:hidden">Edit</span>
+                            </Link>
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            </div>
+          </>
         )}
 
         {/* Pagination */}
