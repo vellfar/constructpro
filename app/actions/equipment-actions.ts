@@ -1,102 +1,9 @@
 "use server"
-// Create Equipment Assessment
-export async function createEquipmentAssessment(equipmentId: number, assessmentDate: string, assessor: string, notes?: string) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) {
-    return { success: false, error: "Unauthorized" }
-  }
-  try {
-    await prisma.equipmentAssessment.create({
-      data: {
-        equipmentId,
-        assessmentDate: new Date(assessmentDate),
-        assessor,
-        notes: notes || null,
-      },
-    })
-    revalidatePath(`/equipment/${equipmentId}`)
-    return { success: true }
-  } catch (error) {
-    console.error("Failed to create assessment:", error)
-    return { success: false, error: "Failed to create assessment" }
-  }
-}
 
-// Update Equipment Assessment
-export async function updateEquipmentAssessment(id: number, assessmentDate: string, assessor: string, notes?: string) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) {
-    return { success: false, error: "Unauthorized" }
-  }
-  try {
-    await prisma.equipmentAssessment.update({
-      where: { id },
-      data: {
-        assessmentDate: new Date(assessmentDate),
-        assessor,
-        notes: notes || null,
-      },
-    })
-    // Optionally revalidate equipment detail page if needed
-    return { success: true }
-  } catch (error) {
-    console.error("Failed to update assessment:", error)
-    return { success: false, error: "Failed to update assessment" }
-  }
-}
-
-// Create Equipment Location
-export async function createEquipmentLocation(equipmentId: number, location: string, startDate: string, endDate?: string, notes?: string) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) {
-    return { success: false, error: "Unauthorized" }
-  }
-  try {
-    await prisma.equipmentLocation.create({
-      data: {
-        equipmentId,
-        location,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
-        notes: notes || null,
-      },
-    })
-    revalidatePath(`/equipment/${equipmentId}`)
-    return { success: true }
-  } catch (error) {
-    console.error("Failed to create location:", error)
-    return { success: false, error: "Failed to create location" }
-  }
-}
-
-// Update Equipment Location
-export async function updateEquipmentLocation(id: number, location: string, startDate: string, endDate?: string, notes?: string) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user) {
-    return { success: false, error: "Unauthorized" }
-  }
-  try {
-    await prisma.equipmentLocation.update({
-      where: { id },
-      data: {
-        location,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
-        notes: notes || null,
-      },
-    })
-    // Optionally revalidate equipment detail page if needed
-    return { success: true }
-  } catch (error) {
-    console.error("Failed to update location:", error)
-    return { success: false, error: "Failed to update location" }
-  }
-}
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/db"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
-import { redirect } from "next/navigation"
 
 export async function getEquipment() {
   const session = await getServerSession(authOptions)
@@ -118,12 +25,12 @@ export async function getEquipment() {
         where: { userId: Number(session.user.id) },
         select: { projectId: true },
       })
-      const assignedProjectIds = userAssignments.map(a => a.projectId)
+      const assignedProjectIds = userAssignments.map((a) => a.projectId)
       const eqAssignments = await prisma.equipmentAssignment.findMany({
         where: { projectId: { in: assignedProjectIds } },
         select: { equipmentId: true },
       })
-      const assignedEquipmentIds = eqAssignments.map(a => a.equipmentId)
+      const assignedEquipmentIds = eqAssignments.map((a) => a.equipmentId)
       equipment = await prisma.equipment.findMany({
         where: { id: { in: assignedEquipmentIds } },
         orderBy: {
@@ -201,8 +108,8 @@ export async function getEquipmentById(id: number) {
 
 export async function createEquipment(formData: FormData) {
   const session = await getServerSession(authOptions)
-  if (!session?.user) {
-    return { success: false, error: "Unauthorized" }
+  if (!session?.user?.email) {
+    return { success: false, error: "Please log in to create equipment" }
   }
 
   try {
@@ -221,64 +128,139 @@ export async function createEquipment(formData: FormData) {
     const supplier = formData.get("supplier") as string
     const dateReceived = formData.get("dateReceived") as string
 
-    if (
-      !equipmentCode ||
-      !name ||
-      !type ||
-      !make ||
-      !model ||
-      !ownership ||
-      !measurementType ||
-      !unit ||
-      !workMeasure
-    ) {
-      return { success: false, error: "Required fields are missing" }
+    // Validate required fields
+    if (!equipmentCode?.trim()) {
+      return { success: false, error: "Equipment code is required" }
+    }
+    if (!name?.trim()) {
+      return { success: false, error: "Equipment name is required" }
+    }
+    if (!type?.trim()) {
+      return { success: false, error: "Equipment type is required" }
+    }
+    if (!make?.trim()) {
+      return { success: false, error: "Make is required" }
+    }
+    if (!model?.trim()) {
+      return { success: false, error: "Model is required" }
+    }
+    if (!ownership?.trim()) {
+      return { success: false, error: "Ownership is required" }
+    }
+    if (!measurementType?.trim()) {
+      return { success: false, error: "Measurement type is required" }
+    }
+    if (!unit?.trim()) {
+      return { success: false, error: "Unit is required" }
+    }
+    if (!workMeasure?.trim()) {
+      return { success: false, error: "Work measure is required" }
     }
 
     // Check if equipment code already exists
     const existingEquipment = await prisma.equipment.findUnique({
-      where: { equipmentCode },
+      where: { equipmentCode: equipmentCode.trim() },
     })
 
     if (existingEquipment) {
-      return { success: false, error: "Equipment code already exists" }
+      return { success: false, error: `Equipment code "${equipmentCode}" already exists` }
     }
 
-    await prisma.equipment.create({
+    // Validate year of manufacture
+    let yearNum = null
+    if (yearOfManufacture?.trim()) {
+      yearNum = Number.parseInt(yearOfManufacture.trim())
+      if (isNaN(yearNum) || yearNum < 1900 || yearNum > new Date().getFullYear()) {
+        return { success: false, error: "Invalid year of manufacture" }
+      }
+    }
+
+    // Validate size
+    let sizeNum = null
+    if (size?.trim()) {
+      sizeNum = Number.parseFloat(size.trim())
+      if (isNaN(sizeNum) || sizeNum < 0) {
+        return { success: false, error: "Invalid size value" }
+      }
+    }
+
+    // Validate acquisition cost
+    let costNum = null
+    if (acquisitionCost?.trim()) {
+      costNum = Number.parseFloat(acquisitionCost.trim())
+      if (isNaN(costNum) || costNum < 0) {
+        return { success: false, error: "Invalid acquisition cost" }
+      }
+    }
+
+    // Validate date received
+    let dateReceivedObj = null
+    if (dateReceived?.trim()) {
+      dateReceivedObj = new Date(dateReceived.trim())
+      if (isNaN(dateReceivedObj.getTime())) {
+        return { success: false, error: "Invalid date received" }
+      }
+      if (dateReceivedObj > new Date()) {
+        return { success: false, error: "Date received cannot be in the future" }
+      }
+    }
+
+    const equipment = await prisma.equipment.create({
       data: {
-        equipmentCode,
-        name,
-        type,
-        make,
-        model,
-        yearOfManufacture: yearOfManufacture ? Number.parseInt(yearOfManufacture) : null,
-        ownership: ownership as any,
-        measurementType,
-        unit,
-        size: size ? Number.parseFloat(size) : null,
-        workMeasure,
-        acquisitionCost: acquisitionCost ? Number.parseFloat(acquisitionCost) : null,
-        supplier: supplier || null,
-        dateReceived: dateReceived ? new Date(dateReceived) : null,
+        equipmentCode: equipmentCode.trim(),
+        name: name.trim(),
+        type: type.trim(),
+        make: make.trim(),
+        model: model.trim(),
+        yearOfManufacture: yearNum,
+        ownership: ownership.trim() as any,
+        measurementType: measurementType.trim(),
+        unit: unit.trim(),
+        size: sizeNum,
+        workMeasure: workMeasure.trim(),
+        acquisitionCost: costNum,
+        supplier: supplier?.trim() || null,
+        dateReceived: dateReceivedObj,
         status: "OPERATIONAL",
       },
     })
 
+    console.log("✅ Equipment created successfully:", equipment.id, equipment.name)
+
     revalidatePath("/equipment")
-    return { success: true }
+    return {
+      success: true,
+      data: equipment,
+      message: `Equipment "${equipment.name}" created successfully`,
+    }
   } catch (error) {
-    console.error("Failed to create equipment:", error)
-    return { success: false, error: "Failed to create equipment" }
+    console.error("❌ Failed to create equipment:", error)
+
+    // Handle specific Prisma errors
+    if (error.code === "P2002") {
+      return { success: false, error: "Equipment code already exists" }
+    }
+
+    return { success: false, error: "Failed to create equipment. Please try again." }
   }
 }
 
 export async function updateEquipment(id: number, formData: FormData) {
   const session = await getServerSession(authOptions)
-  if (!session?.user) {
-    return { success: false, error: "Unauthorized" }
+  if (!session?.user?.email) {
+    return { success: false, error: "Please log in to update equipment" }
   }
 
   try {
+    // Check if equipment exists
+    const existingEquipment = await prisma.equipment.findUnique({
+      where: { id },
+    })
+
+    if (!existingEquipment) {
+      return { success: false, error: "Equipment not found" }
+    }
+
     const equipmentCode = formData.get("equipmentCode") as string
     const name = formData.get("name") as string
     const type = formData.get("type") as string
@@ -295,6 +277,46 @@ export async function updateEquipment(id: number, formData: FormData) {
     const dateReceived = formData.get("dateReceived") as string
     const status = formData.get("status") as string
 
+    // Validate required fields
+    if (!equipmentCode?.trim()) {
+      return { success: false, error: "Equipment code is required" }
+    }
+    if (!name?.trim()) {
+      return { success: false, error: "Equipment name is required" }
+    }
+    if (!type?.trim()) {
+      return { success: false, error: "Equipment type is required" }
+    }
+    if (!make?.trim()) {
+      return { success: false, error: "Make is required" }
+    }
+    if (!model?.trim()) {
+      return { success: false, error: "Model is required" }
+    }
+    if (!ownership?.trim()) {
+      return { success: false, error: "Ownership is required" }
+    }
+    if (!measurementType?.trim()) {
+      return { success: false, error: "Measurement type is required" }
+    }
+    if (!unit?.trim()) {
+      return { success: false, error: "Unit is required" }
+    }
+    if (!workMeasure?.trim()) {
+      return { success: false, error: "Work measure is required" }
+    }
+
+    // Check if equipment code already exists (excluding current equipment)
+    if (equipmentCode.trim() !== existingEquipment.equipmentCode) {
+      const duplicateEquipment = await prisma.equipment.findUnique({
+        where: { equipmentCode: equipmentCode.trim() },
+      })
+
+      if (duplicateEquipment) {
+        return { success: false, error: `Equipment code "${equipmentCode}" already exists` }
+      }
+    }
+
     // Permission check: only Admin or user assigned to the equipment's project
     const isAdmin = session.user.role === "Admin"
     if (!isAdmin) {
@@ -315,33 +337,84 @@ export async function updateEquipment(id: number, formData: FormData) {
       }
     }
 
-    await prisma.equipment.update({
+    // Validate year of manufacture
+    let yearNum = null
+    if (yearOfManufacture?.trim()) {
+      yearNum = Number.parseInt(yearOfManufacture.trim())
+      if (isNaN(yearNum) || yearNum < 1900 || yearNum > new Date().getFullYear()) {
+        return { success: false, error: "Invalid year of manufacture" }
+      }
+    }
+
+    // Validate size
+    let sizeNum = null
+    if (size?.trim()) {
+      sizeNum = Number.parseFloat(size.trim())
+      if (isNaN(sizeNum) || sizeNum < 0) {
+        return { success: false, error: "Invalid size value" }
+      }
+    }
+
+    // Validate acquisition cost
+    let costNum = null
+    if (acquisitionCost?.trim()) {
+      costNum = Number.parseFloat(acquisitionCost.trim())
+      if (isNaN(costNum) || costNum < 0) {
+        return { success: false, error: "Invalid acquisition cost" }
+      }
+    }
+
+    // Validate date received
+    let dateReceivedObj = null
+    if (dateReceived?.trim()) {
+      dateReceivedObj = new Date(dateReceived.trim())
+      if (isNaN(dateReceivedObj.getTime())) {
+        return { success: false, error: "Invalid date received" }
+      }
+      if (dateReceivedObj > new Date()) {
+        return { success: false, error: "Date received cannot be in the future" }
+      }
+    }
+
+    const updatedEquipment = await prisma.equipment.update({
       where: { id },
       data: {
-        equipmentCode,
-        name,
-        type,
-        make,
-        model,
-        yearOfManufacture: yearOfManufacture ? Number.parseInt(yearOfManufacture) : null,
-        ownership: ownership as any,
-        measurementType,
-        unit,
-        size: size ? Number.parseFloat(size) : null,
-        workMeasure,
-        acquisitionCost: acquisitionCost ? Number.parseFloat(acquisitionCost) : null,
-        supplier: supplier || null,
-        dateReceived: dateReceived ? new Date(dateReceived) : null,
-        status: status as any,
+        equipmentCode: equipmentCode.trim(),
+        name: name.trim(),
+        type: type.trim(),
+        make: make.trim(),
+        model: model.trim(),
+        yearOfManufacture: yearNum,
+        ownership: ownership.trim() as any,
+        measurementType: measurementType.trim(),
+        unit: unit.trim(),
+        size: sizeNum,
+        workMeasure: workMeasure.trim(),
+        acquisitionCost: costNum,
+        supplier: supplier?.trim() || null,
+        dateReceived: dateReceivedObj,
+        status: (status?.trim() as any) || "OPERATIONAL",
       },
     })
 
+    console.log("✅ Equipment updated successfully:", updatedEquipment.id, updatedEquipment.name)
+
     revalidatePath("/equipment")
     revalidatePath(`/equipment/${id}`)
-    return { success: true }
+    return {
+      success: true,
+      data: updatedEquipment,
+      message: `Equipment "${updatedEquipment.name}" updated successfully`,
+    }
   } catch (error) {
-    console.error("Failed to update equipment:", error)
-    return { success: false, error: "Failed to update equipment" }
+    console.error("❌ Failed to update equipment:", error)
+
+    // Handle specific Prisma errors
+    if (error.code === "P2002") {
+      return { success: false, error: "Equipment code already exists" }
+    }
+
+    return { success: false, error: "Failed to update equipment. Please try again." }
   }
 }
 
@@ -352,6 +425,30 @@ export async function deleteEquipment(id: number) {
   }
 
   try {
+    // Check if equipment exists
+    const existingEquipment = await prisma.equipment.findUnique({
+      where: { id },
+      include: {
+        assignments: true,
+        fuelRequests: true,
+      },
+    })
+
+    if (!existingEquipment) {
+      return { success: false, error: "Equipment not found" }
+    }
+
+    // Check for dependencies
+    const hasActiveAssignments = existingEquipment.assignments.some((a) => !a.endDate)
+    const hasFuelRequests = existingEquipment.fuelRequests.length > 0
+
+    if (hasActiveAssignments || hasFuelRequests) {
+      return {
+        success: false,
+        error: "Cannot delete equipment with active assignments or fuel requests",
+      }
+    }
+
     // Permission check: only Admin or user assigned to the equipment's project
     const isAdmin = session.user.role === "Admin"
     if (!isAdmin) {
@@ -372,21 +469,24 @@ export async function deleteEquipment(id: number) {
       }
     }
 
-    // If TypeScript complains about deletedAt/deletedBy, use type assertion as any
+    // Soft delete by updating status
     await prisma.equipment.update({
       where: { id },
       data: {
-        deletedAt: new Date(),
-        deletedBy: session.user.email,
-      } as any,
+        status: "RETIRED",
+      },
     })
 
+    console.log("✅ Equipment deleted successfully:", existingEquipment.name)
+
     revalidatePath("/equipment")
-    redirect("/equipment")
-    return { success: true }
+    return {
+      success: true,
+      message: `Equipment "${existingEquipment.name}" deleted successfully`,
+    }
   } catch (error) {
-    console.error("Failed to delete equipment:", error)
-    return { success: false, error: "Failed to delete equipment" }
+    console.error("❌ Failed to delete equipment:", error)
+    return { success: false, error: "Failed to delete equipment. Please try again." }
   }
 }
 
@@ -397,16 +497,25 @@ export async function updateEquipmentStatus(id: number, status: string) {
   }
 
   try {
-    await prisma.equipment.update({
+    const validStatuses = ["OPERATIONAL", "UNDER_MAINTENANCE", "OUT_OF_SERVICE", "RETIRED"]
+    if (!validStatuses.includes(status)) {
+      return { success: false, error: "Invalid status" }
+    }
+
+    const updatedEquipment = await prisma.equipment.update({
       where: { id },
       data: { status: status as any },
     })
 
     revalidatePath("/equipment")
     revalidatePath(`/equipment/${id}`)
-    return { success: true }
+    return {
+      success: true,
+      data: updatedEquipment,
+      message: `Equipment status updated to ${status}`,
+    }
   } catch (error) {
-    console.error("Failed to update equipment status:", error)
+    console.error("❌ Failed to update equipment status:", error)
     return { success: false, error: "Failed to update equipment status" }
   }
 }
@@ -423,6 +532,32 @@ export async function assignEquipmentToProject(
   }
 
   try {
+    // Check if equipment and project exist
+    const [equipment, project] = await Promise.all([
+      prisma.equipment.findUnique({ where: { id: equipmentId } }),
+      prisma.project.findUnique({ where: { id: projectId } }),
+    ])
+
+    if (!equipment) {
+      return { success: false, error: "Equipment not found" }
+    }
+    if (!project) {
+      return { success: false, error: "Project not found" }
+    }
+
+    // Check if equipment is already assigned to this project
+    const existingAssignment = await prisma.equipmentAssignment.findFirst({
+      where: {
+        equipmentId,
+        projectId,
+        endDate: null, // Active assignment
+      },
+    })
+
+    if (existingAssignment) {
+      return { success: false, error: "Equipment is already assigned to this project" }
+    }
+
     await prisma.equipmentAssignment.create({
       data: {
         equipmentId,
@@ -436,9 +571,187 @@ export async function assignEquipmentToProject(
     revalidatePath("/equipment")
     revalidatePath(`/equipment/${equipmentId}`)
     revalidatePath(`/projects/${projectId}`)
-    return { success: true }
+    return {
+      success: true,
+      message: `Equipment "${equipment.name}" assigned to project "${project.name}"`,
+    }
   } catch (error) {
-    console.error("Failed to assign equipment:", error)
+    console.error("❌ Failed to assign equipment:", error)
     return { success: false, error: "Failed to assign equipment" }
+  }
+}
+
+// Create Equipment Assessment
+export async function createEquipmentAssessment(
+  equipmentId: number,
+  assessmentDate: string,
+  assessor: string,
+  notes?: string,
+) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  try {
+    if (!assessmentDate?.trim() || !assessor?.trim()) {
+      return { success: false, error: "Assessment date and assessor are required" }
+    }
+
+    const dateObj = new Date(assessmentDate.trim())
+    if (isNaN(dateObj.getTime())) {
+      return { success: false, error: "Invalid assessment date" }
+    }
+
+    await prisma.equipmentAssessment.create({
+      data: {
+        equipmentId,
+        assessmentDate: dateObj,
+        assessor: assessor.trim(),
+        notes: notes?.trim() || null,
+      },
+    })
+
+    revalidatePath(`/equipment/${equipmentId}`)
+    return { success: true, message: "Assessment created successfully" }
+  } catch (error) {
+    console.error("❌ Failed to create assessment:", error)
+    return { success: false, error: "Failed to create assessment" }
+  }
+}
+
+// Update Equipment Assessment
+export async function updateEquipmentAssessment(id: number, assessmentDate: string, assessor: string, notes?: string) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  try {
+    if (!assessmentDate?.trim() || !assessor?.trim()) {
+      return { success: false, error: "Assessment date and assessor are required" }
+    }
+
+    const dateObj = new Date(assessmentDate.trim())
+    if (isNaN(dateObj.getTime())) {
+      return { success: false, error: "Invalid assessment date" }
+    }
+
+    await prisma.equipmentAssessment.update({
+      where: { id },
+      data: {
+        assessmentDate: dateObj,
+        assessor: assessor.trim(),
+        notes: notes?.trim() || null,
+      },
+    })
+
+    return { success: true, message: "Assessment updated successfully" }
+  } catch (error) {
+    console.error("❌ Failed to update assessment:", error)
+    return { success: false, error: "Failed to update assessment" }
+  }
+}
+
+// Create Equipment Location
+export async function createEquipmentLocation(
+  equipmentId: number,
+  location: string,
+  startDate: string,
+  endDate?: string,
+  notes?: string,
+) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  try {
+    if (!location?.trim() || !startDate?.trim()) {
+      return { success: false, error: "Location and start date are required" }
+    }
+
+    const startDateObj = new Date(startDate.trim())
+    if (isNaN(startDateObj.getTime())) {
+      return { success: false, error: "Invalid start date" }
+    }
+
+    let endDateObj = null
+    if (endDate?.trim()) {
+      endDateObj = new Date(endDate.trim())
+      if (isNaN(endDateObj.getTime())) {
+        return { success: false, error: "Invalid end date" }
+      }
+      if (endDateObj <= startDateObj) {
+        return { success: false, error: "End date must be after start date" }
+      }
+    }
+
+    await prisma.equipmentLocation.create({
+      data: {
+        equipmentId,
+        location: location.trim(),
+        startDate: startDateObj,
+        endDate: endDateObj,
+        notes: notes?.trim() || null,
+      },
+    })
+
+    revalidatePath(`/equipment/${equipmentId}`)
+    return { success: true, message: "Location created successfully" }
+  } catch (error) {
+    console.error("❌ Failed to create location:", error)
+    return { success: false, error: "Failed to create location" }
+  }
+}
+
+// Update Equipment Location
+export async function updateEquipmentLocation(
+  id: number,
+  location: string,
+  startDate: string,
+  endDate?: string,
+  notes?: string,
+) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  try {
+    if (!location?.trim() || !startDate?.trim()) {
+      return { success: false, error: "Location and start date are required" }
+    }
+
+    const startDateObj = new Date(startDate.trim())
+    if (isNaN(startDateObj.getTime())) {
+      return { success: false, error: "Invalid start date" }
+    }
+
+    let endDateObj = null
+    if (endDate?.trim()) {
+      endDateObj = new Date(endDate.trim())
+      if (isNaN(endDateObj.getTime())) {
+        return { success: false, error: "Invalid end date" }
+      }
+      if (endDateObj <= startDateObj) {
+        return { success: false, error: "End date must be after start date" }
+      }
+    }
+
+    await prisma.equipmentLocation.update({
+      where: { id },
+      data: {
+        location: location.trim(),
+        startDate: startDateObj,
+        endDate: endDateObj,
+        notes: notes?.trim() || null,
+      },
+    })
+
+    return { success: true, message: "Location updated successfully" }
+  } catch (error) {
+    console.error("❌ Failed to update location:", error)
+    return { success: false, error: "Failed to update location" }
   }
 }
