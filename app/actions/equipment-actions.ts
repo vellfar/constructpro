@@ -181,6 +181,12 @@ export async function createEquipment(formData: FormData) {
       }
     }
 
+    // Validate ownership if provided
+    const validOwnership = ["OWNED", "RENTED", "LEASED", "UNRA", "MoWT"]
+    if (ownership?.trim() && !validOwnership.includes(ownership.trim())) {
+      return { success: false, error: "Invalid ownership type" }
+    }
+
     const equipment = await prisma.equipment.create({
       data: {
         equipmentCode: equipmentCode.trim(),
@@ -326,6 +332,12 @@ export async function updateEquipment(id: number, formData: FormData) {
       if (dateReceivedObj > new Date()) {
         return { success: false, error: "Date received cannot be in the future" }
       }
+    }
+
+    // Validate ownership if provided
+    const validOwnership = ["OWNED", "RENTED", "LEASED", "UNRA", "MoWT"]
+    if (ownership?.trim() && !validOwnership.includes(ownership.trim())) {
+      return { success: false, error: "Invalid ownership type" }
     }
 
     const updatedEquipment = await prisma.equipment.update({
