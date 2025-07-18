@@ -198,8 +198,8 @@ export default function NewEquipmentPage() {
                       <SelectItem value="OWNED">Owned</SelectItem>
                       <SelectItem value="RENTED">Rented</SelectItem>
                       <SelectItem value="LEASED">Leased</SelectItem>
-                      <SelectItem value="LEASED">UNRA</SelectItem>
-                      <SelectItem value="LEASED">MoWT</SelectItem>
+                      <SelectItem value="UNRA">UNRA</SelectItem>
+                      <SelectItem value="MoWT">MoWT</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
