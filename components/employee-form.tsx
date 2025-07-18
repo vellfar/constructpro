@@ -121,7 +121,6 @@ export function EmployeeForm({ employee, mode }: EmployeeFormProps) {
                     <SelectContent>
                       <SelectItem value="Male">Male</SelectItem>
                       <SelectItem value="Female">Female</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -154,7 +153,7 @@ export function EmployeeForm({ employee, mode }: EmployeeFormProps) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="section">Department *</Label>
+                  <Label htmlFor="section">Section *</Label>
                   <Select name="section" defaultValue={employee?.section || ""} required disabled={isPending}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select department" />
@@ -166,6 +165,7 @@ export function EmployeeForm({ employee, mode }: EmployeeFormProps) {
                       <SelectItem value="HR">Administrative Support</SelectItem>
                       <SelectItem value="Safety">Mechanical</SelectItem>
                       <SelectItem value="Safety">Survey</SelectItem>
+                      <SelectItem value="Safety">Employee</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
