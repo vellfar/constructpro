@@ -128,33 +128,9 @@ export async function createEquipment(formData: FormData) {
     const supplier = formData.get("supplier") as string
     const dateReceived = formData.get("dateReceived") as string
 
-    // Validate required fields
+    // Only equipment code is required
     if (!equipmentCode?.trim()) {
-      return { success: false, error: "Equipment code is required" }
-    }
-    if (!name?.trim()) {
-      return { success: false, error: "Equipment name is required" }
-    }
-    if (!type?.trim()) {
-      return { success: false, error: "Equipment type is required" }
-    }
-    if (!make?.trim()) {
-      return { success: false, error: "Make is required" }
-    }
-    if (!model?.trim()) {
-      return { success: false, error: "Model is required" }
-    }
-    if (!ownership?.trim()) {
-      return { success: false, error: "Ownership is required" }
-    }
-    if (!measurementType?.trim()) {
-      return { success: false, error: "Measurement type is required" }
-    }
-    if (!unit?.trim()) {
-      return { success: false, error: "Unit is required" }
-    }
-    if (!workMeasure?.trim()) {
-      return { success: false, error: "Work measure is required" }
+      return { success: false, error: "Equipment code/plate number is required" }
     }
 
     // Check if equipment code already exists
@@ -166,7 +142,7 @@ export async function createEquipment(formData: FormData) {
       return { success: false, error: `Equipment code "${equipmentCode}" already exists` }
     }
 
-    // Validate year of manufacture
+    // Validate year of manufacture if provided
     let yearNum = null
     if (yearOfManufacture?.trim()) {
       yearNum = Number.parseInt(yearOfManufacture.trim())
@@ -175,7 +151,7 @@ export async function createEquipment(formData: FormData) {
       }
     }
 
-    // Validate size
+    // Validate size if provided
     let sizeNum = null
     if (size?.trim()) {
       sizeNum = Number.parseFloat(size.trim())
@@ -184,7 +160,7 @@ export async function createEquipment(formData: FormData) {
       }
     }
 
-    // Validate acquisition cost
+    // Validate acquisition cost if provided
     let costNum = null
     if (acquisitionCost?.trim()) {
       costNum = Number.parseFloat(acquisitionCost.trim())
@@ -193,7 +169,7 @@ export async function createEquipment(formData: FormData) {
       }
     }
 
-    // Validate date received
+    // Validate date received if provided
     let dateReceivedObj = null
     if (dateReceived?.trim()) {
       dateReceivedObj = new Date(dateReceived.trim())
@@ -208,16 +184,16 @@ export async function createEquipment(formData: FormData) {
     const equipment = await prisma.equipment.create({
       data: {
         equipmentCode: equipmentCode.trim(),
-        name: name.trim(),
-        type: type.trim(),
-        make: make.trim(),
-        model: model.trim(),
+        name: name?.trim() || equipmentCode.trim(), // Use equipment code as fallback name
+        type: type?.trim() || "Equipment", // Default type
+        make: make?.trim() || "Unknown", // Default make
+        model: model?.trim() || "Unknown", // Default model
         yearOfManufacture: yearNum,
-        ownership: ownership.trim() as any,
-        measurementType: measurementType.trim(),
-        unit: unit.trim(),
+        ownership: (ownership?.trim() as any) || "OWNED", // Default ownership
+        measurementType: measurementType?.trim() || "Unit", // Default measurement type
+        unit: unit?.trim() || "pcs", // Default unit
         size: sizeNum,
-        workMeasure: workMeasure.trim(),
+        workMeasure: workMeasure?.trim() || "N/A", // Default work measure
         acquisitionCost: costNum,
         supplier: supplier?.trim() || null,
         dateReceived: dateReceivedObj,
@@ -277,33 +253,9 @@ export async function updateEquipment(id: number, formData: FormData) {
     const dateReceived = formData.get("dateReceived") as string
     const status = formData.get("status") as string
 
-    // Validate required fields
+    // Only equipment code is required
     if (!equipmentCode?.trim()) {
-      return { success: false, error: "Equipment code is required" }
-    }
-    if (!name?.trim()) {
-      return { success: false, error: "Equipment name is required" }
-    }
-    if (!type?.trim()) {
-      return { success: false, error: "Equipment type is required" }
-    }
-    if (!make?.trim()) {
-      return { success: false, error: "Make is required" }
-    }
-    if (!model?.trim()) {
-      return { success: false, error: "Model is required" }
-    }
-    if (!ownership?.trim()) {
-      return { success: false, error: "Ownership is required" }
-    }
-    if (!measurementType?.trim()) {
-      return { success: false, error: "Measurement type is required" }
-    }
-    if (!unit?.trim()) {
-      return { success: false, error: "Unit is required" }
-    }
-    if (!workMeasure?.trim()) {
-      return { success: false, error: "Work measure is required" }
+      return { success: false, error: "Equipment code/plate number is required" }
     }
 
     // Check if equipment code already exists (excluding current equipment)
@@ -337,7 +289,7 @@ export async function updateEquipment(id: number, formData: FormData) {
       }
     }
 
-    // Validate year of manufacture
+    // Validate year of manufacture if provided
     let yearNum = null
     if (yearOfManufacture?.trim()) {
       yearNum = Number.parseInt(yearOfManufacture.trim())
@@ -346,7 +298,7 @@ export async function updateEquipment(id: number, formData: FormData) {
       }
     }
 
-    // Validate size
+    // Validate size if provided
     let sizeNum = null
     if (size?.trim()) {
       sizeNum = Number.parseFloat(size.trim())
@@ -355,7 +307,7 @@ export async function updateEquipment(id: number, formData: FormData) {
       }
     }
 
-    // Validate acquisition cost
+    // Validate acquisition cost if provided
     let costNum = null
     if (acquisitionCost?.trim()) {
       costNum = Number.parseFloat(acquisitionCost.trim())
@@ -364,7 +316,7 @@ export async function updateEquipment(id: number, formData: FormData) {
       }
     }
 
-    // Validate date received
+    // Validate date received if provided
     let dateReceivedObj = null
     if (dateReceived?.trim()) {
       dateReceivedObj = new Date(dateReceived.trim())
@@ -380,20 +332,20 @@ export async function updateEquipment(id: number, formData: FormData) {
       where: { id },
       data: {
         equipmentCode: equipmentCode.trim(),
-        name: name.trim(),
-        type: type.trim(),
-        make: make.trim(),
-        model: model.trim(),
+        name: name?.trim() || equipmentCode.trim(), // Use equipment code as fallback name
+        type: type?.trim() || existingEquipment.type || "Equipment",
+        make: make?.trim() || existingEquipment.make || "Unknown",
+        model: model?.trim() || existingEquipment.model || "Unknown",
         yearOfManufacture: yearNum,
-        ownership: ownership.trim() as any,
-        measurementType: measurementType.trim(),
-        unit: unit.trim(),
+        ownership: (ownership?.trim() as any) || existingEquipment.ownership || "OWNED",
+        measurementType: measurementType?.trim() || existingEquipment.measurementType || "Unit",
+        unit: unit?.trim() || existingEquipment.unit || "pcs",
         size: sizeNum,
-        workMeasure: workMeasure.trim(),
+        workMeasure: workMeasure?.trim() || existingEquipment.workMeasure || "N/A",
         acquisitionCost: costNum,
         supplier: supplier?.trim() || null,
         dateReceived: dateReceivedObj,
-        status: (status?.trim() as any) || "OPERATIONAL",
+        status: (status?.trim() as any) || existingEquipment.status || "OPERATIONAL",
       },
     })
 

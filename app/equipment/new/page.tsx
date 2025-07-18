@@ -150,7 +150,9 @@ export default function NewEquipmentPage() {
           <form onSubmit={handleSubmit}>
             <CardHeader>
               <CardTitle>Equipment Information</CardTitle>
-              <CardDescription>Enter the details for the new equipment</CardDescription>
+              <CardDescription>
+                Enter the equipment details. Only the equipment code/plate number is required.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Success Message */}
@@ -183,23 +185,24 @@ export default function NewEquipmentPage() {
                     required
                     disabled={isPending}
                   />
+                  <p className="text-xs text-muted-foreground">This is the only required field</p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="name">Equipment Name *</Label>
+                  <Label htmlFor="name">Equipment Name</Label>
                   <Input
                     id="name"
                     placeholder="Excavator XC-201"
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
-                    required
                     disabled={isPending}
                   />
+                  <p className="text-xs text-muted-foreground">Will use plate number if not provided</p>
                 </div>
               </div>
 
               <div className="grid gap-6 md:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="type">Type *</Label>
+                  <Label htmlFor="type">Type</Label>
                   <Select
                     value={
                       formData.type &&
@@ -249,24 +252,22 @@ export default function NewEquipmentPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="make">Make *</Label>
+                  <Label htmlFor="make">Make</Label>
                   <Input
                     id="make"
                     placeholder="Caterpillar"
                     value={formData.make}
                     onChange={(e) => handleInputChange("make", e.target.value)}
-                    required
                     disabled={isPending}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="model">Model *</Label>
+                  <Label htmlFor="model">Model</Label>
                   <Input
                     id="model"
                     placeholder="CAT 320"
                     value={formData.model}
                     onChange={(e) => handleInputChange("model", e.target.value)}
-                    required
                     disabled={isPending}
                   />
                 </div>
@@ -287,7 +288,7 @@ export default function NewEquipmentPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="ownership">Ownership *</Label>
+                  <Label htmlFor="ownership">Ownership</Label>
                   <Select
                     value={formData.ownership || "__NONE__"}
                     onValueChange={(value) => handleInputChange("ownership", value === "__NONE__" ? "" : value)}
@@ -310,24 +311,22 @@ export default function NewEquipmentPage() {
 
               <div className="grid gap-6 md:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="measurementType">Measurement Type *</Label>
+                  <Label htmlFor="measurementType">Measurement Type</Label>
                   <Input
                     id="measurementType"
                     placeholder="Volume"
                     value={formData.measurementType}
                     onChange={(e) => handleInputChange("measurementType", e.target.value)}
-                    required
                     disabled={isPending}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="unit">Unit *</Label>
+                  <Label htmlFor="unit">Unit</Label>
                   <Input
                     id="unit"
                     placeholder="m³"
                     value={formData.unit}
                     onChange={(e) => handleInputChange("unit", e.target.value)}
-                    required
                     disabled={isPending}
                   />
                 </div>
@@ -347,13 +346,12 @@ export default function NewEquipmentPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="workMeasure">Fuel Consumption Rate *</Label>
+                <Label htmlFor="workMeasure">Fuel Consumption Rate</Label>
                 <Input
                   id="workMeasure"
                   placeholder="12L/hr"
                   value={formData.workMeasure}
                   onChange={(e) => handleInputChange("workMeasure", e.target.value)}
-                  required
                   disabled={isPending}
                 />
               </div>
