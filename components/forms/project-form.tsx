@@ -469,7 +469,7 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
             disabled={isFormLoading}
           />
         </div>
-        <div className="space-y-2">
+        {/*<div className="space-y-2">
           <Label htmlFor="actualEndDate">Actual End Date</Label>
           <Input
             id="actualEndDate"
@@ -478,7 +478,7 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
             defaultValue={initialData?.actualEndDate ? new Date(initialData.actualEndDate).toISOString().split("T")[0] : ""}
             disabled={isFormLoading}
           />
-        </div>
+        </div> */}
       </div>
 
       <div className="flex justify-end gap-4">
