@@ -121,6 +121,7 @@ model Project {
   location              String?
   startDate             DateTime
   plannedEndDate        DateTime?
+  actualEndDate         DateTime?
   budget                Float
   status                ProjectStatus         @default(PLANNING)
   projectCode           String                @unique

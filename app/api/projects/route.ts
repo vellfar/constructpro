@@ -96,14 +96,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Assignment-based filtering for non-Admins
-    let filteredWhere = { ...where }
+    const filteredWhere = { ...where }
     if (session.user.role !== "Admin") {
       // Get assigned project IDs
       const assignments = await prisma.projectAssignment.findMany({
         where: { userId: Number(session.user.id) },
         select: { projectId: true },
       })
-      const assignedProjectIds = assignments.map(a => a.projectId)
+      const assignedProjectIds = assignments.map((a) => a.projectId)
       filteredWhere.id = { in: assignedProjectIds }
     }
 
@@ -174,14 +174,34 @@ export async function POST(request: NextRequest) {
       location,
       budget,
       startDate,
-      endDate,
+      plannedEndDate,
+      actualEndDate,
       clientId,
       projectCode,
       status = "PLANNING",
     } = body
 
-    if (!name || !clientId) {
-      return NextResponse.json({ error: "Name and client are required" }, { status: 400 })
+    if (!name || !budget) {
+      return NextResponse.json({ error: "Name and budget are required" }, { status: 400 })
+    }
+
+    // Validate dates
+    const startDateObj = startDate ? new Date(startDate) : new Date()
+    let plannedEndDateObj = null
+    let actualEndDateObj = null
+
+    if (plannedEndDate) {
+      plannedEndDateObj = new Date(plannedEndDate)
+      if (plannedEndDateObj <= startDateObj) {
+        return NextResponse.json({ error: "Planned end date must be after start date" }, { status: 400 })
+      }
+    }
+
+    if (actualEndDate) {
+      actualEndDateObj = new Date(actualEndDate)
+      if (actualEndDateObj <= startDateObj) {
+        return NextResponse.json({ error: "Actual end date must be after start date" }, { status: 400 })
+      }
     }
 
     const project = await prisma.project.create({
@@ -190,9 +210,10 @@ export async function POST(request: NextRequest) {
         description,
         location,
         budget: budget ? Number.parseFloat(budget) : 0,
-        startDate: startDate ? new Date(startDate) : new Date(),
-        plannedEndDate: endDate ? new Date(endDate) : null,
-        clientId: Number.parseInt(clientId),
+        startDate: startDateObj,
+        plannedEndDate: plannedEndDateObj,
+        actualEndDate: actualEndDateObj,
+        clientId: clientId ? Number.parseInt(clientId) : null,
         projectCode,
         status,
         createdById: Number(session.user.id),

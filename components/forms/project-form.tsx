@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, AlertCircle, RefreshCw, Hash } from "lucide-react"
+import { Loader2, AlertCircle, RefreshCw, Hash, Calendar } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { toast } from "@/hooks/use-toast"
 
@@ -27,7 +27,7 @@ interface Employee {
   role: string
   department?: string | null
   email?: string | null
-  position?: string
+  designation?: string
   employeeNumber?: string | null
 }
 
@@ -62,6 +62,17 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
   )
   const [selectedStatus, setSelectedStatus] = useState<string>(initialData?.status || "PLANNING")
   const [projectCode, setProjectCode] = useState<string>(initialData?.projectCode || "")
+
+  // Date states for validation
+  const [startDate, setStartDate] = useState<string>(
+    initialData?.startDate ? new Date(initialData.startDate).toISOString().split("T")[0] : "",
+  )
+  const [plannedEndDate, setPlannedEndDate] = useState<string>(
+    initialData?.plannedEndDate ? new Date(initialData.plannedEndDate).toISOString().split("T")[0] : "",
+  )
+  const [actualEndDate, setActualEndDate] = useState<string>(
+    initialData?.actualEndDate ? new Date(initialData.actualEndDate).toISOString().split("T")[0] : "",
+  )
 
   useEffect(() => {
     fetchAllData()
@@ -178,46 +189,82 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
     }
   }
 
+  // Date validation function
+  function validateDates(start: string, plannedEnd: string, actualEnd: string): string | null {
+    if (!start) return null
+
+    const startDateObj = new Date(start)
+
+    if (plannedEnd) {
+      const plannedEndDateObj = new Date(plannedEnd)
+      if (plannedEndDateObj <= startDateObj) {
+        return "Planned end date must be after start date"
+      }
+    }
+
+    if (actualEnd) {
+      const actualEndDateObj = new Date(actualEnd)
+      if (actualEndDateObj <= startDateObj) {
+        return "Actual end date must be after start date"
+      }
+    }
+
+    return null
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+    event.preventDefault()
+
+    // Validate dates before submission
+    const dateError = validateDates(startDate, plannedEndDate, actualEndDate)
+    if (dateError) {
+      toast({
+        title: "Invalid Dates",
+        description: dateError,
+        variant: "destructive",
+        duration: 5000,
+      })
+      return
+    }
+
+    const formData = new FormData(event.currentTarget)
 
     // Clean and format budget before submit
-    const budgetRaw = formData.get("budget") as string;
+    const budgetRaw = formData.get("budget") as string
     if (budgetRaw) {
-      formData.set("budget", budgetRaw.replace(/,/g, ""));
+      formData.set("budget", budgetRaw.replace(/,/g, ""))
     }
 
     // Handle client selection
     if (selectedClientId && selectedClientId !== "NO_CLIENT") {
-      formData.set("clientId", selectedClientId);
+      formData.set("clientId", selectedClientId)
     } else {
-      formData.delete("clientId");
+      formData.delete("clientId")
     }
 
     // Handle status
-    formData.set("status", selectedStatus);
+    formData.set("status", selectedStatus)
     // Ensure project code is included
-    formData.set("projectCode", projectCode);
+    formData.set("projectCode", projectCode)
 
-    setIsSubmitting(true);
+    setIsSubmitting(true)
     try {
-      const result = await onSubmit(formData);
+      const result = await onSubmit(formData)
       if (result?.success) {
         toast({
           title: "Success!",
           description: result.message || "Operation completed successfully",
           duration: 3000,
-        });
-        router.push("/projects");
-        router.refresh();
+        })
+        router.push("/projects")
+        router.refresh()
       } else {
         toast({
           title: "Error",
           description: result?.error || "An error occurred",
           variant: "destructive",
           duration: 5000,
-        });
+        })
       }
     } catch (error) {
       toast({
@@ -225,9 +272,9 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
         duration: 5000,
-      });
+      })
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false)
     }
   }
 
@@ -248,7 +295,7 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="flex items-center justify-between">
               {clientsError}
-              <Button variant="outline" size="sm" onClick={fetchClients} className="ml-2">
+              <Button variant="outline" size="sm" onClick={fetchClients} className="ml-2 bg-transparent">
                 <RefreshCw className="h-3 w-3 mr-1" />
                 Retry
               </Button>
@@ -307,7 +354,7 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
             <AlertCircle className="h-4 w-4" />
             <AlertDescription className="flex items-center justify-between">
               {projectCodeError}
-              <Button variant="outline" size="sm" onClick={generateProjectCode} className="ml-2">
+              <Button variant="outline" size="sm" onClick={generateProjectCode} className="ml-2 bg-transparent">
                 <RefreshCw className="h-3 w-3 mr-1" />
                 Retry
               </Button>
@@ -354,6 +401,7 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
   }
 
   const isFormLoading = isLoading || isSubmitting || loadingClients || loadingEmployees
+  const dateValidationError = validateDates(startDate, plannedEndDate, actualEndDate)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -423,7 +471,7 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="budget">Project Budget / contract price (UGX) *</Label>
+          <Label htmlFor="budget">Project Budget / Contract Price (UGX) *</Label>
           <div className="relative">
             <Input
               id="budget"
@@ -435,11 +483,11 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
               defaultValue={initialData?.budget ? initialData.budget.toLocaleString("en-US") : ""}
               required
               disabled={isFormLoading}
-              onChange={e => {
+              onChange={(e) => {
                 // Format with commas as user types
-                const raw = e.target.value.replace(/,/g, "");
+                const raw = e.target.value.replace(/,/g, "")
                 if (!isNaN(Number(raw))) {
-                  e.target.value = Number(raw).toLocaleString("en-US");
+                  e.target.value = Number(raw).toLocaleString("en-US")
                 }
               }}
             />
@@ -448,14 +496,23 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Date validation error display */}
+      {dateValidationError && (
+        <Alert variant="destructive">
+          <Calendar className="h-4 w-4" />
+          <AlertDescription>{dateValidationError}</AlertDescription>
+        </Alert>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="startDate">Start Date</Label>
           <Input
             id="startDate"
             name="startDate"
             type="date"
-            defaultValue={initialData?.startDate ? new Date(initialData.startDate).toISOString().split("T")[0] : ""}
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
             disabled={isFormLoading}
           />
         </div>
@@ -465,24 +522,34 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
             id="plannedEndDate"
             name="plannedEndDate"
             type="date"
-            defaultValue={initialData?.plannedEndDate ? new Date(initialData.plannedEndDate).toISOString().split("T")[0] : ""}
+            value={plannedEndDate}
+            onChange={(e) => setPlannedEndDate(e.target.value)}
             disabled={isFormLoading}
           />
         </div>
-        {/*<div className="space-y-2">
-          <Label htmlFor="actualEndDate">Actual End Date</Label>
+        <div className="space-y-2">
+          <Label htmlFor="actualEndDate">
+            Actual End Date
+            {selectedStatus === "COMPLETED" && <span className="text-red-500 ml-1">*</span>}
+          </Label>
           <Input
             id="actualEndDate"
             name="actualEndDate"
             type="date"
-            defaultValue={initialData?.actualEndDate ? new Date(initialData.actualEndDate).toISOString().split("T")[0] : ""}
+            value={actualEndDate}
+            onChange={(e) => setActualEndDate(e.target.value)}
             disabled={isFormLoading}
+            required={selectedStatus === "COMPLETED"}
           />
-        </div> */}
+        </div>
       </div>
 
       <div className="flex justify-end gap-4">
-        <Button type="submit" disabled={isFormLoading || !projectCode} className="w-full md:w-auto min-w-[200px]">
+        <Button
+          type="submit"
+          disabled={isFormLoading || !projectCode || !!dateValidationError}
+          className="w-full md:w-auto min-w-[200px]"
+        >
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

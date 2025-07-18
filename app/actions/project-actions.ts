@@ -16,6 +16,14 @@ export async function getProjects() {
     const projects = await prisma.project.findMany({
       include: {
         client: { select: { id: true, name: true } },
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
     })
@@ -42,6 +50,9 @@ export async function getActiveProjects() {
         name: true,
         projectCode: true,
         status: true,
+        startDate: true,
+        plannedEndDate: true,
+        actualEndDate: true,
       },
       orderBy: { name: "asc" },
     })
@@ -75,7 +86,26 @@ export async function createProject(formData: FormData) {
       return { success: false, error: "Project name and budget are required" }
     }
 
-    // ✅ Fetch the user ID
+    // Validate dates
+    const startDateObj = startDate ? new Date(startDate) : new Date()
+    let plannedEndDateObj = null
+    let actualEndDateObj = null
+
+    if (plannedEndDate) {
+      plannedEndDateObj = new Date(plannedEndDate)
+      if (plannedEndDateObj <= startDateObj) {
+        return { success: false, error: "Planned end date must be after start date" }
+      }
+    }
+
+    if (actualEndDate) {
+      actualEndDateObj = new Date(actualEndDate)
+      if (actualEndDateObj <= startDateObj) {
+        return { success: false, error: "Actual end date must be after start date" }
+      }
+    }
+
+    // Fetch the user ID
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: { id: true },
@@ -85,7 +115,7 @@ export async function createProject(formData: FormData) {
       return { success: false, error: "User not found" }
     }
 
-    // ✅ Generate unique project code if not provided
+    // Generate unique project code if not provided
     if (!projectCode) {
       const last = await prisma.project.findFirst({
         where: { projectCode: { startsWith: "PRJ-" } },
@@ -96,14 +126,14 @@ export async function createProject(formData: FormData) {
       let next = 1
       if (last?.projectCode) {
         const match = last.projectCode.match(/PRJ-(\d+)/)
-        if (match) next = parseInt(match[1]) + 1
+        if (match) next = Number.parseInt(match[1]) + 1
       }
 
       next += Math.floor(Math.random() * 5)
       projectCode = `PRJ-${String(next).padStart(4, "0")}`
     }
 
-    // ✅ Check if the generated project code already exists
+    // Check if the generated project code already exists
     const existing = await prisma.project.findUnique({ where: { projectCode } })
     if (existing) {
       return {
@@ -112,15 +142,15 @@ export async function createProject(formData: FormData) {
       }
     }
 
-    // ✅ Prepare data for creation
+    // Prepare data for creation
     const data: any = {
       name,
       description: description || null,
       location: location || null,
-      budget: parseFloat(budget),
-      startDate: startDate ? new Date(startDate) : new Date(),
-      plannedEndDate: plannedEndDate ? new Date(plannedEndDate) : null,
-      actualEndDate: actualEndDate ? new Date(actualEndDate) : null,
+      budget: Number.parseFloat(budget),
+      startDate: startDateObj,
+      plannedEndDate: plannedEndDateObj,
+      actualEndDate: actualEndDateObj,
       projectCode,
       status: ProjectStatus.PLANNING,
       createdAt: new Date(),
@@ -135,11 +165,24 @@ export async function createProject(formData: FormData) {
       }
     }
 
-    const project = await prisma.project.create({ data })
+    const project = await prisma.project.create({
+      data,
+      include: {
+        client: { select: { id: true, name: true } },
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    })
 
     revalidatePath("/projects")
 
-    return { success: true, data: project }
+    return { success: true, data: project, message: "Project created successfully" }
   } catch (error) {
     console.error("❌ Failed to create project:", error)
     return {
@@ -149,12 +192,11 @@ export async function createProject(formData: FormData) {
   }
 }
 
-
 // Update project — safe for internal usage (returns result)
 export async function updateProject(
   id: number,
-  formData: FormData
-): Promise<{ success: boolean; error?: string; data?: any }> {
+  formData: FormData,
+): Promise<{ success: boolean; error?: string; data?: any; message?: string }> {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) return { success: false, error: "Unauthorized" }
@@ -174,6 +216,25 @@ export async function updateProject(
       return { success: false, error: "Required fields are missing" }
     }
 
+    // Validate dates
+    const startDateObj = startDate ? new Date(startDate) : new Date()
+    let plannedEndDateObj = null
+    let actualEndDateObj = null
+
+    if (plannedEndDate) {
+      plannedEndDateObj = new Date(plannedEndDate)
+      if (plannedEndDateObj <= startDateObj) {
+        return { success: false, error: "Planned end date must be after start date" }
+      }
+    }
+
+    if (actualEndDate) {
+      actualEndDateObj = new Date(actualEndDate)
+      if (actualEndDateObj <= startDateObj) {
+        return { success: false, error: "Actual end date must be after start date" }
+      }
+    }
+
     const duplicate = await prisma.project.findFirst({
       where: { projectCode, NOT: { id } },
     })
@@ -183,26 +244,36 @@ export async function updateProject(
       name,
       description: description || null,
       location: location || null,
-      budget: parseFloat(budget),
-      startDate: startDate ? new Date(startDate) : new Date(),
-      plannedEndDate: plannedEndDate ? new Date(plannedEndDate) : null,
-      actualEndDate: actualEndDate ? new Date(actualEndDate) : null,
+      budget: Number.parseFloat(budget),
+      startDate: startDateObj,
+      plannedEndDate: plannedEndDateObj,
+      actualEndDate: actualEndDateObj,
       status: status as ProjectStatus,
       projectCode,
       clientId: clientId && clientId !== "NO_CLIENT" ? Number(clientId) : null,
       updatedAt: new Date(),
-      updatedBy: session.user.email,
     }
 
     const updated = await prisma.project.update({
       where: { id },
       data: updateData,
+      include: {
+        client: { select: { id: true, name: true } },
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
     })
 
     revalidatePath("/projects")
     revalidatePath(`/projects/${id}`)
 
-    return { success: true, data: updated }
+    return { success: true, data: updated, message: "Project updated successfully" }
   } catch (error) {
     console.error("❌ Failed to update project:", error)
     return { success: false, error: "Failed to update project" }
@@ -282,7 +353,22 @@ export async function updateProjectStatus(id: number, status: ProjectStatus) {
 
     const updated = await prisma.project.update({
       where: { id },
-      data: { status },
+      data: {
+        status,
+        // Auto-set actual end date when project is completed
+        ...(status === ProjectStatus.COMPLETED && { actualEndDate: new Date() }),
+      },
+      include: {
+        client: { select: { id: true, name: true } },
+        createdBy: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
     })
 
     revalidatePath("/projects")

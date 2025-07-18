@@ -21,7 +21,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     const cacheKey = cacheKeys.project(projectId)
     const cachedProject = cache.get(cacheKey)
-    // const cachedProject = await cache.get(cacheKey) // use this if cache is async
 
     if (cachedProject) {
       return NextResponse.json(cachedProject)
@@ -38,7 +37,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
                 id: true,
                 firstName: true,
                 lastName: true,
-                position: true,
+                designation: true,
               },
             },
           },
@@ -73,11 +72,11 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
               },
             },
           },
-          orderBy: { requestDate: "desc" },
+          orderBy: { createdAt: "desc" },
           take: 10,
         },
         invoices: {
-          orderBy: { issueDate: "desc" },
+          orderBy: { invoiceDate: "desc" },
         },
         createdBy: {
           select: {
@@ -131,6 +130,23 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       throw new AppError("Project not found", 404, "PROJECT_NOT_FOUND")
     }
 
+    // Validate dates if provided
+    if (updateData.startDate && updateData.plannedEndDate) {
+      const startDate = new Date(updateData.startDate)
+      const plannedEndDate = new Date(updateData.plannedEndDate)
+      if (plannedEndDate <= startDate) {
+        throw new AppError("Planned end date must be after start date", 400, "INVALID_DATE_RANGE")
+      }
+    }
+
+    if (updateData.startDate && updateData.actualEndDate) {
+      const startDate = new Date(updateData.startDate)
+      const actualEndDate = new Date(updateData.actualEndDate)
+      if (actualEndDate <= startDate) {
+        throw new AppError("Actual end date must be after start date", 400, "INVALID_DATE_RANGE")
+      }
+    }
+
     if (updateData.clientId) {
       const client = await prisma.client.findUnique({
         where: { id: updateData.clientId },
@@ -148,7 +164,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
           select: {
             id: true,
             name: true,
-            contactPerson: true,
+            contactName: true,
             email: true,
           },
         },
@@ -216,7 +232,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       throw new AppError(
         "Cannot delete project with existing activities, equipment assignments, fuel requests, or invoices",
         400,
-        "PROJECT_HAS_DEPENDENCIES"
+        "PROJECT_HAS_DEPENDENCIES",
       )
     }
 
