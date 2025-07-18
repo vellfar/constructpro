@@ -229,7 +229,7 @@ async function generateProjectSummaryReport(dateFrom: string, dateTo: string, pr
         spent: p.invoices?.filter((inv) => inv.status === "PAID").reduce((sum, inv) => sum + inv.amount, 0) || 0,
         client: p.client?.name || "N/A",
         startDate: p.startDate,
-        endDate: p.plannedEndDate,
+        plannedEndDate: p.plannedEndDate,
         activitiesCount: p.activities?.length || 0,
         equipmentCount: p.equipmentAssignments?.length || 0,
         fuelRequestsCount: p.fuelRequests?.length || 0,
