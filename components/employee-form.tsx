@@ -161,7 +161,7 @@ export function EmployeeForm({ employee, mode }: EmployeeFormProps) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="section">Department</Label>
+                    <Label htmlFor="section">Section</Label>
                     <Input
                       id="section"
                       name="section"
