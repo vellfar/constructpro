@@ -1,8 +1,9 @@
-version: '3'
+version: '3.9'
 
 services:
   db:
-    image: postgres:17
+    image: postgres:15
+    container_name: constructpro-db
     restart: always
     environment:
       POSTGRES_USER: prisma_user
@@ -11,17 +12,20 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - '5432:5432'
+      - "5432:5432" # only if you really need external access; otherwise, remove this line
 
   app:
     build: .
     container_name: nextjs_app
+    restart: always
     ports:
-      - '3000:3000'
+      - "3000:3000"
     depends_on:
       - db
     environment:
-      - DATABASE_URL=postgresql://prisma_user:Ogiroi1%4012212@db:5432/prisma_db
+      - DATABASE_URL=postgresql://prisma_user:Ogiroi1@12212@db:5432/prisma_db
+      - NEXTAUTH_URL=https://constructmaster.net
+      - NEXTAUTH_SECRET=Ogiroi1@12212
 
 volumes:
   pgdata:
