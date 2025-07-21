@@ -6,21 +6,24 @@ import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { z } from "zod"
 
-// Validation schema
+// ✅ Only required fields: employeeNumber, firstName, lastName
 const employeeSchema = z.object({
   employeeNumber: z.string().min(1, "Employee number is required"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  dateOfAppointment: z.string().min(1, "Date of appointment is required"),
-  section: z.string().min(1, "Department is required"),
-  designation: z.string().min(1, "Designation is required"),
-  wageAmount: z.number().positive("Wage amount must be positive"),
-  wageFrequency: z.string().min(1, "Wage frequency is required"),
-  gender: z.string().min(1, "Gender is required"),
+  dateOfAppointment: z.string().optional(),
+  section: z.string().optional(),
+  designation: z.string().optional(),
+  wageAmount: z
+    .number()
+    .positive("Wage amount must be positive")
+    .optional(),
+  wageFrequency: z.string().optional(),
+  gender: z.string().optional(),
   bank: z.string().optional(),
   accountNumber: z.string().optional(),
   bankBranch: z.string().optional(),
-  employmentTerms: z.string().min(1, "Employment terms is required"),
+  employmentTerms: z.string().optional(),
 })
 
 export async function getEmployees() {
@@ -52,8 +55,8 @@ export async function getEmployees() {
           },
         })
       },
-      () => [], // Fallback to empty array
-      "Get employees",
+      () => [],
+      "Get employees"
     )
 
     return { success: true, data: employees }
@@ -77,7 +80,7 @@ export async function getEmployee(id: number) {
         })
       },
       () => null,
-      "Get employee",
+      "Get employee"
     )
 
     if (!employee) {
@@ -105,7 +108,9 @@ export async function createEmployee(formData: FormData) {
       dateOfAppointment: formData.get("dateOfAppointment") as string,
       section: formData.get("section") as string,
       designation: formData.get("designation") as string,
-      wageAmount: Number.parseFloat(formData.get("wageAmount") as string),
+      wageAmount: formData.get("wageAmount")
+        ? Number(formData.get("wageAmount"))
+        : undefined,
       wageFrequency: formData.get("wageFrequency") as string,
       gender: formData.get("gender") as string,
       bank: formData.get("bank") as string,
@@ -114,25 +119,24 @@ export async function createEmployee(formData: FormData) {
       employmentTerms: formData.get("employmentTerms") as string,
     }
 
-    // Validate data
     const validatedData = employeeSchema.parse(rawData)
 
     const employee = await safeDbOperation(
       async () => {
-        // Check if employee number already exists
-        const existingEmployee = await db.employee.findUnique({
+        const existing = await db.employee.findUnique({
           where: { employeeNumber: validatedData.employeeNumber },
-          select: { id: true },
         })
 
-        if (existingEmployee) {
+        if (existing) {
           throw new Error("Employee number already exists")
         }
 
         return await db.employee.create({
           data: {
             ...validatedData,
-            dateOfAppointment: new Date(validatedData.dateOfAppointment),
+            dateOfAppointment: validatedData.dateOfAppointment
+              ? new Date(validatedData.dateOfAppointment)
+              : null,
             bank: validatedData.bank || null,
             accountNumber: validatedData.accountNumber || null,
             bankBranch: validatedData.bankBranch || null,
@@ -148,7 +152,7 @@ export async function createEmployee(formData: FormData) {
       () => {
         throw new Error("Database operation failed")
       },
-      "Create employee",
+      "Create employee"
     )
 
     revalidatePath("/employees")
@@ -157,7 +161,6 @@ export async function createEmployee(formData: FormData) {
     if (error instanceof z.ZodError) {
       return { success: false, error: error.errors[0].message }
     }
-
     if (error instanceof Error) {
       if (error.message === "Employee number already exists") {
         return { success: false, error: error.message }
@@ -183,7 +186,9 @@ export async function updateEmployee(id: number, formData: FormData) {
       dateOfAppointment: formData.get("dateOfAppointment") as string,
       section: formData.get("section") as string,
       designation: formData.get("designation") as string,
-      wageAmount: Number.parseFloat(formData.get("wageAmount") as string),
+      wageAmount: formData.get("wageAmount")
+        ? Number(formData.get("wageAmount"))
+        : undefined,
       wageFrequency: formData.get("wageFrequency") as string,
       gender: formData.get("gender") as string,
       bank: formData.get("bank") as string,
@@ -192,21 +197,18 @@ export async function updateEmployee(id: number, formData: FormData) {
       employmentTerms: formData.get("employmentTerms") as string,
     }
 
-    // Validate data
     const validatedData = employeeSchema.parse(rawData)
 
     const employee = await safeDbOperation(
       async () => {
-        // Check if employee number exists for another employee
-        const existingEmployee = await db.employee.findFirst({
+        const existing = await db.employee.findFirst({
           where: {
             employeeNumber: validatedData.employeeNumber,
             NOT: { id },
           },
-          select: { id: true },
         })
 
-        if (existingEmployee) {
+        if (existing) {
           throw new Error("Employee number already exists")
         }
 
@@ -214,7 +216,9 @@ export async function updateEmployee(id: number, formData: FormData) {
           where: { id },
           data: {
             ...validatedData,
-            dateOfAppointment: new Date(validatedData.dateOfAppointment),
+            dateOfAppointment: validatedData.dateOfAppointment
+              ? new Date(validatedData.dateOfAppointment)
+              : null,
             bank: validatedData.bank || null,
             accountNumber: validatedData.accountNumber || null,
             bankBranch: validatedData.bankBranch || null,
@@ -230,7 +234,7 @@ export async function updateEmployee(id: number, formData: FormData) {
       () => {
         throw new Error("Database operation failed")
       },
-      "Update employee",
+      "Update employee"
     )
 
     revalidatePath("/employees")
@@ -240,7 +244,6 @@ export async function updateEmployee(id: number, formData: FormData) {
     if (error instanceof z.ZodError) {
       return { success: false, error: error.errors[0].message }
     }
-
     if (error instanceof Error) {
       if (error.message === "Employee number already exists") {
         return { success: false, error: error.message }
@@ -261,14 +264,12 @@ export async function deleteEmployee(id: number) {
 
     await safeDbOperation(
       async () => {
-        await db.employee.delete({
-          where: { id },
-        })
+        await db.employee.delete({ where: { id } })
       },
       () => {
         throw new Error("Database operation failed")
       },
-      "Delete employee",
+      "Delete employee"
     )
 
     revalidatePath("/employees")
@@ -314,11 +315,11 @@ export async function searchEmployees(query: string) {
           orderBy: {
             firstName: "asc",
           },
-          take: 50, // Limit results for performance
+          take: 50,
         })
       },
-      () => [], // Fallback to empty array
-      "Search employees",
+      () => [],
+      "Search employees"
     )
 
     return { success: true, data: employees }
