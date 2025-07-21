@@ -209,6 +209,7 @@ model Equipment {
   assessments         EquipmentAssessment[]
   locations           EquipmentLocation[]
 }
+
 model EquipmentAssessment {
   id            Int        @id @default(autoincrement())
   equipmentId   Int
@@ -225,13 +226,16 @@ model EquipmentLocation {
   id            Int        @id @default(autoincrement())
   equipmentId   Int
   location      String
-  startDate     DateTime
+  startDate     DateTime   @default(now())
   endDate       DateTime?
   notes         String?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
   equipment     Equipment  @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@index([startDate])
+  @@index([endDate])
 }
 
 model EquipmentAssignment {
@@ -239,11 +243,11 @@ model EquipmentAssignment {
   equipmentId Int
   userId      Int?
   projectId   Int
-  startDate   DateTime
+  startDate   DateTime  @default(now())
   endDate     DateTime?
   assignedBy  String
-  assignedAt  DateTime?
-  status      String   @default("ACTIVE")
+  assignedAt  DateTime  @default(now())
+  status      String    @default("ACTIVE")
   notes       String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -252,6 +256,9 @@ model EquipmentAssignment {
   equipment   Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user        User?     @relation(fields: [userId], references: [id])
+
+  @@index([startDate])
+  @@index([endDate])
 }
 
 model FuelRequest {
