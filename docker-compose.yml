@@ -7,7 +7,7 @@ services:
     ports:
       - '3000:3000'
     environment:
-      - DATABASE_URL=postgresql://prisma_user:Ogiroi1%4012212@db:5432/prisma_db
+      - DATABASE_URL=postgresql://prisma_user:Ogiroi1%4012212@host.docker.internal:5432/prisma_db
 
 volumes:
   pgdata:
