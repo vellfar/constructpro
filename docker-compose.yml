@@ -1,10 +1,27 @@
-version: '1.0'
+version: '3'
 
 services:
+  db:
+    image: postgres:17
+    container_name: db
+    environment:
+      POSTGRES_USER: prisma_user
+      POSTGRES_PASSWORD: Ogiroi1@12212
+      POSTGRES_DB: prisma_db
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+
   app:
     build: .
     container_name: nextjs_app
     ports:
       - '3000:3000'
+    depends_on:
+      - db
     environment:
-      - DATABASE_URL=postgresql://prisma_user:Ogiroi1@12212@172.17.0.1:5432/prisma_db
+      - DATABASE_URL=postgresql://prisma_user:Ogiroi1%4012212@db:5432/prisma_db
+
+volumes:
+  pgdata:
