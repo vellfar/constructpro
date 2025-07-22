@@ -156,11 +156,7 @@ export async function createProject(formData: FormData) {
       createdById: user.id,
     }
 
-    if (clientId && clientId !== "NO_CLIENT") {
-      data.client = {
-        connect: { id: Number(clientId) },
-      }
-    }
+    data.clientId = clientId && clientId !== "NO_CLIENT" ? Number(clientId) : null
 
     const project = await prisma.project.create({
       data,

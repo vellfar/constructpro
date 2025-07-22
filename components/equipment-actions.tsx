@@ -36,6 +36,7 @@ export function EquipmentActions({ equipment }: EquipmentActionsProps) {
   const router = useRouter()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const handleDelete = async () => {
     setIsDeleting(true)
@@ -54,9 +55,16 @@ export function EquipmentActions({ equipment }: EquipmentActionsProps) {
     }
   }
 
+  // Custom navigation handler for Edit Equipment
+  const handleEdit = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault()
+    setMenuOpen(false)
+    router.push(`/equipment/${equipment.id}/edit`)
+  }
+
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="h-8 w-8 bg-white/80 hover:bg-white">
             <MoreHorizontal className="h-4 w-4" />
@@ -71,10 +79,10 @@ export function EquipmentActions({ equipment }: EquipmentActionsProps) {
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href={`/equipment/${equipment.id}/edit`}>
+            <a href={`/equipment/${equipment.id}/edit`} onClick={handleEdit}>
               <Edit className="mr-2 h-4 w-4" />
               Edit Equipment
-            </Link>
+            </a>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
