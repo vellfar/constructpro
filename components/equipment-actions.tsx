@@ -45,8 +45,8 @@ export function EquipmentActions({ equipment }: EquipmentActionsProps) {
     try {
       const result = await deleteEquipment(equipment.id)
       if (result.success) {
-        router.refresh()
         setShowDeleteDialog(false)
+        router.push("/equipment")
       } else {
         setDeleteError(result.error || "Failed to delete equipment.")
         console.error("Failed to delete equipment:", result.error)
