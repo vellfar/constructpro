@@ -175,7 +175,7 @@ export default function EquipmentPage() {
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 </div>
               </TableHead>
-              <TableHead>Type / Make / Model</TableHead>
+              <TableHead>Make</TableHead>
               <TableHead>Code</TableHead>
               <TableHead>Year</TableHead>
               <TableHead>Status</TableHead>
