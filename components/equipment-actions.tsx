@@ -38,17 +38,21 @@ export function EquipmentActions({ equipment }: EquipmentActionsProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
+  const [deleteError, setDeleteError] = useState<string>("")
   const handleDelete = async () => {
     setIsDeleting(true)
+    setDeleteError("")
     try {
       const result = await deleteEquipment(equipment.id)
       if (result.success) {
         router.refresh()
         setShowDeleteDialog(false)
       } else {
+        setDeleteError(result.error || "Failed to delete equipment.")
         console.error("Failed to delete equipment:", result.error)
       }
     } catch (error) {
+      setDeleteError("An unexpected error occurred.")
       console.error("Error deleting equipment:", error)
     } finally {
       setIsDeleting(false)
@@ -103,9 +107,12 @@ export function EquipmentActions({ equipment }: EquipmentActionsProps) {
               This will permanently delete the equipment "{equipment.name}" ({equipment.equipmentCode}). This action
               cannot be undone.
             </AlertDialogDescription>
+            {deleteError && (
+              <div className="mt-2 text-sm text-red-600 font-semibold">{deleteError}</div>
+            )}
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}

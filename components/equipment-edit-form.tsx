@@ -11,11 +11,14 @@ import { updateEquipment } from "@/app/actions/equipment-actions"
 
 export default function EquipmentEditForm({ equipment }: { equipment: any }) {
   const [errorMsg, setErrorMsg] = useState("")
+  const [loading, setLoading] = useState(false)
   const router = useRouter()
 
   async function handleUpdate(formData: FormData) {
     setErrorMsg("")
+    setLoading(true)
     const result = await updateEquipment(equipment.id, formData)
+    setLoading(false)
     if (result?.success) {
       router.push(`/equipment/${equipment.id}`)
     } else {
@@ -168,8 +171,10 @@ export default function EquipmentEditForm({ equipment }: { equipment: any }) {
           </div>
         </div>
         <div className="flex gap-4 pt-4">
-          <Button type="submit">Update Equipment</Button>
-          <Button type="button" variant="outline" asChild>
+          <Button type="submit" disabled={loading}>
+            {loading ? "Updating..." : "Update Equipment"}
+          </Button>
+          <Button type="button" variant="outline" asChild disabled={loading}>
             <Link href={`/equipment/${equipment.id}`}>Cancel</Link>
           </Button>
         </div>

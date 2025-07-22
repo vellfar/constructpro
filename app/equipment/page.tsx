@@ -7,12 +7,13 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Search, Truck, Loader2, Download, MoreVertical } from "lucide-react"
+import { Plus, Search, Truck, Loader2, Download, MoreVertical, ArrowUpDown, Eye, Edit } from "lucide-react"
 import Link from "next/link"
 import { getEquipment } from "@/app/actions/equipment-actions"
 import { EquipmentActions } from "@/components/equipment-actions"
 import { exportToCSV, exportToExcel, formatDataForExport } from "@/lib/export-utils"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 export const viewport = {
   width: "device-width",
@@ -41,6 +42,23 @@ export default function EquipmentPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid")
+
+  useEffect(() => {
+    // Set view mode based on screen size
+    const handleResize = () => {
+      setViewMode(window.innerWidth >= 768 ? "table" : "grid")
+    }
+
+    // Initial check
+    handleResize()
+
+    // Add event listener
+    window.addEventListener("resize", handleResize)
+
+    // Cleanup
+    return () => window.removeEventListener("resize", handleResize)
+  }, [])
 
   useEffect(() => {
     const fetchEquipment = async () => {
@@ -121,6 +139,108 @@ export default function EquipmentPage() {
       default:
         return "bg-gray-100 text-gray-800 border-gray-200"
     }
+  }
+
+  function EquipmentTable({ equipment: equipmentList }: { equipment: Equipment[] }) {
+    if (!equipmentList || equipmentList.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-white rounded-lg border border-gray-200">
+          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <Truck className="h-8 w-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No equipment found</h3>
+          <p className="text-sm text-gray-600 mb-6 max-w-sm">
+            {searchTerm || typeFilter !== "all" || statusFilter !== "all"
+              ? "No equipment matches your current filters. Try adjusting your search criteria."
+              : "Get started by adding your first piece of equipment to track and manage your construction assets."}
+          </p>
+          <Button asChild className="bg-blue-600 hover:bg-blue-700">
+            <Link href="/equipment/new">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Equipment
+            </Link>
+          </Button>
+        </div>
+      )
+    }
+
+    return (
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[250px]">
+                <div className="flex items-center">
+                  Equipment
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                </div>
+              </TableHead>
+              <TableHead>Type / Make / Model</TableHead>
+              <TableHead>Code</TableHead>
+              <TableHead>Year</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Ownership</TableHead>
+              <TableHead>Size</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {equipmentList.map((item) => (
+              <TableRow key={item.id} className="hover:bg-gray-50">
+                <TableCell className="font-medium">
+                  <Link href={`/equipment/${item.id}`} className="hover:text-blue-600 transition-colors">
+                    {item.name}
+                  </Link>
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium">{item.type}</span>
+                    {item.make && item.model && (
+                      <span className="text-gray-500">
+                        {" "}
+                        • {item.make} {item.model}
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">{item.equipmentCode}</span>
+                </TableCell>
+                <TableCell>{item.yearOfManufacture || "N/A"}</TableCell>
+                <TableCell>
+                  <Badge className={`text-xs font-medium border ${getStatusColor(item.status)}`}>
+                    {item.status.replace("_", " ")}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className={`text-xs ${getOwnershipColor(item.ownership)}`}>
+                    {item.ownership}
+                  </Badge>
+                </TableCell>
+                <TableCell>{item.size ? `${item.size} ${item.unit || ""}`.trim() : "N/A"}</TableCell>
+                <TableCell className="text-right">
+                  <div className="flex justify-end gap-2">
+                    <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Link href={`/equipment/${item.id}`}>
+                        <span className="sr-only">View</span>
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Link href={`/equipment/${item.id}/edit`}>
+                        <span className="sr-only">Edit</span>
+                        <Edit className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <EquipmentActions equipment={item} />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    )
   }
 
   function EquipmentGrid({ equipment: equipmentList }: { equipment: Equipment[] }) {
@@ -215,6 +335,14 @@ export default function EquipmentPage() {
           </Card>
         ))}
       </div>
+    )
+  }
+
+  function EquipmentView({ equipment: equipmentList }: { equipment: Equipment[] }) {
+    return viewMode === "table" ? (
+      <EquipmentTable equipment={equipmentList} />
+    ) : (
+      <EquipmentGrid equipment={equipmentList} />
     )
   }
 
@@ -408,6 +536,28 @@ export default function EquipmentPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* View Toggle - Only visible on larger screens */}
+                <div className="hidden md:flex justify-end">
+                  <div className="inline-flex rounded-md shadow-sm">
+                    <Button
+                      variant={viewMode === "grid" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setViewMode("grid")}
+                      className={`rounded-l-md rounded-r-none ${viewMode === "grid" ? "bg-blue-600" : "bg-white border-gray-300"}`}
+                    >
+                      Grid
+                    </Button>
+                    <Button
+                      variant={viewMode === "table" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setViewMode("table")}
+                      className={`rounded-r-md rounded-l-none ${viewMode === "table" ? "bg-blue-600" : "bg-white border-gray-300"}`}
+                    >
+                      Table
+                    </Button>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -446,16 +596,16 @@ export default function EquipmentPage() {
 
             {/* Tab Content */}
             <TabsContent value="all" className="mt-6">
-              <EquipmentGrid equipment={filteredEquipment} />
+              <EquipmentView equipment={filteredEquipment} />
             </TabsContent>
             <TabsContent value="operational" className="mt-6">
-              <EquipmentGrid equipment={operationalEquipment} />
+              <EquipmentView equipment={operationalEquipment} />
             </TabsContent>
             <TabsContent value="maintenance" className="mt-6">
-              <EquipmentGrid equipment={maintenanceEquipment} />
+              <EquipmentView equipment={maintenanceEquipment} />
             </TabsContent>
             <TabsContent value="outofservice" className="mt-6">
-              <EquipmentGrid equipment={outOfServiceEquipment} />
+              <EquipmentView equipment={outOfServiceEquipment} />
             </TabsContent>
           </Tabs>
         </div>
