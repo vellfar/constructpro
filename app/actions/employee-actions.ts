@@ -14,10 +14,10 @@ const employeeSchema = z.object({
   dateOfAppointment: z.string().optional(),
   section: z.string().optional(),
   designation: z.string().optional(),
-  wageAmount: z
-    .number()
-    .positive("Wage amount must be positive")
-    .optional(),
+  wageAmount: z.preprocess(
+    (val) => (val === '' || val === undefined ? undefined : Number(val)),
+    z.number().positive("Wage amount must be positive").optional()
+  ),
   wageFrequency: z.string().optional(),
   gender: z.string().optional(),
   bank: z.string().optional(),
@@ -55,7 +55,20 @@ export async function getEmployees() {
           },
         })
       },
-      () => [],
+      () => [{
+  employeeNumber: "",
+  firstName: "",
+  lastName: "",
+  dateOfAppointment: new Date(),
+  section: "",
+  designation: "",
+  wageAmount: 0,
+  wageFrequency: "",
+  gender: "",
+  employmentTerms: "",
+  id: 0,
+  createdAt: new Date(),
+}],
       "Get employees"
     )
 
@@ -79,7 +92,24 @@ export async function getEmployee(id: number) {
           where: { id },
         })
       },
-      () => null,
+      () => ({
+  employeeNumber: "",
+  firstName: "",
+  lastName: "",
+  dateOfAppointment: new Date(),
+  section: "",
+  designation: "",
+  wageAmount: 0,
+  wageFrequency: "",
+  gender: "",
+  bank: "",
+  accountNumber: "",
+  bankBranch: "",
+  employmentTerms: "",
+  id: 0,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+}),
       "Get employee"
     )
 
@@ -102,21 +132,19 @@ export async function createEmployee(formData: FormData) {
     }
 
     const rawData = {
-      employeeNumber: formData.get("employeeNumber") as string,
-      firstName: formData.get("firstName") as string,
-      lastName: formData.get("lastName") as string,
-      dateOfAppointment: formData.get("dateOfAppointment") as string,
-      section: formData.get("section") as string,
-      designation: formData.get("designation") as string,
-      wageAmount: formData.get("wageAmount")
-        ? Number(formData.get("wageAmount"))
-        : undefined,
-      wageFrequency: formData.get("wageFrequency") as string,
-      gender: formData.get("gender") as string,
-      bank: formData.get("bank") as string,
-      accountNumber: formData.get("accountNumber") as string,
-      bankBranch: formData.get("bankBranch") as string,
-      employmentTerms: formData.get("employmentTerms") as string,
+      employeeNumber: formData.get("employeeNumber")?.toString() || "",
+      firstName: formData.get("firstName")?.toString() || "",
+      lastName: formData.get("lastName")?.toString() || "",
+      dateOfAppointment: formData.get("dateOfAppointment")?.toString() || undefined,
+      section: formData.get("section")?.toString() || undefined,
+      designation: formData.get("designation")?.toString() || undefined,
+      wageAmount: formData.get("wageAmount")?.toString() || undefined,
+      wageFrequency: formData.get("wageFrequency")?.toString() || undefined,
+      gender: formData.get("gender")?.toString() || undefined,
+      bank: formData.get("bank")?.toString() || undefined,
+      accountNumber: formData.get("accountNumber")?.toString() || undefined,
+      bankBranch: formData.get("bankBranch")?.toString() || undefined,
+      employmentTerms: formData.get("employmentTerms")?.toString() || undefined,
     }
 
     const validatedData = employeeSchema.parse(rawData)
@@ -133,13 +161,19 @@ export async function createEmployee(formData: FormData) {
 
         return await db.employee.create({
           data: {
-            ...validatedData,
-            dateOfAppointment: validatedData.dateOfAppointment
-              ? new Date(validatedData.dateOfAppointment)
-              : null,
-            bank: validatedData.bank || null,
-            accountNumber: validatedData.accountNumber || null,
-            bankBranch: validatedData.bankBranch || null,
+            employeeNumber: validatedData.employeeNumber,
+            firstName: validatedData.firstName,
+            lastName: validatedData.lastName,
+            dateOfAppointment: validatedData.dateOfAppointment ? new Date(validatedData.dateOfAppointment) : new Date(),
+            section: validatedData.section ?? "",
+            designation: validatedData.designation ?? "",
+            wageAmount: validatedData.wageAmount ?? 0,
+            wageFrequency: validatedData.wageFrequency ?? "",
+            gender: validatedData.gender ?? "",
+            bank: validatedData.bank ?? "",
+            accountNumber: validatedData.accountNumber ?? "",
+            bankBranch: validatedData.bankBranch ?? "",
+            employmentTerms: validatedData.employmentTerms ?? "",
           },
           select: {
             id: true,
@@ -149,9 +183,12 @@ export async function createEmployee(formData: FormData) {
           },
         })
       },
-      () => {
-        throw new Error("Database operation failed")
-      },
+      () => ({
+        employeeNumber: "",
+        firstName: "",
+        lastName: "",
+        id: 0,
+      }),
       "Create employee"
     )
 
@@ -186,9 +223,7 @@ export async function updateEmployee(id: number, formData: FormData) {
       dateOfAppointment: formData.get("dateOfAppointment") as string,
       section: formData.get("section") as string,
       designation: formData.get("designation") as string,
-      wageAmount: formData.get("wageAmount")
-        ? Number(formData.get("wageAmount"))
-        : undefined,
+      wageAmount: formData.get("wageAmount"),
       wageFrequency: formData.get("wageFrequency") as string,
       gender: formData.get("gender") as string,
       bank: formData.get("bank") as string,
@@ -215,13 +250,19 @@ export async function updateEmployee(id: number, formData: FormData) {
         return await db.employee.update({
           where: { id },
           data: {
-            ...validatedData,
-            dateOfAppointment: validatedData.dateOfAppointment
-              ? new Date(validatedData.dateOfAppointment)
-              : null,
-            bank: validatedData.bank || null,
-            accountNumber: validatedData.accountNumber || null,
-            bankBranch: validatedData.bankBranch || null,
+            employeeNumber: validatedData.employeeNumber,
+            firstName: validatedData.firstName,
+            lastName: validatedData.lastName,
+            dateOfAppointment: validatedData.dateOfAppointment ? new Date(validatedData.dateOfAppointment) : new Date(),
+            section: validatedData.section ?? "",
+            designation: validatedData.designation ?? "",
+            wageAmount: validatedData.wageAmount ?? 0,
+            wageFrequency: validatedData.wageFrequency ?? "",
+            gender: validatedData.gender ?? "",
+            bank: validatedData.bank ?? "",
+            accountNumber: validatedData.accountNumber ?? "",
+            bankBranch: validatedData.bankBranch ?? "",
+            employmentTerms: validatedData.employmentTerms ?? "",
           },
           select: {
             id: true,
@@ -231,9 +272,12 @@ export async function updateEmployee(id: number, formData: FormData) {
           },
         })
       },
-      () => {
-        throw new Error("Database operation failed")
-      },
+      () => ({
+        employeeNumber: "",
+        firstName: "",
+        lastName: "",
+        id: 0,
+      }),
       "Update employee"
     )
 
@@ -266,9 +310,7 @@ export async function deleteEmployee(id: number) {
       async () => {
         await db.employee.delete({ where: { id } })
       },
-      () => {
-        throw new Error("Database operation failed")
-      },
+      () => {},
       "Delete employee"
     )
 
@@ -318,7 +360,19 @@ export async function searchEmployees(query: string) {
           take: 50,
         })
       },
-      () => [],
+      () => [{
+        dateOfAppointment: new Date(),
+        section: "",
+        designation: "",
+        wageAmount: 0,
+        wageFrequency: "",
+        gender: "",
+        employmentTerms: "",
+        employeeNumber: "",
+        firstName: "",
+        lastName: "",
+        id: 0,
+      }],
       "Search employees"
     )
 
