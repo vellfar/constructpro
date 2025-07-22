@@ -435,12 +435,9 @@ export async function deleteEquipment(id: number) {
       }
     }
 
-    // Soft delete by updating status
-    await prisma.equipment.update({
+    // Actually delete the equipment record
+    await prisma.equipment.delete({
       where: { id },
-      data: {
-        status: "RETIRED",
-      },
     })
 
     console.log("✅ Equipment deleted successfully:", existingEquipment.name)
