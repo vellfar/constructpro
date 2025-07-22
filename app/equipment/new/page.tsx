@@ -52,7 +52,7 @@ export default function NewEquipmentPage() {
       try {
         const formDataObj = new FormData()
         Object.entries(formData).forEach(([key, value]) => {
-          if (value.trim()) {
+          if (typeof value === "string" && value.trim()) {
             formDataObj.append(key, value.trim())
           }
         })
@@ -63,27 +63,20 @@ export default function NewEquipmentPage() {
 
         console.log("📝 Create result:", result)
 
-        if (result.success) {
-          console.log("✅ Equipment created successfully!")
-
+        if (result && result.success) {
           setSuccess(result.message || "Equipment created successfully!")
-
           toast({
             title: "Success!",
             description: result.message || "Equipment created successfully",
             duration: 3000,
           })
-
-          // Redirect after a short delay to show success message
           setTimeout(() => {
             router.push("/equipment")
             router.refresh()
           }, 1500)
         } else {
-          console.log("❌ Create failed:", result.error)
-          const errorMessage = result.error || "Failed to create equipment"
+          const errorMessage = (result && result.error) ? result.error : "Failed to create equipment. Please check your input and try again."
           setError(errorMessage)
-
           toast({
             title: "Error",
             description: errorMessage,
@@ -91,32 +84,25 @@ export default function NewEquipmentPage() {
             duration: 5000,
           })
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("💥 Unexpected error during creation:", error)
-
         // Check if this is a redirect error (which means success in Next.js server actions)
         if (
           error instanceof Error &&
-          (error.message.includes("NEXT_REDIRECT") ||
-            error.message.includes("redirect") ||
-            error.digest?.includes("NEXT_REDIRECT"))
+          (error.message?.includes("NEXT_REDIRECT") ||
+            error.message?.includes("redirect") ||
+            ((error as any)?.digest?.includes("NEXT_REDIRECT")))
         ) {
-          console.log("✅ Redirect detected - equipment was created successfully!")
-
           setSuccess("Equipment created successfully! Redirecting...")
-
           toast({
             title: "Success!",
             description: "Equipment created successfully",
             duration: 3000,
           })
-
-          // The redirect will handle navigation automatically
           return
         } else {
-          const errorMessage = "An unexpected error occurred. Please try again."
+          const errorMessage = error?.message || "An unexpected error occurred. Please try again."
           setError(errorMessage)
-
           toast({
             title: "Error",
             description: errorMessage,

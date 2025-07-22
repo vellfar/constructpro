@@ -229,7 +229,7 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
     }
 
     // Handle client selection
-    if (selectedClientId && selectedClientId !== "NO_CLIENT") {
+    if (selectedClientId && selectedClientId !== "NO_CLIENT" && selectedClientId !== "NO_CLIENTS_AVAILABLE") {
       formData.set("clientId", selectedClientId)
     } else {
       formData.delete("clientId")
@@ -515,7 +515,6 @@ export function ProjectForm({ initialData, onSubmit, isLoading = false, submitBu
             value={actualEndDate}
             onChange={(e) => setActualEndDate(e.target.value)}
             disabled={isFormLoading}
-            required={selectedStatus === "COMPLETED"}
           />
         </div>
       </div>

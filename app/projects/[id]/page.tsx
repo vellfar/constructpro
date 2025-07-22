@@ -201,10 +201,17 @@ export default async function ProjectDetailPage({ params }: PageProps) {
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">End Date</p>
+                  <p className="text-sm text-muted-foreground">Planned End Date</p>
                   <p className="flex items-center gap-1 text-sm">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    {formatDate(project.plannedEndDate)}
+                    {project.plannedEndDate ? formatDate(project.plannedEndDate) : "Not set"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Actual End Date</p>
+                  <p className="flex items-center gap-1 text-sm">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    {project.actualEndDate ? formatDate(project.actualEndDate) : "Not set"}
                   </p>
                 </div>
               </div>

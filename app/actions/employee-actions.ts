@@ -55,20 +55,20 @@ export async function getEmployees() {
           },
         })
       },
-      () => [{
-  employeeNumber: "",
-  firstName: "",
-  lastName: "",
-  dateOfAppointment: new Date(),
-  section: "",
-  designation: "",
-  wageAmount: 0,
-  wageFrequency: "",
-  gender: "",
-  employmentTerms: "",
-  id: 0,
-  createdAt: new Date(),
-}],
+      [{
+        employeeNumber: "",
+        firstName: "",
+        lastName: "",
+        dateOfAppointment: new Date(),
+        section: "",
+        designation: "",
+        wageAmount: 0,
+        wageFrequency: "",
+        gender: "",
+        employmentTerms: "",
+        id: 0,
+        createdAt: new Date(),
+      }],
       "Get employees"
     )
 
@@ -92,24 +92,25 @@ export async function getEmployee(id: number) {
           where: { id },
         })
       },
-      () => ({
-  employeeNumber: "",
-  firstName: "",
-  lastName: "",
-  dateOfAppointment: new Date(),
-  section: "",
-  designation: "",
-  wageAmount: 0,
-  wageFrequency: "",
-  gender: "",
-  bank: "",
-  accountNumber: "",
-  bankBranch: "",
-  employmentTerms: "",
-  id: 0,
-  createdAt: new Date(),
-  updatedAt: new Date(),
-}),
+      {
+        id: 0,
+        employeeNumber: "",
+        firstName: "",
+        lastName: "",
+        dateOfAppointment: new Date(),
+        section: "",
+        designation: "",
+        wageAmount: 0,
+        wageFrequency: "",
+        gender: "",
+        bank: "",
+        accountNumber: "",
+        bankBranch: "",
+        employmentTerms: "",
+        isActive: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
       "Get employee"
     )
 
@@ -183,12 +184,12 @@ export async function createEmployee(formData: FormData) {
           },
         })
       },
-      () => ({
+      {
         employeeNumber: "",
         firstName: "",
         lastName: "",
         id: 0,
-      }),
+      },
       "Create employee"
     )
 
@@ -272,12 +273,12 @@ export async function updateEmployee(id: number, formData: FormData) {
           },
         })
       },
-      () => ({
+      {
         employeeNumber: "",
         firstName: "",
         lastName: "",
         id: 0,
-      }),
+      },
       "Update employee"
     )
 
@@ -310,7 +311,7 @@ export async function deleteEmployee(id: number) {
       async () => {
         await db.employee.delete({ where: { id } })
       },
-      () => {},
+      undefined,
       "Delete employee"
     )
 
@@ -360,7 +361,10 @@ export async function searchEmployees(query: string) {
           take: 50,
         })
       },
-      () => [{
+      [{
+        employeeNumber: "",
+        firstName: "",
+        lastName: "",
         dateOfAppointment: new Date(),
         section: "",
         designation: "",
@@ -368,9 +372,6 @@ export async function searchEmployees(query: string) {
         wageFrequency: "",
         gender: "",
         employmentTerms: "",
-        employeeNumber: "",
-        firstName: "",
-        lastName: "",
         id: 0,
       }],
       "Search employees"

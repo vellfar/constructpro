@@ -116,8 +116,8 @@ export function EmployeeForm({ employee, mode }: EmployeeFormProps) {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="gender">Gender *</Label>
-                    <Select name="gender" defaultValue={employee?.gender || "Male"} required disabled={isPending}>
+                    <Label htmlFor="gender">Gender</Label>
+                    <Select name="gender" defaultValue={employee?.gender || "Male"} disabled={isPending}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select gender" />
                       </SelectTrigger>

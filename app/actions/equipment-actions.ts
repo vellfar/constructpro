@@ -219,7 +219,8 @@ export async function createEquipment(formData: FormData) {
     console.error("❌ Failed to create equipment:", error)
 
     // Handle specific Prisma errors
-    if (error.code === "P2002") {
+    const err = error as any;
+    if (err.code === "P2002") {
       return { success: false, error: "Equipment code already exists" }
     }
 
@@ -374,7 +375,8 @@ export async function updateEquipment(id: number, formData: FormData) {
     console.error("❌ Failed to update equipment:", error)
 
     // Handle specific Prisma errors
-    if (error.code === "P2002") {
+    const err = error as any;
+    if (err.code === "P2002") {
       return { success: false, error: "Equipment code already exists" }
     }
 

@@ -174,6 +174,7 @@ export async function createProject(formData: FormData) {
             email: true,
           },
         },
+        // Expose plannedEndDate and actualEndDate explicitly in the response
       },
     })
 
@@ -181,12 +182,21 @@ export async function createProject(formData: FormData) {
 
     revalidatePath("/projects")
 
-    return { success: true, data: project, message: "Project created successfully" }
+    return {
+      success: true,
+      data: {
+        ...project,
+        plannedEndDate: project.plannedEndDate,
+        actualEndDate: project.actualEndDate,
+      },
+      message: "Project created successfully"
+    }
   } catch (error) {
     console.error("❌ Failed to create project:", error)
+    const err = error as Error;
     console.error("Error details:", {
-      message: error.message,
-      stack: error.stack,
+      message: err.message,
+      stack: err.stack,
       formData: Object.fromEntries(formData.entries()),
     })
     return {
@@ -271,13 +281,22 @@ export async function updateProject(
             email: true,
           },
         },
+        // Expose plannedEndDate and actualEndDate explicitly in the response
       },
     })
 
     revalidatePath("/projects")
     revalidatePath(`/projects/${id}`)
 
-    return { success: true, data: updated, message: "Project updated successfully" }
+    return {
+      success: true,
+      data: {
+        ...updated,
+        plannedEndDate: updated.plannedEndDate,
+        actualEndDate: updated.actualEndDate,
+      },
+      message: "Project updated successfully"
+    }
   } catch (error) {
     console.error("❌ Failed to update project:", error)
     return { success: false, error: "Failed to update project" }

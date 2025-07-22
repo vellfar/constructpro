@@ -20,7 +20,7 @@ COPY .env ./
 COPY .env.local ./
 
 # ✅ Generate Prisma Client
-# RUN npx prisma generate
+RUN npx prisma generate
 
 # ❗️❌ Remove `migrate dev` and `db seed` from the Dockerfile for production
 # These should be handled **outside** the Dockerfile (or in `docker-entrypoint.sh`)
