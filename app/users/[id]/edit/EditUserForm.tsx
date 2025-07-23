@@ -157,7 +157,7 @@ export default function EditUserForm({
       </div>
       <div className="flex items-center space-x-2">
         <Checkbox id="isActive" name="isActive" checked={formData.isActive} onChange={handleChange} />
-        <Label htmlFor="isActive">Active User</Label>
+        <Label htmlFor="isActive">{formData.isActive ? "Active User" : "Inactive User"}</Label>
       </div>
       {error && <p className="text-sm text-red-500">{error}</p>}
       <div className="flex gap-4 pt-4">
