@@ -177,6 +177,8 @@ model Activity {
   completedAt DateTime?
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+  deletedBy   String?
 
   // Relations
   project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
