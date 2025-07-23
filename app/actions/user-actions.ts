@@ -67,7 +67,8 @@ export async function createUser(formData: FormData) {
     const hashedPassword = await bcrypt.hash(password, 12)
 
     await withRetry(async () => {
-      await db.user.create({
+      // Create user
+      const user = await db.user.create({
         data: {
           email,
           username,
@@ -78,6 +79,26 @@ export async function createUser(formData: FormData) {
           roleId,
         },
       })
+      // If role is Employee, create employee record and link
+      const role = await db.role.findUnique({ where: { id: roleId } })
+      if (role && role.name.toLowerCase() === "employee") {
+        await db.employee.create({
+          data: {
+            employeeNumber: `EMP-${user.id}`,
+            firstName,
+            lastName,
+            user: { connect: { id: user.id } },
+            designation: "Employee",
+            section: "",
+            dateOfAppointment: new Date().toISOString().split("T")[0],
+            wageAmount: 0,
+            wageFrequency: "Monthly",
+            gender: "",
+            employmentTerms: "",
+            isActive: true,
+          },
+        })
+      }
     })
 
     revalidatePath("/users")
@@ -101,7 +122,11 @@ export async function updateUser(id: number, formData: FormData) {
     const lastName = formData.get("lastName") as string
     const roleId = Number.parseInt(formData.get("roleId") as string)
     const phoneNumber = formData.get("phoneNumber") as string
-    const isActive = formData.get("isActive") === "on"
+    const isActiveRaw = formData.get("isActive")
+    let isActive: boolean | undefined = undefined
+    if (isActiveRaw !== null) {
+      isActive = isActiveRaw === "on" || isActiveRaw === "true" || isActiveRaw === "1"
+    }
     const password = formData.get("password") as string | undefined
 
     if (!email || !firstName || !lastName || !roleId) {
@@ -121,7 +146,7 @@ export async function updateUser(id: number, formData: FormData) {
         lastName,
         phoneNumber: phoneNumber || null,
         roleId,
-        isActive,
+        ...(typeof isActive === "boolean" ? { isActive } : {}),
         // Audit trail
         updatedBy: session.user.email,
         updatedAt: new Date(),

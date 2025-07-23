@@ -35,6 +35,16 @@ export default async function UserPage({ params }: UserPageProps) {
     include: {
       role: true,
       employee: true,
+      projectAssignments: {
+        include: {
+          project: true,
+        },
+      },
+      equipmentAssignments: {
+        include: {
+          equipment: true,
+        },
+      },
     },
   })
 
@@ -146,6 +156,46 @@ export default async function UserPage({ params }: UserPageProps) {
                     <p className="text-sm text-muted-foreground">Date of Appointment</p>
                     <p className="font-medium">{new Date(user.employee.dateOfAppointment).toLocaleDateString()}</p>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Assigned Projects */}
+          {user.projectAssignments && user.projectAssignments.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Assigned Projects</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {user.projectAssignments.map((assignment: any) => (
+                    <div key={assignment.project.id} className="p-2 border rounded">
+                      <p className="font-medium">{assignment.project.name}</p>
+                      <p className="text-sm text-muted-foreground">Code: {assignment.project.projectCode || "N/A"}</p>
+                      <p className="text-xs text-muted-foreground">Role: {assignment.role}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Assigned Equipment */}
+          {user.equipmentAssignments && user.equipmentAssignments.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Assigned Equipment</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {user.equipmentAssignments.map((assignment: any) => (
+                    <div key={assignment.equipment.id} className="p-2 border rounded">
+                      <p className="font-medium">{assignment.equipment.name}</p>
+                      <p className="text-sm text-muted-foreground">Code: {assignment.equipment.equipmentCode || "N/A"}</p>
+                      <p className="text-xs text-muted-foreground">Project: {assignment.projectId}</p>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>

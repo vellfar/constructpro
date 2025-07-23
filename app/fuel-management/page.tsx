@@ -366,6 +366,7 @@ export default function FuelManagementPage() {
         toast.success("Fuel request created successfully")
         setShowCreateDialog(false)
         resetCreateForm()
+        window.location.reload()
       } else {
         toast.error(result.error || result.message || "Failed to create fuel request")
       }
@@ -404,6 +405,7 @@ export default function FuelManagementPage() {
         setShowApprovalDialog(false)
         setSelectedRequest(null)
         resetApprovalForm()
+        window.location.reload()
       } else {
         toast.error(result.error || result.message || "Failed to process request")
       }
@@ -437,6 +439,7 @@ export default function FuelManagementPage() {
         setShowIssueDialog(false)
         setSelectedRequest(null)
         resetIssueForm()
+        window.location.reload()
       } else {
         toast.error(result.error || result.message || "Failed to issue fuel")
       }
@@ -1255,10 +1258,6 @@ export default function FuelManagementPage() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="bg-white">
                                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                      <DropdownMenuItem>
-                                        <Eye className="mr-2 h-4 w-4" />
-                                        View Details
-                                      </DropdownMenuItem>
                                       <DropdownMenuSeparator />
 
                                       {/* Role-based actions */}
@@ -1297,15 +1296,23 @@ export default function FuelManagementPage() {
                                       {/* Acknowledge Receipt: Only requester, status ISSUED */}
                                       {request.status === "ISSUED" && session?.user?.id === String(request.requestedBy?.id) && (
                                         <DropdownMenuItem
-                                          onClick={() => {
-                                            // Call acknowledgeFuelRequest action here
-                                            // You may want to show a dialog for quantity/comments
-                                            // For now, just acknowledge full issued quantity
-                                            fetch(`/api/fuel-requests/${request.id}/acknowledge`, {
-                                              method: "PATCH",
-                                              headers: { "Content-Type": "application/json" },
-                                              body: JSON.stringify({ acknowledgedQuantity: request.issuedQuantity, acknowledgmentComments: "Received in full" }),
-                                            }).then(() => fetchData())
+                                          onClick={async () => {
+                                            try {
+                                              const response = await fetch(`/api/fuel-requests/${request.id}/acknowledge`, {
+                                                method: "PATCH",
+                                                headers: { "Content-Type": "application/json" },
+                                                body: JSON.stringify({ acknowledgedQuantity: request.issuedQuantity, acknowledgmentComments: "Received in full" }),
+                                              });
+                                              const result = await response.json();
+                                              if (response.ok && (result.success || result.id)) {
+                                                toast.success(result.message || "Fuel receipt acknowledged successfully");
+                                                window.location.reload();
+                                              } else {
+                                                toast.error(result.error || result.message || "Failed to acknowledge receipt");
+                                              }
+                                            } catch (error) {
+                                              toast.error("Failed to acknowledge receipt");
+                                            }
                                           }}
                                         >
                                           <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
