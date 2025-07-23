@@ -59,19 +59,45 @@ export default function EmployeesPage() {
         try {
           setLoading(true);
           setError(null);
-          const result = await getEmployees().catch(() => null);
-          if (result === null) {
-            throw new Error("Network error. Please check your connection.");
-          }
-          if (result.success && result.data) {
-            if (!ignore) {
-              setEmployees(result.data);
-              setFilteredEmployees(result.data);
+          // Get employees from employee table
+          const empResult = await getEmployees().catch(() => null);
+          // Get users with employee role and employee record
+          const userRes = await fetch("/api/users?role=employee");
+          let userEmployees: Employee[] = [];
+          if (userRes.ok) {
+            const userData = await userRes.json();
+            if (Array.isArray(userData)) {
+              userEmployees = userData
+                .filter((u: any) => u.employee)
+                .map((u: any) => ({
+                  id: u.employee.id,
+                  employeeNumber: u.employee.employeeNumber,
+                  firstName: u.employee.firstName,
+                  lastName: u.employee.lastName,
+                  section: u.employee.section,
+                  designation: u.employee.designation,
+                  wageAmount: u.employee.wageAmount,
+                  wageFrequency: u.employee.wageFrequency,
+                  gender: u.employee.gender,
+                  employmentTerms: u.employee.employmentTerms,
+                  dateOfAppointment: u.employee.dateOfAppointment,
+                }));
             }
-          } else {
-            setError(result.error || "Failed to load employees");
-            setEmployees([]);
-            setFilteredEmployees([]);
+          }
+          let allEmployees: Employee[] = [];
+          if (empResult && empResult.success && empResult.data) {
+            allEmployees = [...empResult.data];
+          }
+          // Merge and deduplicate by employeeNumber
+          const merged: Employee[] = [...allEmployees, ...userEmployees].reduce((acc: Employee[], curr: Employee) => {
+            if (!acc.some((e) => e.employeeNumber === curr.employeeNumber)) {
+              acc.push(curr);
+            }
+            return acc;
+          }, []);
+          if (!ignore) {
+            setEmployees(merged);
+            setFilteredEmployees(merged);
           }
           setLoading(false);
           return;
