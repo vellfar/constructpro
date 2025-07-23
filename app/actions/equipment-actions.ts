@@ -1,7 +1,9 @@
 "use server"
 
+// @ts-ignore
 import { revalidatePath } from "next/cache"
 import { prisma } from "@/lib/db"
+// @ts-ignore
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 
@@ -25,12 +27,12 @@ export async function getEquipment() {
         where: { userId: Number(session.user.id) },
         select: { projectId: true },
       })
-      const assignedProjectIds = userAssignments.map((a) => a.projectId)
+      const assignedProjectIds = userAssignments.map((a: { projectId: number }) => a.projectId)
       const eqAssignments = await prisma.equipmentAssignment.findMany({
         where: { projectId: { in: assignedProjectIds } },
         select: { equipmentId: true },
       })
-      const assignedEquipmentIds = eqAssignments.map((a) => a.equipmentId)
+      const assignedEquipmentIds = eqAssignments.map((a: { equipmentId: number }) => a.equipmentId)
       equipment = await prisma.equipment.findMany({
         where: { id: { in: assignedEquipmentIds } },
         orderBy: {
@@ -405,7 +407,7 @@ export async function deleteEquipment(id: number) {
     }
 
     // Check for dependencies
-    const hasActiveAssignments = existingEquipment.assignments.some((a) => !a.endDate)
+    const hasActiveAssignments = existingEquipment.assignments.some((a: { endDate: Date | null }) => !a.endDate)
     const hasFuelRequests = existingEquipment.fuelRequests.length > 0
 
     if (hasActiveAssignments || hasFuelRequests) {

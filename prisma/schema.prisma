@@ -365,6 +365,8 @@ enum EquipmentOwnership {
   OWNED
   RENTED
   LEASED
+  UNRA
+  MoWT
 }
 
 enum FuelType {
