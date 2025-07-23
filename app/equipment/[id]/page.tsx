@@ -97,7 +97,7 @@ export default async function EquipmentDetailPage({ params }: { params: { id: st
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Acquisition Cost:</span>
-                        <span>${equipment.acquisitionCost?.toLocaleString() || "N/A"}</span>
+                        <span>UGX{equipment.acquisitionCost?.toLocaleString() || "N/A"}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Supplier:</span>

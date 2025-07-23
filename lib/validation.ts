@@ -65,7 +65,7 @@ export const equipmentCreateSchema = z.object({
   make: z.string().min(1).max(100),
   model: z.string().min(1).max(100),
   yearOfManufacture: z.number().int().min(1900).max(new Date().getFullYear()).optional(),
-  ownership: z.enum(["OWNED", "RENTED", "LEASED"]),
+  ownership: z.enum(["OWNED", "RENTED", "LEASED", "UNRA", "MoWT"]),
   measurementType: z.string().min(1).max(50),
   unit: z.string().min(1).max(20),
   size: z.number().positive().optional(),
@@ -205,7 +205,7 @@ export const projectFilterSchema = paginationSchema.extend({
 export const equipmentFilterSchema = paginationSchema.extend({
   type: z.array(z.string()).optional(),
   status: z.array(z.enum(STATUS_OPTIONS.EQUIPMENT)).optional(),
-  ownership: z.array(z.enum(["OWNED", "RENTED", "LEASED"])).optional(),
+  ownership: z.array(z.enum(["OWNED", "RENTED", "LEASED", "UNRA", "MoWT"])).optional(),
   make: z.array(z.string()).optional(),
   available: z.boolean().optional(),
 })
