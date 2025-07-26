@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Search, Truck, Loader2, Download, MoreVertical, ArrowUpDown, Eye, Edit } from "lucide-react"
+import BulkUploadDialog from "./bulk-upload-dialog"
 import Link from "next/link"
 import { getEquipment } from "@/app/actions/equipment-actions"
 import { EquipmentActions } from "@/components/equipment-actions"
@@ -452,6 +453,7 @@ export default function EquipmentPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <BulkUploadDialog onSuccess={() => window.location.reload()} />
             <Button size="sm" asChild className="bg-blue-600 hover:bg-blue-700">
               <Link href="/equipment/new">
                 <Plus className="mr-2 h-4 w-4" />

@@ -1,3 +1,144 @@
+// To use bulkUploadEquipment, install csv-parse: npm install csv-parse
+// Usage: Call bulkUploadEquipment(file: File) with a CSV file containing equipment data.
+import { parse } from "csv-parse/sync"
+import type { Readable } from "stream"
+// Bulk upload equipment from CSV
+export async function bulkUploadEquipment(file: File) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.email) {
+    return { success: false, error: "Please log in to upload equipment" }
+  }
+
+  try {
+    // Read file as text
+    const text = await file.text()
+    // Parse CSV
+    const records = parse(text, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+    })
+
+    if (!Array.isArray(records) || records.length === 0) {
+      return { success: false, error: "No equipment records found in CSV" }
+    }
+
+    const validOwnership = ["OWNED", "RENTED", "LEASED", "UNRA", "MoWT"]
+    const errors: string[] = []
+    const created: any[] = []
+
+    type EquipmentCSVRow = {
+      equipmentCode?: string
+      name?: string
+      type?: string
+      make?: string
+      model?: string
+      yearOfManufacture?: string
+      ownership?: string
+      measurementType?: string
+      unit?: string
+      size?: string
+      workMeasure?: string
+      acquisitionCost?: string
+      supplier?: string
+      dateReceived?: string
+    }
+    for (let i = 0; i < records.length; i++) {
+      const row = records[i] as EquipmentCSVRow
+      const equipmentCode = row.equipmentCode?.trim()
+      if (!equipmentCode) {
+        errors.push(`Row ${i + 2}: Equipment code is required`)
+        continue
+      }
+      // Check for duplicate code
+      const existing = await prisma.equipment.findUnique({ where: { equipmentCode } })
+      if (existing) {
+        errors.push(`Row ${i + 2}: Equipment code '${equipmentCode}' already exists`)
+        continue
+      }
+      // Validate ownership
+      const ownership = row.ownership?.trim() || "OWNED"
+      if (!validOwnership.includes(ownership)) {
+        errors.push(`Row ${i + 2}: Invalid ownership type '${ownership}'`)
+        continue
+      }
+      // Validate year
+      let yearNum = null
+      if (row.yearOfManufacture?.trim()) {
+        yearNum = Number.parseInt(row.yearOfManufacture.trim())
+        if (isNaN(yearNum) || yearNum < 1900 || yearNum > new Date().getFullYear()) {
+          errors.push(`Row ${i + 2}: Invalid year of manufacture`)
+          continue
+        }
+      }
+      // Validate size
+      let sizeNum = null
+      if (row.size?.trim()) {
+        sizeNum = Number.parseFloat(row.size.trim())
+        if (isNaN(sizeNum) || sizeNum < 0) {
+          errors.push(`Row ${i + 2}: Invalid size value`)
+          continue
+        }
+      }
+      // Validate acquisition cost
+      let costNum = null
+      if (row.acquisitionCost?.trim()) {
+        costNum = Number.parseFloat(row.acquisitionCost.trim())
+        if (isNaN(costNum) || costNum < 0) {
+          errors.push(`Row ${i + 2}: Invalid acquisition cost`)
+          continue
+        }
+      }
+      // Validate date received
+      let dateReceivedObj = null
+      if (row.dateReceived?.trim()) {
+        dateReceivedObj = new Date(row.dateReceived.trim())
+        if (isNaN(dateReceivedObj.getTime())) {
+          errors.push(`Row ${i + 2}: Invalid date received`)
+          continue
+        }
+        if (dateReceivedObj > new Date()) {
+          errors.push(`Row ${i + 2}: Date received cannot be in the future`)
+          continue
+        }
+      }
+      // Create equipment
+      const equipment = await prisma.equipment.create({
+        data: {
+          equipmentCode,
+          name: row.name?.trim() || equipmentCode,
+          type: row.type?.trim() || "Equipment",
+          make: row.make?.trim() || "Unknown",
+          model: row.model?.trim() || "Unknown",
+          yearOfManufacture: yearNum,
+          ownership: ownership,
+          measurementType: row.measurementType?.trim() || "Unit",
+          unit: row.unit?.trim() || "pcs",
+          size: sizeNum,
+          workMeasure: row.workMeasure?.trim() || "N/A",
+          acquisitionCost: costNum,
+          supplier: row.supplier?.trim() || null,
+          dateReceived: dateReceivedObj,
+          status: "OPERATIONAL",
+        },
+      })
+      created.push(equipment)
+    }
+
+    revalidatePath("/equipment")
+    return {
+      success: errors.length === 0,
+      created,
+      errors,
+      message: errors.length === 0
+        ? `Successfully uploaded ${created.length} equipment record(s)`
+        : `Some records failed: ${errors.join("; ")}`,
+    }
+  } catch (error) {
+    console.error("❌ Failed to bulk upload equipment:", error)
+    return { success: false, error: "Failed to upload equipment. Please check your CSV and try again." }
+  }
+}
 "use server"
 
 // @ts-ignore
