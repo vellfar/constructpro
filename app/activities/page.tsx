@@ -80,7 +80,7 @@ export default async function ActivitiesPage() {
           where: { userId: Number(session.user.id) },
           select: { projectId: true },
         })
-        const assignedProjectIds = assignments.map(a => a.projectId)
+        const assignedProjectIds = assignments.map((a: { projectId: number }) => a.projectId)
         dbActivities = await db.activity.findMany({
           where: { projectId: { in: assignedProjectIds } },
           include: {
@@ -108,7 +108,7 @@ export default async function ActivitiesPage() {
       }
 
       // Convert all id fields to string to match the Activity, Project, and Employee interfaces
-      return dbActivities.map((activity) => ({
+      return dbActivities.map((activity: any) => ({
         ...activity,
         id: activity.id.toString(),
         project: {
