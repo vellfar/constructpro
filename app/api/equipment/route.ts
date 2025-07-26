@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+export const runtime = "nodejs"
 
 export const dynamic = "force-dynamic"
 export const revalidate = 0
@@ -50,13 +51,13 @@ export async function GET(request: NextRequest) {
         where: { userId: Number(session.user.id) },
         select: { projectId: true },
       })
-      const assignedProjectIds = userAssignments.map(a => a.projectId)
+      const assignedProjectIds = userAssignments.map((a: { projectId: number }) => a.projectId)
       // Get equipment IDs assigned to those projects
       const eqAssignments = await prisma.equipmentAssignment.findMany({
         where: { projectId: { in: assignedProjectIds } },
         select: { equipmentId: true },
       })
-      const assignedEquipmentIds = eqAssignments.map(a => a.equipmentId)
+      const assignedEquipmentIds = eqAssignments.map((a: { equipmentId: number }) => a.equipmentId)
       filteredWhere.id = { in: assignedEquipmentIds }
     }
 
