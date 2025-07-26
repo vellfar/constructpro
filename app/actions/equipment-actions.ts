@@ -11,18 +11,16 @@ import { authOptions } from "@/lib/auth"
 import { parse } from "csv-parse/sync"
 import type { Readable } from "stream"
 // Bulk upload equipment from CSV
-export async function bulkUploadEquipment(file: File) {
+export async function bulkUploadEquipment(csvText: string) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email) {
     return { success: false, error: "Please log in to upload equipment" }
   }
 
   try {
-    // Read file as text
-    const text = await file.text()
     let records
     try {
-      records = parse(text, {
+      records = parse(csvText, {
         columns: true,
         skip_empty_lines: true,
         trim: true,
