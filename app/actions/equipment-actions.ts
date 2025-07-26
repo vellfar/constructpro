@@ -20,15 +20,23 @@ export async function bulkUploadEquipment(file: File) {
   try {
     // Read file as text
     const text = await file.text()
-    // Parse CSV
-    const records = parse(text, {
-      columns: true,
-      skip_empty_lines: true,
-      trim: true,
-    })
+    let records
+    try {
+      records = parse(text, {
+        columns: true,
+        skip_empty_lines: true,
+        trim: true,
+      })
+    } catch (parseErr) {
+      return {
+        success: false,
+        error: `CSV parsing failed: ${(parseErr as Error).message}`,
+        message: "Failed to parse CSV file. Please check the format."
+      }
+    }
 
     if (!Array.isArray(records) || records.length === 0) {
-      return { success: false, error: "No equipment records found in CSV" }
+      return { success: false, error: "No equipment records found in CSV", message: "No equipment records found in CSV file." }
     }
 
     const validOwnership = ["OWNED", "RENTED", "LEASED", "UNRA", "MoWT"]
@@ -111,40 +119,63 @@ export async function bulkUploadEquipment(file: File) {
         }
       }
       // Create equipment
-      const equipment = await prisma.equipment.create({
-        data: {
-          equipmentCode,
-          name: row.name?.trim() || equipmentCode,
-          type: row.type?.trim() || "Equipment",
-          make: row.make?.trim() || "Unknown",
-          model: row.model?.trim() || "Unknown",
-          yearOfManufacture: yearNum,
-          ownership: ownership,
-          measurementType: row.measurementType?.trim() || "Unit",
-          unit: row.unit?.trim() || "pcs",
-          size: sizeNum,
-          workMeasure: row.workMeasure?.trim() || "N/A",
-          acquisitionCost: costNum,
-          supplier: row.supplier?.trim() || null,
-          dateReceived: dateReceivedObj,
-          status: "OPERATIONAL",
-        },
-      })
-      created.push(equipment)
+      try {
+        const equipment = await prisma.equipment.create({
+          data: {
+            equipmentCode,
+            name: row.name?.trim() || equipmentCode,
+            type: row.type?.trim() || "Equipment",
+            make: row.make?.trim() || "Unknown",
+            model: row.model?.trim() || "Unknown",
+            yearOfManufacture: yearNum,
+            ownership: ownership,
+            measurementType: row.measurementType?.trim() || "Unit",
+            unit: row.unit?.trim() || "pcs",
+            size: sizeNum,
+            workMeasure: row.workMeasure?.trim() || "N/A",
+            acquisitionCost: costNum,
+            supplier: row.supplier?.trim() || null,
+            dateReceived: dateReceivedObj,
+            status: "OPERATIONAL",
+          },
+        })
+        created.push(equipment)
+      } catch (dbErr) {
+        errors.push(`Row ${i + 2}: Database error: ${(dbErr as Error).message}`)
+        continue
+      }
     }
 
     revalidatePath("/equipment")
-    return {
-      success: errors.length === 0,
-      created,
-      errors,
-      message: errors.length === 0
-        ? `Successfully uploaded ${created.length} equipment record(s)`
-        : `Some records failed: ${errors.join("; ")}`,
+    if (created.length > 0 && errors.length === 0) {
+      return {
+        success: true,
+        created,
+        errors: [],
+        message: `Successfully uploaded ${created.length} equipment record(s).`
+      }
+    } else if (created.length > 0 && errors.length > 0) {
+      return {
+        success: false,
+        created,
+        errors,
+        message: `Some records uploaded, but some failed: ${errors.join("; ")}`
+      }
+    } else {
+      return {
+        success: false,
+        created: [],
+        errors,
+        message: `No equipment uploaded. Errors: ${errors.join("; ")}`
+      }
     }
   } catch (error) {
     console.error("❌ Failed to bulk upload equipment:", error)
-    return { success: false, error: "Failed to upload equipment. Please check your CSV and try again." }
+    return {
+      success: false,
+      error: (error as Error).message || "Failed to upload equipment. Please check your CSV and try again.",
+      message: "Failed to upload equipment. Please check your CSV and try again."
+    }
   }
 }
 
