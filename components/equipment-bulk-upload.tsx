@@ -20,12 +20,14 @@ export default function EquipmentBulkUpload({ onSuccess }: { onSuccess?: () => v
       })
       const data = await res.json()
       setResult(data)
-      if (data.success && onSuccess) onSuccess()
+      if (data.success) {
+        if (fileInputRef.current) fileInputRef.current.value = ""
+        if (onSuccess) onSuccess()
+      }
     } catch (err) {
       setResult({ success: false, message: "Upload failed. Please try again." })
     } finally {
       setUploading(false)
-      if (fileInputRef.current) fileInputRef.current.value = ""
     }
   }
 
