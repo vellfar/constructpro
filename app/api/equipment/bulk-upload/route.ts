@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { bulkUploadEquipment } from "@/app/actions/equipment-actions"
 
-export const runtime = "edge"
-
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
