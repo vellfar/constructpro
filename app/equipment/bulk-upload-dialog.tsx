@@ -10,9 +10,14 @@ export default function BulkUploadDialog({ onSuccess }: { onSuccess?: () => void
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="border-gray-300 bg-transparent">
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-gray-300 bg-transparent flex items-center gap-2 sm:gap-2 sm:inline-flex w-full sm:w-auto justify-start sm:justify-center"
+        >
           <Upload className="mr-2 h-4 w-4" />
-          Bulk Upload
+          <span className="hidden sm:inline">Bulk Upload</span>
+          <span className="sm:hidden">Upload</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-lg w-full">
