@@ -60,13 +60,17 @@ export default function EquipmentBulkUpload({ onSuccess }: { onSuccess?: () => v
       </button>
       {result && (
         <div className={result.success ? "text-green-600" : "text-red-600"}>
-          {result.message}
+          {result.message || "No message from server."}
           {result.errors && (
             <ul className="mt-2 list-disc list-inside text-sm">
               {result.errors.map((err, i) => (
                 <li key={i}>{err}</li>
               ))}
             </ul>
+          )}
+          {/* Debug: show raw response if no message or errors */}
+          {(!result.message && !result.errors) && (
+            <pre className="mt-2 text-xs bg-gray-100 p-2 rounded border overflow-x-auto">{JSON.stringify(result, null, 2)}</pre>
           )}
         </div>
       )}
