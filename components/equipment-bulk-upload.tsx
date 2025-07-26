@@ -6,13 +6,20 @@ export default function EquipmentBulkUpload({ onSuccess }: { onSuccess?: () => v
   const [uploading, setUploading] = useState(false)
   const [result, setResult] = useState<null | { success: boolean; message?: string; errors?: string[] }>(null)
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null
+    setSelectedFile(file)
+    setResult(null)
+  }
+
+  const handleUpload = async () => {
+    if (!selectedFile) return
     setUploading(true)
     setResult(null)
     const formData = new FormData()
-    formData.append("file", file)
+    formData.append("file", selectedFile)
     try {
       const res = await fetch("/api/equipment/bulk-upload", {
         method: "POST",
@@ -22,7 +29,9 @@ export default function EquipmentBulkUpload({ onSuccess }: { onSuccess?: () => v
       setResult(data)
       if (data.success) {
         if (fileInputRef.current) fileInputRef.current.value = ""
+        setSelectedFile(null)
         if (onSuccess) onSuccess()
+        window.location.reload()
       }
     } catch (err) {
       setResult({ success: false, message: "Upload failed. Please try again." })
@@ -42,7 +51,13 @@ export default function EquipmentBulkUpload({ onSuccess }: { onSuccess?: () => v
         disabled={uploading}
         className="block w-full border p-2 rounded"
       />
-      {uploading && <div className="text-blue-600">Uploading...</div>}
+      <button
+        onClick={handleUpload}
+        disabled={uploading || !selectedFile}
+        className="mt-2 px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {uploading ? "Uploading..." : "Upload"}
+      </button>
       {result && (
         <div className={result.success ? "text-green-600" : "text-red-600"}>
           {result.message}
