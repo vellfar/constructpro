@@ -1,3 +1,11 @@
+"use server"
+
+// @ts-ignore
+import { revalidatePath } from "next/cache"
+import { prisma } from "@/lib/db"
+// @ts-ignore
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
 // To use bulkUploadEquipment, install csv-parse: npm install csv-parse
 // Usage: Call bulkUploadEquipment(file: File) with a CSV file containing equipment data.
 import { parse } from "csv-parse/sync"
@@ -139,14 +147,7 @@ export async function bulkUploadEquipment(file: File) {
     return { success: false, error: "Failed to upload equipment. Please check your CSV and try again." }
   }
 }
-"use server"
 
-// @ts-ignore
-import { revalidatePath } from "next/cache"
-import { prisma } from "@/lib/db"
-// @ts-ignore
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth"
 
 export async function getEquipment() {
   const session = await getServerSession(authOptions)
