@@ -479,6 +479,9 @@ export default function EquipmentPage() {
                   <Download className="mr-2 h-4 w-4" />
                   Export Excel
                 </DropdownMenuItem>
+                <div className="px-2 py-1">
+                  <BulkUploadDialog onSuccess={() => window.location.reload()} />
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button size="sm" asChild className="bg-blue-600 hover:bg-blue-700">
