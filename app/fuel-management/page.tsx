@@ -872,7 +872,7 @@ export default function FuelManagementPage() {
                     <span className="sm:hidden">New</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="w-[95vw] max-w-md mx-auto bg-white">
+                <DialogContent className="w-[95vw] max-w-md mx-auto bg-white max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle className="text-gray-900">Create Fuel Request</DialogTitle>
                     <DialogDescription className="text-gray-600">
@@ -941,21 +941,6 @@ export default function FuelManagementPage() {
                         </SelectContent>
                       </Select>
                     </div>
-
-
-
-// ...existing code...
-
-// Place this block just before the return statement in FuelManagementPage
-// Filtered lists for dropdowns
-// (Move this block inside the FuelManagementPage function, just before return)
-// ...other logic...
-
-// At the end of the FuelManagementPage function, before return (
-// e.g. after all hooks and logic, but before the JSX return)
-// This block should NOT be at the top-level or between JSX blocks
-// Instead, place it just before the return (
-// let filteredProjects = ... etc)
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
