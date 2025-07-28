@@ -161,6 +161,12 @@ const REQUEST_STATUSES = [
 const EMPTY_VALUE = "__NONE__"
 
 export default function FuelManagementPage() {
+  // Track dialog open state for autoFocus
+  const [createDialogJustOpened, setCreateDialogJustOpened] = useState(false);
+  // Control Select open state for project/equipment
+  const [projectSelectOpen, setProjectSelectOpen] = useState(false);
+  const [equipmentSelectOpen, setEquipmentSelectOpen] = useState(false);
+  // Track dialog open state for autoFocus
   const { data: session, status } = useSession()
 
   // State management
@@ -779,7 +785,13 @@ export default function FuelManagementPage() {
             </div>
 
             {canCreateRequest && (
-              <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+              <Dialog
+                open={showCreateDialog}
+                onOpenChange={(open) => {
+                  setShowCreateDialog(open);
+                  setCreateDialogJustOpened(open);
+                }}
+              >
                 <DialogTrigger asChild>
                   <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
                     <Plus className="h-4 w-4 mr-2" />
@@ -800,24 +812,33 @@ export default function FuelManagementPage() {
                       <label className="text-sm font-medium text-gray-700">Project *</label>
                       {/* Searchable, scrollable project dropdown */}
                       <Select
+                        open={projectSelectOpen}
+                        onOpenChange={setProjectSelectOpen}
                         value={createForm.projectId}
-                        onValueChange={(value) => setCreateForm((prev) => ({ ...prev, projectId: value }))}
+                        onValueChange={(value) => {
+                          setCreateForm((prev) => ({ ...prev, projectId: value }));
+                          setProjectSelectOpen(false); // close only when item is selected
+                        }}
                       >
                         <SelectTrigger className="bg-white border-gray-300">
                           <SelectValue placeholder="Select project" />
                         </SelectTrigger>
                         <SelectContent className="bg-white max-h-56 overflow-y-auto">
                           <div className="sticky top-0 z-10 bg-white px-2 py-1">
-                            <Input
-                              ref={projectSearchRef}
-                              type="text"
-                              placeholder="Search projects..."
-                              value={projectSearch}
-                              onChange={e => setProjectSearch(e.target.value)}
-                              className="w-full text-sm bg-white border-gray-300"
-                              autoFocus
-                              inputMode="search"
-                            />
+                          <Input
+                            ref={projectSearchRef}
+                            type="text"
+                            placeholder="Search projects..."
+                            value={projectSearch}
+                            onChange={e => {
+                              setProjectSearch(e.target.value);
+                              setProjectSelectOpen(true); // keep open while typing
+                            }}
+                            className="w-full text-sm bg-white border-gray-300"
+                            autoFocus={createDialogJustOpened}
+                            inputMode="search"
+                            onBlur={() => setCreateDialogJustOpened(false)}
+                          />
                           </div>
                           <SelectItem value={EMPTY_VALUE}>Select project</SelectItem>
                           {filteredProjects.map((project) => (
@@ -834,24 +855,33 @@ export default function FuelManagementPage() {
                       <label className="text-sm font-medium text-gray-700">Equipment *</label>
                       {/* Searchable, scrollable equipment dropdown */}
                       <Select
+                        open={equipmentSelectOpen}
+                        onOpenChange={setEquipmentSelectOpen}
                         value={createForm.equipmentId}
-                        onValueChange={(value) => setCreateForm((prev) => ({ ...prev, equipmentId: value }))}
+                        onValueChange={(value) => {
+                          setCreateForm((prev) => ({ ...prev, equipmentId: value }));
+                          setEquipmentSelectOpen(false); // close only when item is selected
+                        }}
                       >
                         <SelectTrigger className="bg-white border-gray-300">
                           <SelectValue placeholder="Select equipment" />
                         </SelectTrigger>
                         <SelectContent className="bg-white max-h-56 overflow-y-auto">
                           <div className="sticky top-0 z-10 bg-white px-2 py-1">
-                            <Input
-                              ref={equipmentSearchRef}
-                              type="text"
-                              placeholder="Search equipment..."
-                              value={equipmentSearch}
-                              onChange={e => setEquipmentSearch(e.target.value)}
-                              className="w-full text-sm bg-white border-gray-300"
-                              autoFocus
-                              inputMode="search"
-                            />
+                          <Input
+                            ref={equipmentSearchRef}
+                            type="text"
+                            placeholder="Search equipment..."
+                            value={equipmentSearch}
+                            onChange={e => {
+                              setEquipmentSearch(e.target.value);
+                              setEquipmentSelectOpen(true); // keep open while typing
+                            }}
+                            className="w-full text-sm bg-white border-gray-300"
+                            autoFocus={createDialogJustOpened}
+                            inputMode="search"
+                            onBlur={() => setCreateDialogJustOpened(false)}
+                          />
                           </div>
                           <SelectItem value={EMPTY_VALUE}>Select equipment</SelectItem>
                           {filteredEquipment.map((item) => (
