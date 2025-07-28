@@ -106,7 +106,9 @@ export default async function EquipmentDetailPage({ params }: { params: { id: st
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Date Received:</span>
                         <span>
-                          {equipment.dateReceived ? new Date(equipment.dateReceived).toLocaleDateString() : "N/A"}
+                          {equipment.dateReceived
+                            ? new Date(equipment.dateReceived).toLocaleDateString('en-GB')
+                            : "N/A"}
                         </span>
                       </div>
                     </div>

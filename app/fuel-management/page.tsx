@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -224,6 +224,9 @@ export default function FuelManagementPage() {
   // Search state for dropdowns
   const [projectSearch, setProjectSearch] = useState("");
   const [equipmentSearch, setEquipmentSearch] = useState("");
+  // Refs for search inputs to keep focus on mobile
+  const projectSearchRef = useRef<HTMLInputElement>(null);
+  const equipmentSearchRef = useRef<HTMLInputElement>(null);
 
   // Filtered lists for dropdowns
   const filteredProjects = projectSearch
@@ -804,13 +807,24 @@ export default function FuelManagementPage() {
                           <SelectValue placeholder="Select project" />
                         </SelectTrigger>
                         <SelectContent className="bg-white max-h-56 overflow-y-auto">
-                          <div className="sticky top-0 z-10 bg-white px-2 py-1">
+                          <div
+                            className="sticky top-0 z-10 bg-white px-2 py-1"
+                            onClick={() => {
+                              // On mobile, ensure input stays focused
+                              projectSearchRef.current?.focus();
+                            }}
+                          >
                             <Input
+                              ref={projectSearchRef}
                               type="text"
                               placeholder="Search projects..."
                               value={projectSearch}
                               onChange={e => setProjectSearch(e.target.value)}
                               className="w-full text-sm bg-white border-gray-300"
+                              onFocus={e => {
+                                // iOS/Android: ensure input stays focused
+                                e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                              }}
                             />
                           </div>
                           <SelectItem value={EMPTY_VALUE}>Select project</SelectItem>
@@ -835,13 +849,22 @@ export default function FuelManagementPage() {
                           <SelectValue placeholder="Select equipment" />
                         </SelectTrigger>
                         <SelectContent className="bg-white max-h-56 overflow-y-auto">
-                          <div className="sticky top-0 z-10 bg-white px-2 py-1">
+                          <div
+                            className="sticky top-0 z-10 bg-white px-2 py-1"
+                            onClick={() => {
+                              equipmentSearchRef.current?.focus();
+                            }}
+                          >
                             <Input
+                              ref={equipmentSearchRef}
                               type="text"
                               placeholder="Search equipment..."
                               value={equipmentSearch}
                               onChange={e => setEquipmentSearch(e.target.value)}
                               className="w-full text-sm bg-white border-gray-300"
+                              onFocus={e => {
+                                e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                              }}
                             />
                           </div>
                           <SelectItem value={EMPTY_VALUE}>Select equipment</SelectItem>
@@ -1399,30 +1422,7 @@ export default function FuelManagementPage() {
                     className="bg-white border-gray-300"
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Approval Comments</label>
-                  <Textarea
-                    value={approvalForm.approvalComments || ""}
-                    onChange={(e) => setApprovalForm((prev) => ({ ...prev, approvalComments: e.target.value }))}
-                    placeholder="Optional comments about the approval..."
-                    rows={3}
-                    className="bg-white border-gray-300"
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Rejection Reason *</label>
-                <Textarea
-                  value={approvalForm.rejectionReason || ""}
-                  onChange={(e) => setApprovalForm((prev) => ({ ...prev, rejectionReason: e.target.value }))}
-                  placeholder="Explain why this request is being rejected..."
-                  rows={3}
-                  className="bg-white border-gray-300"
-                />
-              </div>
-            )}
-          </div>
+                <div className="
           <DialogFooter>
             <Button
               variant="outline"
