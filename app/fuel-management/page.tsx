@@ -221,6 +221,25 @@ export default function FuelManagementPage() {
     issuanceComments: "",
   })
 
+  // Search state for dropdowns
+  const [projectSearch, setProjectSearch] = useState("");
+  const [equipmentSearch, setEquipmentSearch] = useState("");
+
+  // Filtered lists for dropdowns
+  const filteredProjects = projectSearch
+    ? projects.filter((project) =>
+        project.name.toLowerCase().includes(projectSearch.toLowerCase()) ||
+        (project.projectCode && project.projectCode.toLowerCase().includes(projectSearch.toLowerCase()))
+      )
+    : projects;
+
+  const filteredEquipment = equipmentSearch
+    ? equipment.filter((item) =>
+        item.name.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
+        (item.equipmentCode && item.equipmentCode.toLowerCase().includes(equipmentSearch.toLowerCase()))
+      )
+    : equipment;
+
   // Fetch data function with retry and session error handling
   const fetchData = useCallback(async () => {
     let attempts = 0;
@@ -699,6 +718,32 @@ export default function FuelManagementPage() {
                         Issue Fuel
                       </DropdownMenuItem>
                     )}
+                    {/* Acknowledge Receipt: Only requester, status ISSUED */}
+                    {request.status === "ISSUED" && session?.user?.id === String(request.requestedBy?.id) && (
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          try {
+                            const response = await fetch(`/api/fuel-requests/${request.id}/acknowledge`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ acknowledgedQuantity: request.issuedQuantity, acknowledgmentComments: "Received in full" }),
+                            });
+                            const result = await response.json();
+                            if (response.ok && (result.success || result.id)) {
+                              toast.success(result.message || "Fuel receipt acknowledged and request completed.");
+                              fetchData();
+                            } else {
+                              toast.error(result.error || result.message || "Failed to acknowledge receipt");
+                            }
+                          } catch (error) {
+                            toast.error("Failed to acknowledge receipt");
+                          }
+                        }}
+                      >
+                        <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
+                        Acknowledge Receipt
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -835,8 +880,10 @@ export default function FuelManagementPage() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="grid gap-4 py-4">
+
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">Project *</label>
+                      {/* Searchable, scrollable project dropdown */}
                       <Select
                         value={createForm.projectId}
                         onValueChange={(value) => setCreateForm((prev) => ({ ...prev, projectId: value }))}
@@ -844,19 +891,30 @@ export default function FuelManagementPage() {
                         <SelectTrigger className="bg-white border-gray-300">
                           <SelectValue placeholder="Select project" />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
+                        <SelectContent className="bg-white max-h-56 overflow-y-auto">
+                          <div className="sticky top-0 z-10 bg-white px-2 py-1">
+                            <Input
+                              type="text"
+                              placeholder="Search projects..."
+                              value={projectSearch}
+                              onChange={e => setProjectSearch(e.target.value)}
+                              className="w-full text-sm bg-white border-gray-300"
+                            />
+                          </div>
                           <SelectItem value={EMPTY_VALUE}>Select project</SelectItem>
-                          {projects.map((project) => (
+                          {filteredProjects.map((project) => (
                             <SelectItem key={project.id} value={project.id.toString()}>
-                              {project.name} {project.projectCode && `(${project.projectCode})`}
+                              {project.name} {project.projectCode ? `(${project.projectCode})` : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
 
+
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">Equipment *</label>
+                      {/* Searchable, scrollable equipment dropdown */}
                       <Select
                         value={createForm.equipmentId}
                         onValueChange={(value) => setCreateForm((prev) => ({ ...prev, equipmentId: value }))}
@@ -864,16 +922,40 @@ export default function FuelManagementPage() {
                         <SelectTrigger className="bg-white border-gray-300">
                           <SelectValue placeholder="Select equipment" />
                         </SelectTrigger>
-                        <SelectContent className="bg-white">
+                        <SelectContent className="bg-white max-h-56 overflow-y-auto">
+                          <div className="sticky top-0 z-10 bg-white px-2 py-1">
+                            <Input
+                              type="text"
+                              placeholder="Search equipment..."
+                              value={equipmentSearch}
+                              onChange={e => setEquipmentSearch(e.target.value)}
+                              className="w-full text-sm bg-white border-gray-300"
+                            />
+                          </div>
                           <SelectItem value={EMPTY_VALUE}>Select equipment</SelectItem>
-                          {equipment.map((item) => (
+                          {filteredEquipment.map((item) => (
                             <SelectItem key={item.id} value={item.id.toString()}>
-                              {item.name} ({item.equipmentCode})
+                              {item.name} {item.equipmentCode ? `(${item.equipmentCode})` : ""}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
+
+
+
+// ...existing code...
+
+// Place this block just before the return statement in FuelManagementPage
+// Filtered lists for dropdowns
+// (Move this block inside the FuelManagementPage function, just before return)
+// ...other logic...
+
+// At the end of the FuelManagementPage function, before return (
+// e.g. after all hooks and logic, but before the JSX return)
+// This block should NOT be at the top-level or between JSX blocks
+// Instead, place it just before the return (
+// let filteredProjects = ... etc)
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
