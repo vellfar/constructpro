@@ -275,20 +275,21 @@ export default function UsersPage() {
               </Table>
             </CardContent>
           </Card>
-        {/* Pagination Controls */}
-        {getTotalPages(filteredUsers) > 1 && (
-          <div className="flex justify-center items-center gap-2 mt-6">
-            <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
-              Prev
-            </Button>
-            <span className="text-sm text-gray-700">
-              Page {page} of {getTotalPages(filteredUsers)}
-            </span>
-            <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(getTotalPages(filteredUsers), p + 1))} disabled={page === getTotalPages(filteredUsers)}>
-              Next
-            </Button>
-          </div>
-        )}
+          {/* Pagination Controls */}
+          {getTotalPages(filteredUsers) > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-6">
+              <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+                Prev
+              </Button>
+              <span className="text-sm text-gray-700">
+                Page {page} of {getTotalPages(filteredUsers)}
+              </span>
+              <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(getTotalPages(filteredUsers), p + 1))} disabled={page === getTotalPages(filteredUsers)}>
+                Next
+              </Button>
+            </div>
+          )}
+        </div> {/* <-- This closing div was missing */}
       </div>
     </div>
   )
