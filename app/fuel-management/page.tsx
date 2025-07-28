@@ -807,13 +807,7 @@ export default function FuelManagementPage() {
                           <SelectValue placeholder="Select project" />
                         </SelectTrigger>
                         <SelectContent className="bg-white max-h-56 overflow-y-auto">
-                          <div
-                            className="sticky top-0 z-10 bg-white px-2 py-1"
-                            onClick={() => {
-                              // On mobile, ensure input stays focused
-                              projectSearchRef.current?.focus();
-                            }}
-                          >
+                          <div className="sticky top-0 z-10 bg-white px-2 py-1">
                             <Input
                               ref={projectSearchRef}
                               type="text"
@@ -821,10 +815,8 @@ export default function FuelManagementPage() {
                               value={projectSearch}
                               onChange={e => setProjectSearch(e.target.value)}
                               className="w-full text-sm bg-white border-gray-300"
-                              onFocus={e => {
-                                // iOS/Android: ensure input stays focused
-                                e.target.setSelectionRange(e.target.value.length, e.target.value.length);
-                              }}
+                              autoFocus
+                              inputMode="search"
                             />
                           </div>
                           <SelectItem value={EMPTY_VALUE}>Select project</SelectItem>
@@ -849,12 +841,7 @@ export default function FuelManagementPage() {
                           <SelectValue placeholder="Select equipment" />
                         </SelectTrigger>
                         <SelectContent className="bg-white max-h-56 overflow-y-auto">
-                          <div
-                            className="sticky top-0 z-10 bg-white px-2 py-1"
-                            onClick={() => {
-                              equipmentSearchRef.current?.focus();
-                            }}
-                          >
+                          <div className="sticky top-0 z-10 bg-white px-2 py-1">
                             <Input
                               ref={equipmentSearchRef}
                               type="text"
@@ -862,9 +849,8 @@ export default function FuelManagementPage() {
                               value={equipmentSearch}
                               onChange={e => setEquipmentSearch(e.target.value)}
                               className="w-full text-sm bg-white border-gray-300"
-                              onFocus={e => {
-                                e.target.setSelectionRange(e.target.value.length, e.target.value.length);
-                              }}
+                              autoFocus
+                              inputMode="search"
                             />
                           </div>
                           <SelectItem value={EMPTY_VALUE}>Select equipment</SelectItem>
