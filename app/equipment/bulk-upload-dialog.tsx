@@ -20,7 +20,7 @@ export default function BulkUploadDialog({ onSuccess }: { onSuccess?: () => void
           <span className="sm:hidden">Upload</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg w-full">
+      <DialogContent className="max-w-lg w-full max-h-[80vh] overflow-auto">
         <DialogHeader>
           <DialogTitle>Bulk Equipment Upload</DialogTitle>
         </DialogHeader>
