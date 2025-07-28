@@ -166,6 +166,9 @@ export default function FuelManagementPage() {
   // Control Select open state for project/equipment
   const [projectSelectOpen, setProjectSelectOpen] = useState(false);
   const [equipmentSelectOpen, setEquipmentSelectOpen] = useState(false);
+  // Track if user is typing in search fields
+  const [projectInputActive, setProjectInputActive] = useState(false);
+  const [equipmentInputActive, setEquipmentInputActive] = useState(false);
   // Track dialog open state for autoFocus
   const { data: session, status } = useSession()
 
@@ -812,12 +815,16 @@ export default function FuelManagementPage() {
                       <label className="text-sm font-medium text-gray-700">Project *</label>
                       {/* Searchable, scrollable project dropdown */}
                       <Select
-                        open={projectSelectOpen}
-                        onOpenChange={setProjectSelectOpen}
+                        open={projectSelectOpen || projectInputActive}
+                        onOpenChange={(open) => {
+                          setProjectSelectOpen(open);
+                          if (!open) setProjectInputActive(false);
+                        }}
                         value={createForm.projectId}
                         onValueChange={(value) => {
                           setCreateForm((prev) => ({ ...prev, projectId: value }));
-                          setProjectSelectOpen(false); // close only when item is selected
+                          setProjectSelectOpen(false);
+                          setProjectInputActive(false);
                         }}
                       >
                         <SelectTrigger className="bg-white border-gray-300">
@@ -830,14 +837,28 @@ export default function FuelManagementPage() {
                             type="text"
                             placeholder="Search projects..."
                             value={projectSearch}
+                            onFocus={() => {
+                              setProjectInputActive(true);
+                              setProjectSelectOpen(true);
+                              setTimeout(() => projectSearchRef.current?.focus(), 0);
+                            }}
                             onChange={e => {
                               setProjectSearch(e.target.value);
-                              setProjectSelectOpen(true); // keep open while typing
+                              setProjectInputActive(true);
+                              setProjectSelectOpen(true);
                             }}
                             className="w-full text-sm bg-white border-gray-300"
                             autoFocus={createDialogJustOpened}
                             inputMode="search"
-                            onBlur={() => setCreateDialogJustOpened(false)}
+                            onBlur={e => {
+                              // Only close if not interacting with dropdown
+                              setTimeout(() => {
+                                if (!document.activeElement || document.activeElement === document.body) {
+                                  setProjectInputActive(false);
+                                  setProjectSelectOpen(false);
+                                }
+                              }, 100);
+                            }}
                           />
                           </div>
                           <SelectItem value={EMPTY_VALUE}>Select project</SelectItem>
@@ -855,12 +876,16 @@ export default function FuelManagementPage() {
                       <label className="text-sm font-medium text-gray-700">Equipment *</label>
                       {/* Searchable, scrollable equipment dropdown */}
                       <Select
-                        open={equipmentSelectOpen}
-                        onOpenChange={setEquipmentSelectOpen}
+                        open={equipmentSelectOpen || equipmentInputActive}
+                        onOpenChange={(open) => {
+                          setEquipmentSelectOpen(open);
+                          if (!open) setEquipmentInputActive(false);
+                        }}
                         value={createForm.equipmentId}
                         onValueChange={(value) => {
                           setCreateForm((prev) => ({ ...prev, equipmentId: value }));
-                          setEquipmentSelectOpen(false); // close only when item is selected
+                          setEquipmentSelectOpen(false);
+                          setEquipmentInputActive(false);
                         }}
                       >
                         <SelectTrigger className="bg-white border-gray-300">
@@ -873,14 +898,27 @@ export default function FuelManagementPage() {
                             type="text"
                             placeholder="Search equipment..."
                             value={equipmentSearch}
+                            onFocus={() => {
+                              setEquipmentInputActive(true);
+                              setEquipmentSelectOpen(true);
+                              setTimeout(() => equipmentSearchRef.current?.focus(), 0);
+                            }}
                             onChange={e => {
                               setEquipmentSearch(e.target.value);
-                              setEquipmentSelectOpen(true); // keep open while typing
+                              setEquipmentInputActive(true);
+                              setEquipmentSelectOpen(true);
                             }}
                             className="w-full text-sm bg-white border-gray-300"
                             autoFocus={createDialogJustOpened}
                             inputMode="search"
-                            onBlur={() => setCreateDialogJustOpened(false)}
+                            onBlur={e => {
+                              setTimeout(() => {
+                                if (!document.activeElement || document.activeElement === document.body) {
+                                  setEquipmentInputActive(false);
+                                  setEquipmentSelectOpen(false);
+                                }
+                              }, 100);
+                            }}
                           />
                           </div>
                           <SelectItem value={EMPTY_VALUE}>Select equipment</SelectItem>
