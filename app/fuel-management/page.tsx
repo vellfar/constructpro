@@ -1422,7 +1422,30 @@ export default function FuelManagementPage() {
                     className="bg-white border-gray-300"
                   />
                 </div>
-                <div className="
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Approval Comments</label>
+                  <Textarea
+                    value={approvalForm.approvalComments || ""}
+                    onChange={(e) => setApprovalForm((prev) => ({ ...prev, approvalComments: e.target.value }))}
+                    placeholder="Optional comments about the approval..."
+                    rows={3}
+                    className="bg-white border-gray-300"
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Rejection Reason *</label>
+                <Textarea
+                  value={approvalForm.rejectionReason || ""}
+                  onChange={(e) => setApprovalForm((prev) => ({ ...prev, rejectionReason: e.target.value }))}
+                  placeholder="Explain why this request is being rejected..."
+                  rows={3}
+                  className="bg-white border-gray-300"
+                />
+              </div>
+            )}
+          </div>
           <DialogFooter>
             <Button
               variant="outline"
@@ -1443,7 +1466,6 @@ export default function FuelManagementPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {/* Issue Dialog */}
       <Dialog open={showIssueDialog} onOpenChange={setShowIssueDialog}>
         <DialogContent className="w-[95vw] max-w-lg mx-auto bg-white">
@@ -1452,8 +1474,7 @@ export default function FuelManagementPage() {
             <DialogDescription className="text-gray-600">
               {selectedRequest && (
                 <>
-                  Issue fuel for Request #{selectedRequest.requestNumber} - Approved: {selectedRequest.approvedQuantity}
-                  L
+                  Issue fuel for Request #{selectedRequest.requestNumber} - Approved: {selectedRequest.approvedQuantity}L
                 </>
               )}
             </DialogDescription>
