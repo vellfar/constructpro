@@ -840,7 +840,6 @@ export default function FuelManagementPage() {
                             onFocus={() => {
                               setProjectInputActive(true);
                               setProjectSelectOpen(true);
-                              setTimeout(() => projectSearchRef.current?.focus(), 0);
                             }}
                             onChange={e => {
                               setProjectSearch(e.target.value);
@@ -850,15 +849,6 @@ export default function FuelManagementPage() {
                             className="w-full text-sm bg-white border-gray-300"
                             autoFocus={createDialogJustOpened}
                             inputMode="search"
-                            onBlur={e => {
-                              // Only close if not interacting with dropdown
-                              setTimeout(() => {
-                                if (!document.activeElement || document.activeElement === document.body) {
-                                  setProjectInputActive(false);
-                                  setProjectSelectOpen(false);
-                                }
-                              }, 100);
-                            }}
                           />
                           </div>
                           <SelectItem value={EMPTY_VALUE}>Select project</SelectItem>
@@ -901,7 +891,6 @@ export default function FuelManagementPage() {
                             onFocus={() => {
                               setEquipmentInputActive(true);
                               setEquipmentSelectOpen(true);
-                              setTimeout(() => equipmentSearchRef.current?.focus(), 0);
                             }}
                             onChange={e => {
                               setEquipmentSearch(e.target.value);
@@ -911,14 +900,6 @@ export default function FuelManagementPage() {
                             className="w-full text-sm bg-white border-gray-300"
                             autoFocus={createDialogJustOpened}
                             inputMode="search"
-                            onBlur={e => {
-                              setTimeout(() => {
-                                if (!document.activeElement || document.activeElement === document.body) {
-                                  setEquipmentInputActive(false);
-                                  setEquipmentSelectOpen(false);
-                                }
-                              }, 100);
-                            }}
                           />
                           </div>
                           <SelectItem value={EMPTY_VALUE}>Select equipment</SelectItem>
