@@ -163,12 +163,9 @@ const EMPTY_VALUE = "__NONE__"
 export default function FuelManagementPage() {
   // Track dialog open state for autoFocus
   const [createDialogJustOpened, setCreateDialogJustOpened] = useState(false);
-  // Control Select open state for project/equipment
-  const [projectSelectOpen, setProjectSelectOpen] = useState(false);
-  const [equipmentSelectOpen, setEquipmentSelectOpen] = useState(false);
-  // Track if user is typing in search fields
-  const [projectInputActive, setProjectInputActive] = useState(false);
-  const [equipmentInputActive, setEquipmentInputActive] = useState(false);
+  // Control Select open state for project/equipment (single state)
+  const [projectDropdownOpen, setProjectDropdownOpen] = useState(false);
+  const [equipmentDropdownOpen, setEquipmentDropdownOpen] = useState(false);
   // Track dialog open state for autoFocus
   const { data: session, status } = useSession()
 
@@ -815,16 +812,14 @@ export default function FuelManagementPage() {
                       <label className="text-sm font-medium text-gray-700">Project *</label>
                       {/* Searchable, scrollable project dropdown */}
                       <Select
-                        open={projectSelectOpen || projectInputActive}
+                        open={projectDropdownOpen}
                         onOpenChange={(open) => {
-                          setProjectSelectOpen(open);
-                          if (!open) setProjectInputActive(false);
+                          setProjectDropdownOpen(open);
                         }}
                         value={createForm.projectId}
                         onValueChange={(value) => {
                           setCreateForm((prev) => ({ ...prev, projectId: value }));
-                          setProjectSelectOpen(false);
-                          setProjectInputActive(false);
+                          setProjectDropdownOpen(false);
                         }}
                       >
                         <SelectTrigger className="bg-white border-gray-300">
@@ -838,13 +833,11 @@ export default function FuelManagementPage() {
                             placeholder="Search projects..."
                             value={projectSearch}
                             onFocus={() => {
-                              setProjectInputActive(true);
-                              setProjectSelectOpen(true);
+                              setProjectDropdownOpen(true);
                             }}
                             onChange={e => {
                               setProjectSearch(e.target.value);
-                              setProjectInputActive(true);
-                              setProjectSelectOpen(true);
+                              setProjectDropdownOpen(true);
                             }}
                             className="w-full text-sm bg-white border-gray-300"
                             autoFocus={createDialogJustOpened}
@@ -866,16 +859,14 @@ export default function FuelManagementPage() {
                       <label className="text-sm font-medium text-gray-700">Equipment *</label>
                       {/* Searchable, scrollable equipment dropdown */}
                       <Select
-                        open={equipmentSelectOpen || equipmentInputActive}
+                        open={equipmentDropdownOpen}
                         onOpenChange={(open) => {
-                          setEquipmentSelectOpen(open);
-                          if (!open) setEquipmentInputActive(false);
+                          setEquipmentDropdownOpen(open);
                         }}
                         value={createForm.equipmentId}
                         onValueChange={(value) => {
                           setCreateForm((prev) => ({ ...prev, equipmentId: value }));
-                          setEquipmentSelectOpen(false);
-                          setEquipmentInputActive(false);
+                          setEquipmentDropdownOpen(false);
                         }}
                       >
                         <SelectTrigger className="bg-white border-gray-300">
@@ -889,13 +880,11 @@ export default function FuelManagementPage() {
                             placeholder="Search equipment..."
                             value={equipmentSearch}
                             onFocus={() => {
-                              setEquipmentInputActive(true);
-                              setEquipmentSelectOpen(true);
+                              setEquipmentDropdownOpen(true);
                             }}
                             onChange={e => {
                               setEquipmentSearch(e.target.value);
-                              setEquipmentInputActive(true);
-                              setEquipmentSelectOpen(true);
+                              setEquipmentDropdownOpen(true);
                             }}
                             className="w-full text-sm bg-white border-gray-300"
                             autoFocus={createDialogJustOpened}
