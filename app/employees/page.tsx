@@ -40,6 +40,15 @@ interface Employee {
 }
 
 export default function EmployeesPage() {
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const pageSize = 12
+  function getPaginated(list: Employee[]) {
+    return list.slice((page - 1) * pageSize, page * pageSize)
+  }
+  function getTotalPages(list: Employee[]) {
+    return Math.max(1, Math.ceil(list.length / pageSize))
+  }
   const [employees, setEmployees] = useState<Employee[]>([])
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
@@ -429,7 +438,7 @@ export default function EmployeesPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredEmployees.map((employee) => (
+                        {getPaginated(filteredEmployees).map((employee) => (
                           <TableRow key={employee.id} className="hover:bg-gray-50">
                             <TableCell className="font-medium">{employee.employeeNumber}</TableCell>
                             <TableCell>
@@ -480,7 +489,7 @@ export default function EmployeesPage() {
             {/* Mobile/Tablet Card View */}
             <div className="lg:hidden">
               <div className="grid gap-4">
-                {filteredEmployees.map((employee) => (
+                {getPaginated(filteredEmployees).map((employee) => (
                   <Card key={employee.id} className="hover:shadow-md transition-shadow">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
@@ -538,6 +547,20 @@ export default function EmployeesPage() {
                 ))}
               </div>
             </div>
+            {/* Pagination Controls */}
+            {getTotalPages(filteredEmployees) > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-6">
+                <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+                  Prev
+                </Button>
+                <span className="text-sm text-gray-700">
+                  Page {page} of {getTotalPages(filteredEmployees)}
+                </span>
+                <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(getTotalPages(filteredEmployees), p + 1))} disabled={page === getTotalPages(filteredEmployees)}>
+                  Next
+                </Button>
+              </div>
+            )}
           </>
         )}
       </div>

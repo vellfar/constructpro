@@ -67,7 +67,7 @@ export async function bulkUploadEquipment(csvText: string) {
       // Check for duplicate code
       const existing = await prisma.equipment.findUnique({ where: { equipmentCode } })
       if (existing) {
-        errors.push(`Row ${i + 2}: Equipment code '${equipmentCode}' already exists`)
+        errors.push(`Row ${i + 2}: Equipment code '${equipmentCode}' already exists in the system. Skipped.`)
         continue
       }
       // Validate ownership
@@ -153,18 +153,22 @@ export async function bulkUploadEquipment(csvText: string) {
         message: `Successfully uploaded ${created.length} equipment record(s).`
       }
     } else if (created.length > 0 && errors.length > 0) {
+      // Count skipped due to duplicates
+      const skipped = errors.filter(e => e.includes("already exists in the system")).length;
       return {
         success: false,
         created,
         errors,
-        message: `Some records uploaded, but some failed: ${errors.join("; ")}`
+        message: `Uploaded ${created.length} equipment. ${skipped} duplicate${skipped !== 1 ? "s were" : " was"} skipped. ${errors.length - skipped} other error${errors.length - skipped !== 1 ? "s" : ""}. See details.`
       }
     } else {
+      // All failed
+      const skipped = errors.filter(e => e.includes("already exists in the system")).length;
       return {
         success: false,
         created: [],
         errors,
-        message: `No equipment uploaded. Errors: ${errors.join("; ")}`
+        message: `No equipment uploaded. ${skipped} duplicate${skipped !== 1 ? "s were" : " was"} skipped. ${errors.length - skipped} other error${errors.length - skipped !== 1 ? "s" : ""}. See details.`
       }
     }
   } catch (error) {

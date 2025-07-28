@@ -47,6 +47,12 @@ export default async function ActivitiesPage() {
   let activities: Activity[] = []
   let error = null
 
+  // Pagination state (client-side)
+  const [page, setPage] = useState(1)
+  const pageSize = 12
+  const getPaginated = (list: Activity[]) => list.slice((page - 1) * pageSize, page * pageSize)
+  const getTotalPages = (list: Activity[]) => Math.max(1, Math.ceil(list.length / pageSize))
+
   try {
     activities = await withRetry(async () => {
       let dbActivities
@@ -196,6 +202,9 @@ export default async function ActivitiesPage() {
     )
   }
 
+  const paginatedActivities = getPaginated(activities)
+  const totalPages = getTotalPages(activities)
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
@@ -335,7 +344,7 @@ export default async function ActivitiesPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {activities.map((activity) => (
+                          {paginatedActivities.map((activity) => (
                             <TableRow key={activity.id} className="hover:bg-gray-50 transition-colors">
                               <TableCell className="font-medium">
                                 <div>
@@ -411,7 +420,7 @@ export default async function ActivitiesPage() {
 
                   {/* Mobile Card View */}
                   <div className="lg:hidden space-y-4">
-                    {activities.map((activity) => (
+                    {paginatedActivities.map((activity) => (
                       <Card key={activity.id} className="border border-gray-200">
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between">
@@ -474,6 +483,20 @@ export default async function ActivitiesPage() {
                       </Card>
                     ))}
                   </div>
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-2 mt-6">
+                      <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+                        Prev
+                      </Button>
+                      <span className="text-sm text-gray-700">
+                        Page {page} of {totalPages}
+                      </span>
+                      <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+                        Next
+                      </Button>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="text-center py-8 sm:py-12">

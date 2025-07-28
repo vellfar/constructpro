@@ -30,6 +30,15 @@ interface User {
 }
 
 export default function UsersPage() {
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const pageSize = 12
+  function getPaginated(list: User[]) {
+    return list.slice((page - 1) * pageSize, page * pageSize)
+  }
+  function getTotalPages(list: User[]) {
+    return Math.max(1, Math.ceil(list.length / pageSize))
+  }
   const { data: session } = useSession()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
@@ -236,7 +245,7 @@ export default function UsersPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredUsers.map((user) => (
+                    getPaginated(filteredUsers).map((user) => (
                       <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="font-medium">
                           <Link href={`/users/${user.id}`} className="hover:underline text-foreground">
@@ -266,7 +275,20 @@ export default function UsersPage() {
               </Table>
             </CardContent>
           </Card>
-        </div>
+        {/* Pagination Controls */}
+        {getTotalPages(filteredUsers) > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-6">
+            <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+              Prev
+            </Button>
+            <span className="text-sm text-gray-700">
+              Page {page} of {getTotalPages(filteredUsers)}
+            </span>
+            <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(getTotalPages(filteredUsers), p + 1))} disabled={page === getTotalPages(filteredUsers)}>
+              Next
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -45,6 +45,18 @@ export default function EquipmentPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid")
 
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const pageSize = 12
+  // Helper to get paginated data
+  function getPaginated(list: Equipment[]) {
+    return list.slice((page - 1) * pageSize, page * pageSize)
+  }
+  // Helper to get total pages for a list
+  function getTotalPages(list: Equipment[]) {
+    return Math.max(1, Math.ceil(list.length / pageSize))
+  }
+
   useEffect(() => {
     // Set view mode based on screen size
     const handleResize = () => {
@@ -340,10 +352,30 @@ export default function EquipmentPage() {
   }
 
   function EquipmentView({ equipment: equipmentList }: { equipment: Equipment[] }) {
-    return viewMode === "table" ? (
-      <EquipmentTable equipment={equipmentList} />
-    ) : (
-      <EquipmentGrid equipment={equipmentList} />
+    const paginated = getPaginated(equipmentList)
+    const totalPages = getTotalPages(equipmentList)
+    return (
+      <>
+        {viewMode === "table" ? (
+          <EquipmentTable equipment={paginated} />
+        ) : (
+          <EquipmentGrid equipment={paginated} />
+        )}
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-6">
+            <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+              Prev
+            </Button>
+            <span className="text-sm text-gray-700">
+              Page {page} of {totalPages}
+            </span>
+            <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+              Next
+            </Button>
+          </div>
+        )}
+      </>
     )
   }
 

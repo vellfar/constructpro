@@ -588,8 +588,12 @@ export default function FuelManagementPage() {
     }
 
     // Tab filter
-    if (activeTab !== "all" && request.status !== activeTab.toUpperCase()) {
-      return false
+    if (activeTab !== "all") {
+      if (activeTab === "acknowledged") {
+        if (request.status !== "ACKNOWLEDGED") return false;
+      } else {
+        if (request.status !== activeTab.toUpperCase()) return false;
+      }
     }
 
     // Additional filters
@@ -608,13 +612,19 @@ export default function FuelManagementPage() {
     return true
   })
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const pageSize = 12;
+  const totalPages = Math.ceil(filteredRequests.length / pageSize);
+  const paginatedRequests = filteredRequests.slice((page - 1) * pageSize, page * pageSize);
+
   // Tab counts
   const tabCounts = {
     all: fuelRequests.length,
     pending: fuelRequests.filter((r) => r.status === "PENDING").length,
     approved: fuelRequests.filter((r) => r.status === "APPROVED").length,
     issued: fuelRequests.filter((r) => r.status === "ISSUED").length,
-    completed: fuelRequests.filter((r) => r.status === "COMPLETED").length,
+    acknowledged: fuelRequests.filter((r) => r.status === "ACKNOWLEDGED").length,
   }
 
   // Loading state
@@ -659,135 +669,37 @@ export default function FuelManagementPage() {
     const status = REQUEST_STATUSES.find((s) => s.value === request.status)
     const StatusIcon = status?.icon || Clock
     const urgency = URGENCY_LEVELS.find((u) => u.value === request.urgency)
+    // Shorten/truncate request number for mobile
+    const shortRequestNumber = (request.requestNumber || `FR-${request.id}`).length > 10
+      ? (request.requestNumber || `FR-${request.id}`).slice(0, 10) + '...'
+      : (request.requestNumber || `FR-${request.id}`);
 
     return (
       <Card key={request.id} className="bg-white border border-gray-200 hover:shadow-md transition-shadow duration-200">
         <CardContent className="p-4">
           <div className="space-y-3">
-            {/* Header */}
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-900">{request.requestNumber || `FR-${request.id}`}</h3>
-                <p className="text-sm text-gray-600">{new Date(request.createdAt).toLocaleDateString()}</p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Badge variant={request.status === "APPROVED" ? "default" : "secondary"} className="bg-white border">
-                  <StatusIcon className="h-3 w-3 mr-1" />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <StatusIcon className="h-4 w-4 text-gray-600" />
+                <span className="font-semibold text-gray-900 text-sm">{shortRequestNumber}</span>
+                <Badge variant={request.status === "APPROVED" ? "default" : "secondary"} className="bg-white border text-xs">
                   {status?.label || request.status}
                 </Badge>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-white">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuItem>
-                      <Eye className="mr-2 h-4 w-4" />
-                      View Details
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {request.status === "PENDING" && canApproveRequest && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setSelectedRequest(request)
-                          setApprovalForm((prev) => ({
-                            ...prev,
-                            approvedQuantity: request.requestedQuantity,
-                          }))
-                          setShowApprovalDialog(true)
-                        }}
-                      >
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Approve/Reject
-                      </DropdownMenuItem>
-                    )}
-                    {request.status === "APPROVED" && canIssueRequest && (
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setSelectedRequest(request)
-                          setIssueForm((prev) => ({
-                            ...prev,
-                            issuedQuantity: request.approvedQuantity || 0,
-                          }))
-                          setShowIssueDialog(true)
-                        }}
-                      >
-                        <Send className="mr-2 h-4 w-4" />
-                        Issue Fuel
-                      </DropdownMenuItem>
-                    )}
-                    {/* Acknowledge Receipt: Only requester, status ISSUED */}
-                    {request.status === "ISSUED" && session?.user?.id === String(request.requestedBy?.id) && (
-                      <DropdownMenuItem
-                        onClick={async () => {
-                          try {
-                            const response = await fetch(`/api/fuel-requests/${request.id}/acknowledge`, {
-                              method: "PATCH",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ acknowledgedQuantity: request.issuedQuantity, acknowledgmentComments: "Received in full" }),
-                            });
-                            const result = await response.json();
-                            if (response.ok && (result.success || result.id)) {
-                              toast.success(result.message || "Fuel receipt acknowledged and request completed.");
-                              fetchData();
-                            } else {
-                              toast.error(result.error || result.message || "Failed to acknowledge receipt");
-                            }
-                          } catch (error) {
-                            toast.error("Failed to acknowledge receipt");
-                          }
-                        }}
-                      >
-                        <CheckCircle className="mr-2 h-4 w-4 text-green-600" />
-                        Acknowledge Receipt
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
+              <span className="text-xs text-gray-500">{new Date(request.createdAt).toLocaleDateString()}</span>
             </div>
-
-            {/* Equipment & Project */}
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p className="text-gray-500 font-medium">Equipment</p>
-                <p className="text-gray-900">{request.equipment?.name || "N/A"}</p>
-                <p className="text-gray-500 text-xs">{request.equipment?.equipmentCode}</p>
-              </div>
-              <div>
-                <p className="text-gray-500 font-medium">Project</p>
-                <p className="text-gray-900">{request.project?.name || "N/A"}</p>
-                <p className="text-gray-500 text-xs">{request.project?.projectCode}</p>
-              </div>
-            </div>
-
-            {/* Fuel Details */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Badge variant="outline" className="bg-white">
-                  {FUEL_TYPES.find((t) => t.value === request.fuelType)?.label || request.fuelType}
-                </Badge>
-                {urgency && (
-                  <div className="flex items-center">
-                    <div className={`w-2 h-2 rounded-full ${urgency.color} mr-1`} />
-                    <span className="text-xs text-gray-600">{urgency.label}</span>
-                  </div>
-                )}
-              </div>
-              <div className="text-right text-sm">
-                <p className="font-medium text-gray-900">{request.requestedQuantity}L</p>
-                <p className="text-gray-500">Requested</p>
-              </div>
-            </div>
-
-            {/* Requested By */}
+            <div className="text-gray-900 font-medium text-sm">{request.equipment?.name || "N/A"}</div>
+            <div className="text-gray-500 text-xs">{request.equipment?.equipmentCode || ""}</div>
+            <div className="text-gray-900 font-medium text-sm">{request.project?.name || "N/A"}</div>
+            <div className="text-gray-500 text-xs">{request.project?.projectCode || ""}</div>
             <div className="text-sm">
-              <p className="text-gray-500">Requested by</p>
-              <p className="text-gray-900">
-                {request.requestedBy?.firstName} {request.requestedBy?.lastName}
-              </p>
+              <div className="text-gray-900">Requested: {request.requestedQuantity}L</div>
+              {request.approvedQuantity && (
+                <div className="text-gray-500">Approved: {request.approvedQuantity}L</div>
+              )}
+              {request.issuedQuantity && (
+                <div className="text-gray-500">Issued: {request.issuedQuantity}L</div>
+              )}
             </div>
           </div>
         </CardContent>
@@ -1195,8 +1107,8 @@ export default function FuelManagementPage() {
               <TabsTrigger value="issued" className="data-[state=active]:bg-white">
                 Issued ({tabCounts.issued})
               </TabsTrigger>
-              <TabsTrigger value="completed" className="data-[state=active]:bg-white">
-                Completed ({tabCounts.completed})
+              <TabsTrigger value="acknowledged" className="data-[state=active]:bg-white">
+                Acknowledged ({tabCounts.acknowledged})
               </TabsTrigger>
             </TabsList>
           </div>
@@ -1231,9 +1143,17 @@ export default function FuelManagementPage() {
               <>
                 {/* Mobile View - Cards */}
                 <div className="lg:hidden space-y-4">
-                  {filteredRequests.map((request) => (
+                  {paginatedRequests.map((request) => (
                     <MobileRequestCard key={request.id} request={request} />
                   ))}
+                  {/* Pagination Controls - Mobile */}
+                  {totalPages > 1 && (
+                    <div className="flex justify-center items-center gap-2 mt-4">
+                      <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Prev</Button>
+                      <span className="text-sm text-gray-700">Page {page} of {totalPages}</span>
+                      <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</Button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Desktop View - Table */}
@@ -1246,7 +1166,7 @@ export default function FuelManagementPage() {
                       <Table>
                         <TableHeader>
                           <TableRow className="border-gray-200">
-                            <TableHead className="text-gray-700">Request #</TableHead>
+                            <TableHead className="text-gray-700 w-24 md:w-32 lg:w-36 xl:w-40 truncate">Request #</TableHead>
                             <TableHead className="text-gray-700">Equipment</TableHead>
                             <TableHead className="text-gray-700">Project</TableHead>
                             <TableHead className="text-gray-700">Fuel Type</TableHead>
@@ -1258,14 +1178,14 @@ export default function FuelManagementPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {filteredRequests.map((request) => {
+                          {paginatedRequests.map((request) => {
                             const status = REQUEST_STATUSES.find((s) => s.value === request.status)
                             const StatusIcon = status?.icon || Clock
 
                             return (
                               <TableRow key={request.id} className="border-gray-200 hover:bg-gray-50">
-                                <TableCell className="font-medium text-gray-900">
-                                  {request.requestNumber || `FR-${request.id}`}
+                                <TableCell className="font-medium text-gray-900 w-24 md:w-32 lg:w-36 xl:w-40 truncate max-w-[8ch] md:max-w-[12ch] lg:max-w-[16ch] xl:max-w-[20ch]">
+                                  <span title={request.requestNumber || `FR-${request.id}`}>{(request.requestNumber || `FR-${request.id}`).length > 12 ? (request.requestNumber || `FR-${request.id}`).slice(0, 12) + '...' : (request.requestNumber || `FR-${request.id}`)}</span>
                                 </TableCell>
                                 <TableCell>
                                   <div>
@@ -1411,6 +1331,14 @@ export default function FuelManagementPage() {
                         </TableBody>
                       </Table>
                     </div>
+                    {/* Pagination Controls - Desktop */}
+                    {totalPages > 1 && (
+                      <div className="flex justify-center items-center gap-2 mt-4">
+                        <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>Prev</Button>
+                        <span className="text-sm text-gray-700">Page {page} of {totalPages}</span>
+                        <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </>

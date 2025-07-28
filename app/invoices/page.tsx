@@ -55,6 +55,15 @@ interface Invoice {
 }
 
 export default function InvoicesPage() {
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const pageSize = 12
+  function getPaginated(list: Invoice[]) {
+    return list.slice((page - 1) * pageSize, page * pageSize)
+  }
+  function getTotalPages(list: Invoice[]) {
+    return Math.max(1, Math.ceil(list.length / pageSize))
+  }
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([])
   const [loading, setLoading] = useState(true)
@@ -395,7 +404,7 @@ export default function InvoicesPage() {
               </CardContent>
             </Card>
           ) : (
-            filteredInvoices.map((invoice) => (
+            getPaginated(filteredInvoices).map((invoice) => (
               <Card key={invoice.id} className="bg-white border border-gray-200 hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-3">
@@ -490,7 +499,7 @@ export default function InvoicesPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredInvoices.map((invoice) => (
+                    getPaginated(filteredInvoices).map((invoice) => (
                       <TableRow key={invoice.id} className="hover:bg-gray-50 transition-colors border-gray-200">
                         <TableCell className="font-medium text-gray-900">{invoice.invoiceNumber}</TableCell>
                         <TableCell>
@@ -547,6 +556,20 @@ export default function InvoicesPage() {
             </div>
           </CardContent>
         </Card>
+        {/* Pagination Controls */}
+        {getTotalPages(filteredInvoices) > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-6">
+            <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+              Prev
+            </Button>
+            <span className="text-sm text-gray-700">
+              Page {page} of {getTotalPages(filteredInvoices)}
+            </span>
+            <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(getTotalPages(filteredInvoices), p + 1))} disabled={page === getTotalPages(filteredInvoices)}>
+              Next
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   )

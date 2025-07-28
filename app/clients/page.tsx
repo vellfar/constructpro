@@ -42,6 +42,15 @@ interface Client {
 }
 
 export default function ClientsPage() {
+  // Pagination state
+  const [page, setPage] = useState(1)
+  const pageSize = 12
+  function getPaginated(list: Client[]) {
+    return list.slice((page - 1) * pageSize, page * pageSize)
+  }
+  function getTotalPages(list: Client[]) {
+    return Math.max(1, Math.ceil(list.length / pageSize))
+  }
   const [clients, setClients] = useState<Client[]>([])
   const [filteredClients, setFilteredClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
@@ -300,7 +309,7 @@ export default function ClientsPage() {
           <>
             {/* Mobile View - Cards */}
             <div className="block md:hidden space-y-4">
-              {filteredClients.map((client) => (
+              {getPaginated(filteredClients).map((client) => (
                 <ClientCard key={client.id} client={client} />
               ))}
             </div>
@@ -347,7 +356,7 @@ export default function ClientsPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredClients.map((client) => (
+                      {getPaginated(filteredClients).map((client) => (
                         <TableRow key={client.id} className="hover:bg-gray-50 transition-colors border-gray-100">
                           <TableCell>
                             <div className="font-medium text-gray-900">{client.name}</div>
@@ -414,6 +423,20 @@ export default function ClientsPage() {
                 </CardContent>
               </Card>
             </div>
+            {/* Pagination Controls */}
+            {getTotalPages(filteredClients) > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-6">
+                <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
+                  Prev
+                </Button>
+                <span className="text-sm text-gray-700">
+                  Page {page} of {getTotalPages(filteredClients)}
+                </span>
+                <Button size="sm" variant="outline" onClick={() => setPage((p) => Math.min(getTotalPages(filteredClients), p + 1))} disabled={page === getTotalPages(filteredClients)}>
+                  Next
+                </Button>
+              </div>
+            )}
           </>
         )}
       </div>
