@@ -810,40 +810,31 @@ export default function FuelManagementPage() {
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">Project *</label>
-                      {/* Searchable, scrollable project dropdown */}
+                      {/* Search input outside dropdown */}
+                      <Input
+                        ref={projectSearchRef}
+                        type="text"
+                        placeholder="Search projects..."
+                        value={projectSearch}
+                        onChange={e => setProjectSearch(e.target.value)}
+                        className="w-full text-sm bg-white border-gray-300 mb-2"
+                        inputMode="search"
+                        autoFocus={createDialogJustOpened}
+                      />
                       <Select
                         open={projectDropdownOpen}
-                        onOpenChange={(open) => {
-                          setProjectDropdownOpen(open);
-                        }}
+                        onOpenChange={setProjectDropdownOpen}
                         value={createForm.projectId}
                         onValueChange={(value) => {
                           setCreateForm((prev) => ({ ...prev, projectId: value }));
                           setProjectDropdownOpen(false);
+                          setProjectSearch("");
                         }}
                       >
                         <SelectTrigger className="bg-white border-gray-300">
                           <SelectValue placeholder="Select project" />
                         </SelectTrigger>
                         <SelectContent className="bg-white max-h-56 overflow-y-auto">
-                          <div className="sticky top-0 z-10 bg-white px-2 py-1">
-                          <Input
-                            ref={projectSearchRef}
-                            type="text"
-                            placeholder="Search projects..."
-                            value={projectSearch}
-                            onFocus={() => {
-                              setProjectDropdownOpen(true);
-                            }}
-                            onChange={e => {
-                              setProjectSearch(e.target.value);
-                              setProjectDropdownOpen(true);
-                            }}
-                            className="w-full text-sm bg-white border-gray-300"
-                            autoFocus={createDialogJustOpened}
-                            inputMode="search"
-                          />
-                          </div>
                           <SelectItem value={EMPTY_VALUE}>Select project</SelectItem>
                           {filteredProjects.map((project) => (
                             <SelectItem key={project.id} value={project.id.toString()}>
@@ -857,40 +848,31 @@ export default function FuelManagementPage() {
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-700">Equipment *</label>
-                      {/* Searchable, scrollable equipment dropdown */}
+                      {/* Search input outside dropdown */}
+                      <Input
+                        ref={equipmentSearchRef}
+                        type="text"
+                        placeholder="Search equipment..."
+                        value={equipmentSearch}
+                        onChange={e => setEquipmentSearch(e.target.value)}
+                        className="w-full text-sm bg-white border-gray-300 mb-2"
+                        inputMode="search"
+                        autoFocus={createDialogJustOpened}
+                      />
                       <Select
                         open={equipmentDropdownOpen}
-                        onOpenChange={(open) => {
-                          setEquipmentDropdownOpen(open);
-                        }}
+                        onOpenChange={setEquipmentDropdownOpen}
                         value={createForm.equipmentId}
                         onValueChange={(value) => {
                           setCreateForm((prev) => ({ ...prev, equipmentId: value }));
                           setEquipmentDropdownOpen(false);
+                          setEquipmentSearch("");
                         }}
                       >
                         <SelectTrigger className="bg-white border-gray-300">
                           <SelectValue placeholder="Select equipment" />
                         </SelectTrigger>
                         <SelectContent className="bg-white max-h-56 overflow-y-auto">
-                          <div className="sticky top-0 z-10 bg-white px-2 py-1">
-                          <Input
-                            ref={equipmentSearchRef}
-                            type="text"
-                            placeholder="Search equipment..."
-                            value={equipmentSearch}
-                            onFocus={() => {
-                              setEquipmentDropdownOpen(true);
-                            }}
-                            onChange={e => {
-                              setEquipmentSearch(e.target.value);
-                              setEquipmentDropdownOpen(true);
-                            }}
-                            className="w-full text-sm bg-white border-gray-300"
-                            autoFocus={createDialogJustOpened}
-                            inputMode="search"
-                          />
-                          </div>
                           <SelectItem value={EMPTY_VALUE}>Select equipment</SelectItem>
                           {filteredEquipment.map((item) => (
                             <SelectItem key={item.id} value={item.id.toString()}>
