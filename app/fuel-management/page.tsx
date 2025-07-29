@@ -272,18 +272,27 @@ export default function FuelManagementPage() {
   useEffect(() => {
     if (projectSearch.trim() !== "") {
       setProjectDropdownOpen(true);
-      // Keep input focused
-      if (projectSearchRef.current) projectSearchRef.current.focus();
     }
   }, [projectSearch]);
 
   useEffect(() => {
     if (equipmentSearch.trim() !== "") {
       setEquipmentDropdownOpen(true);
-      // Keep input focused
-      if (equipmentSearchRef.current) equipmentSearchRef.current.focus();
     }
   }, [equipmentSearch]);
+
+  // Ensure search input remains focused when dropdown opens
+  useEffect(() => {
+    if (projectDropdownOpen && projectSearchRef.current) {
+      projectSearchRef.current.focus();
+    }
+  }, [projectDropdownOpen]);
+
+  useEffect(() => {
+    if (equipmentDropdownOpen && equipmentSearchRef.current) {
+      equipmentSearchRef.current.focus();
+    }
+  }, [equipmentDropdownOpen]);
 
   // Fetch data function with retry and session error handling
   const fetchData = useCallback(async () => {
