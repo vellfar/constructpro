@@ -258,6 +258,7 @@ export default function FuelManagementPage() {
       })
     : projects;
 
+  // Always search/filter over the full equipment list from the API (no slicing or limiting)
   const filteredEquipment = debouncedEquipmentSearch.trim() !== ""
     ? equipment.filter((item) => {
         const search = debouncedEquipmentSearch.toLowerCase();
@@ -305,7 +306,8 @@ export default function FuelManagementPage() {
         const [fuelResponse, projectsResponse, equipmentResponse] = await Promise.all([
           fetch(`/api/fuel-requests?${queryParams}`).catch(() => null),
           fetch("/api/projects").catch(() => null),
-          fetch("/api/equipment").catch(() => null),
+          // Fetch all equipment with a large pageSize to get all equipment
+          fetch("/api/equipment?page=1&pageSize=1000").catch(() => null),
         ]);
         // Handle session/network errors
         if (fuelResponse?.status === 401 || projectsResponse?.status === 401 || equipmentResponse?.status === 401) {
