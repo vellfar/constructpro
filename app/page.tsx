@@ -339,7 +339,7 @@ export default function DashboardPage() {
                     {req.status}
                   </Badge>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 truncate">{req.description}</p>
+                    <p className="text-sm font-medium text-slate-900 truncate">{req.equipmentCode || "-"}</p>
                     <p className="text-xs text-slate-500">{req.timestamp}</p>
                   </div>
                 </div>

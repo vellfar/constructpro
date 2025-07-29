@@ -1,6 +1,16 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
+
+// Debounce hook
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -230,14 +240,17 @@ export default function FuelManagementPage() {
   // Search state for dropdowns
   const [projectSearch, setProjectSearch] = useState("");
   const [equipmentSearch, setEquipmentSearch] = useState("");
+  // Debounced search values
+  const debouncedProjectSearch = useDebounce(projectSearch, 250);
+  const debouncedEquipmentSearch = useDebounce(equipmentSearch, 250);
   // Refs for search inputs to keep focus on mobile
   const projectSearchRef = useRef<HTMLInputElement>(null);
   const equipmentSearchRef = useRef<HTMLInputElement>(null);
 
-  // Filtered lists for dropdowns (live search, match name/code, case-insensitive)
-  const filteredProjects = projectSearch.trim() !== ""
+  // Filtered lists for dropdowns (debounced, live search, match name/code, case-insensitive)
+  const filteredProjects = debouncedProjectSearch.trim() !== ""
     ? projects.filter((project) => {
-        const search = projectSearch.toLowerCase();
+        const search = debouncedProjectSearch.toLowerCase();
         return (
           project.name.toLowerCase().includes(search) ||
           (project.projectCode && project.projectCode.toLowerCase().includes(search))
@@ -245,9 +258,9 @@ export default function FuelManagementPage() {
       })
     : projects;
 
-  const filteredEquipment = equipmentSearch.trim() !== ""
+  const filteredEquipment = debouncedEquipmentSearch.trim() !== ""
     ? equipment.filter((item) => {
-        const search = equipmentSearch.toLowerCase();
+        const search = debouncedEquipmentSearch.toLowerCase();
         return (
           item.name.toLowerCase().includes(search) ||
           (item.equipmentCode && item.equipmentCode.toLowerCase().includes(search))
@@ -255,16 +268,20 @@ export default function FuelManagementPage() {
       })
     : equipment;
 
-  // Live search: open dropdown automatically when typing
+  // Live search: open dropdown automatically when typing, keep input focused
   useEffect(() => {
     if (projectSearch.trim() !== "") {
       setProjectDropdownOpen(true);
+      // Keep input focused
+      if (projectSearchRef.current) projectSearchRef.current.focus();
     }
   }, [projectSearch]);
 
   useEffect(() => {
     if (equipmentSearch.trim() !== "") {
       setEquipmentDropdownOpen(true);
+      // Keep input focused
+      if (equipmentSearchRef.current) equipmentSearchRef.current.focus();
     }
   }, [equipmentSearch]);
 
