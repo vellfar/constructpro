@@ -234,20 +234,39 @@ export default function FuelManagementPage() {
   const projectSearchRef = useRef<HTMLInputElement>(null);
   const equipmentSearchRef = useRef<HTMLInputElement>(null);
 
-  // Filtered lists for dropdowns
-  const filteredProjects = projectSearch
-    ? projects.filter((project) =>
-        project.name.toLowerCase().includes(projectSearch.toLowerCase()) ||
-        (project.projectCode && project.projectCode.toLowerCase().includes(projectSearch.toLowerCase()))
-      )
+  // Filtered lists for dropdowns (live search, match name/code, case-insensitive)
+  const filteredProjects = projectSearch.trim() !== ""
+    ? projects.filter((project) => {
+        const search = projectSearch.toLowerCase();
+        return (
+          project.name.toLowerCase().includes(search) ||
+          (project.projectCode && project.projectCode.toLowerCase().includes(search))
+        );
+      })
     : projects;
 
-  const filteredEquipment = equipmentSearch
-    ? equipment.filter((item) =>
-        item.name.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
-        (item.equipmentCode && item.equipmentCode.toLowerCase().includes(equipmentSearch.toLowerCase()))
-      )
+  const filteredEquipment = equipmentSearch.trim() !== ""
+    ? equipment.filter((item) => {
+        const search = equipmentSearch.toLowerCase();
+        return (
+          item.name.toLowerCase().includes(search) ||
+          (item.equipmentCode && item.equipmentCode.toLowerCase().includes(search))
+        );
+      })
     : equipment;
+
+  // Live search: open dropdown automatically when typing
+  useEffect(() => {
+    if (projectSearch.trim() !== "") {
+      setProjectDropdownOpen(true);
+    }
+  }, [projectSearch]);
+
+  useEffect(() => {
+    if (equipmentSearch.trim() !== "") {
+      setEquipmentDropdownOpen(true);
+    }
+  }, [equipmentSearch]);
 
   // Fetch data function with retry and session error handling
   const fetchData = useCallback(async () => {
