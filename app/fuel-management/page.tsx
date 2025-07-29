@@ -268,18 +268,7 @@ export default function FuelManagementPage() {
       })
     : equipment;
 
-  // Live search: open dropdown automatically when typing, keep input focused
-  useEffect(() => {
-    if (projectSearch.trim() !== "") {
-      setProjectDropdownOpen(true);
-    }
-  }, [projectSearch]);
-
-  useEffect(() => {
-    if (equipmentSearch.trim() !== "") {
-      setEquipmentDropdownOpen(true);
-    }
-  }, [equipmentSearch]);
+  // Live search: user must open dropdown manually to select project/equipment
 
   // Ensure search input remains focused when dropdown opens
   useEffect(() => {
