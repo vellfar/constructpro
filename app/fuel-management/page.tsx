@@ -870,11 +870,15 @@ export default function FuelManagementPage() {
                         </SelectTrigger>
                         <SelectContent className="bg-white max-h-56 overflow-y-auto">
                           <SelectItem value={EMPTY_VALUE}>Select project</SelectItem>
-                          {filteredProjects.map((project) => (
-                            <SelectItem key={project.id} value={project.id.toString()}>
-                              {project.name} {project.projectCode ? `(${project.projectCode})` : ""}
-                            </SelectItem>
-                          ))}
+                          {filteredProjects.length > 0 ? (
+                            filteredProjects.map((project) => (
+                              <SelectItem key={project.id} value={project.id.toString()}>
+                                {project.name} {project.projectCode ? `(${project.projectCode})` : ""}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="px-4 py-2 text-gray-500 text-sm">No projects found</div>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
@@ -908,11 +912,15 @@ export default function FuelManagementPage() {
                         </SelectTrigger>
                         <SelectContent className="bg-white max-h-56 overflow-y-auto">
                           <SelectItem value={EMPTY_VALUE}>Select equipment</SelectItem>
-                          {filteredEquipment.map((item) => (
-                            <SelectItem key={item.id} value={item.id.toString()}>
-                              {item.name} {item.equipmentCode ? `(${item.equipmentCode})` : ""}
-                            </SelectItem>
-                          ))}
+                          {filteredEquipment.length > 0 ? (
+                            filteredEquipment.map((item) => (
+                              <SelectItem key={item.id} value={item.id.toString()}>
+                                {item.name} {item.equipmentCode ? `(${item.equipmentCode})` : ""}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="px-4 py-2 text-gray-500 text-sm">No equipment found</div>
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
