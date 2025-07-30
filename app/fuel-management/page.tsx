@@ -718,8 +718,7 @@ export default function FuelManagementPage() {
       ? (request.requestNumber || `FR-${request.id}`).slice(0, 10) + '...'
       : (request.requestNumber || `FR-${request.id}`);
 
-    // Desktop action logic reused for mobile
-    // Use the same dropdown UI and logic as desktop, but render in the card
+    // Use the same dropdown UI and logic as desktop, but render at the top right below the date
     return (
       <Card key={request.id} className="bg-white border border-gray-200 hover:shadow-md transition-shadow duration-200">
         <CardContent className="p-4">
@@ -732,7 +731,55 @@ export default function FuelManagementPage() {
                   {status?.label || request.status}
                 </Badge>
               </div>
-              <span className="text-xs text-gray-500">{new Date(request.createdAt).toLocaleDateString()}</span>
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-xs text-gray-500">{new Date(request.createdAt).toLocaleDateString()}</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline" className="border-gray-300">
+                      Actions
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-white">
+                    {/* Approve/Reject action */}
+                    {canApproveRequest && request.status === "PENDING" && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setSelectedRequest(request);
+                          setShowApprovalDialog(true);
+                        }}
+                        className="text-green-700 hover:bg-green-50"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" /> Approve
+                      </DropdownMenuItem>
+                    )}
+                    {/* Issue action */}
+                    {canIssueRequest && request.status === "APPROVED" && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setSelectedRequest(request);
+                          setShowIssueDialog(true);
+                        }}
+                        className="text-blue-700 hover:bg-blue-50"
+                      >
+                        <Fuel className="h-4 w-4 mr-2" /> Issue
+                      </DropdownMenuItem>
+                    )}
+                    {/* Acknowledge action (if you have this on desktop) */}
+                    {canIssueRequest && request.status === "ISSUED" && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          // setSelectedRequest(request);
+                          // setShowAcknowledgeDialog(true);
+                        }}
+                        className="text-yellow-700 hover:bg-yellow-50"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" /> Acknowledge
+                      </DropdownMenuItem>
+                    )}
+                    {/* Add more actions here as needed, matching desktop logic */}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
             <div className="text-gray-900 font-medium text-sm">{request.equipment?.name || "N/A"}</div>
             <div className="text-gray-500 text-xs">{request.equipment?.equipmentCode || ""}</div>
@@ -746,55 +793,6 @@ export default function FuelManagementPage() {
               {request.issuedQuantity && (
                 <div className="text-gray-500">Issued: {request.issuedQuantity}L</div>
               )}
-            </div>
-            {/* Actions for mobile (reuse desktop dropdown and logic) */}
-            <div className="flex flex-wrap gap-2 mt-2">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button size="sm" variant="outline" className="border-gray-300">
-                    Actions
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-white">
-                  {/* Approve/Reject action */}
-                  {canApproveRequest && request.status === "PENDING" && (
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setSelectedRequest(request);
-                        setShowApprovalDialog(true);
-                      }}
-                      className="text-green-700 hover:bg-green-50"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" /> Approve
-                    </DropdownMenuItem>
-                  )}
-                  {/* Issue action */}
-                  {canIssueRequest && request.status === "APPROVED" && (
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setSelectedRequest(request);
-                        setShowIssueDialog(true);
-                      }}
-                      className="text-blue-700 hover:bg-blue-50"
-                    >
-                      <Fuel className="h-4 w-4 mr-2" /> Issue
-                    </DropdownMenuItem>
-                  )}
-                  {/* Acknowledge action (if you have this on desktop) */}
-                  {canIssueRequest && request.status === "ISSUED" && (
-                    <DropdownMenuItem
-                      onClick={() => {
-                        // setSelectedRequest(request);
-                        // setShowAcknowledgeDialog(true);
-                      }}
-                      className="text-yellow-700 hover:bg-yellow-50"
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" /> Acknowledge
-                    </DropdownMenuItem>
-                  )}
-                  {/* Add more actions here as needed, matching desktop logic */}
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
         </CardContent>
