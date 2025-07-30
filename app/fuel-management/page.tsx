@@ -723,8 +723,8 @@ export default function FuelManagementPage() {
     // Desktop: const canAcknowledge = request.status === "ISSUED" && session?.user?.id && request.requestedBy?.id && session.user.id === request.requestedBy.id;
     // We'll define canAcknowledge at the top level and pass it as a prop if needed, or just inline here referencing the same logic
     const canAcknowledge = (() => {
-      // This matches the desktop logic, but references the same session and request
-      return request.status === "ISSUED" && session?.user?.id && request.requestedBy?.id && session.user.id === request.requestedBy.id;
+      // This matches the desktop logic, but ensures type consistency (string vs number)
+      return request.status === "ISSUED" && session?.user?.id && request.requestedBy?.id && session.user.id === String(request.requestedBy.id);
     })();
 
     return (
