@@ -188,7 +188,10 @@ export default function EditUserForm({
                   onChange={handleChange}
                   className="accent-primary"
                 />
-                <Label htmlFor={`equipment-${eq.id}`}>{eq.name}</Label>
+                <Label htmlFor={`equipment-${eq.id}`}>
+                  {eq.name}
+                  {eq.equipmentCode ? ` (${eq.equipmentCode})` : ""}
+                </Label>
               </div>
             );
           })}
