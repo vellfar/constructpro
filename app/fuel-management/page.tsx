@@ -775,9 +775,23 @@ export default function FuelManagementPage() {
                     {/* Acknowledge action (only for request initiator) */}
                     {canAcknowledge && (
                       <DropdownMenuItem
-                        onClick={() => {
-                          // setSelectedRequest(request);
-                          // setShowAcknowledgeDialog(true);
+                        onClick={async () => {
+                          try {
+                            const response = await fetch(`/api/fuel-requests/${request.id}/acknowledge`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ acknowledgedQuantity: request.issuedQuantity, acknowledgmentComments: "Received in full" }),
+                            });
+                            const result = await response.json();
+                            if (response.ok && (result.success || result.id)) {
+                              toast.success(result.message || "Fuel receipt acknowledged successfully");
+                              window.location.reload();
+                            } else {
+                              toast.error(result.error || result.message || "Failed to acknowledge receipt");
+                            }
+                          } catch (error) {
+                            toast.error("Failed to acknowledge receipt");
+                          }
                         }}
                         className="text-yellow-700 hover:bg-yellow-50"
                       >
