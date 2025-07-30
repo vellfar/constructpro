@@ -719,6 +719,14 @@ export default function FuelManagementPage() {
       : (request.requestNumber || `FR-${request.id}`);
 
     // Use the same dropdown UI and logic as desktop, but render at the top right below the date
+    // Use the same acknowledge logic and permissions as desktop view
+    // Desktop: const canAcknowledge = request.status === "ISSUED" && session?.user?.id && request.requestedBy?.id && session.user.id === request.requestedBy.id;
+    // We'll define canAcknowledge at the top level and pass it as a prop if needed, or just inline here referencing the same logic
+    const canAcknowledge = (() => {
+      // This matches the desktop logic, but references the same session and request
+      return request.status === "ISSUED" && session?.user?.id && request.requestedBy?.id && session.user.id === request.requestedBy.id;
+    })();
+
     return (
       <Card key={request.id} className="bg-white border border-gray-200 hover:shadow-md transition-shadow duration-200">
         <CardContent className="p-4">
@@ -764,8 +772,8 @@ export default function FuelManagementPage() {
                         <Fuel className="h-4 w-4 mr-2" /> Issue
                       </DropdownMenuItem>
                     )}
-                    {/* Acknowledge action (if you have this on desktop) */}
-                    {canIssueRequest && request.status === "ISSUED" && (
+                    {/* Acknowledge action (only for request initiator) */}
+                    {canAcknowledge && (
                       <DropdownMenuItem
                         onClick={() => {
                           // setSelectedRequest(request);
