@@ -45,6 +45,8 @@ export default function EditUserForm({
     isActive: user.isActive,
     projectIds: projectAssignments?.map((pa: any) => pa.projectId.toString()) || [],
     equipmentIds: equipmentAssignments?.filter((ea: any) => ea.userId === user.id).map((ea: any) => ea.equipmentId.toString()) || [],
+    password: "",
+    confirmPassword: "",
   })
 
   const handleChange = (e: any) => {
@@ -79,26 +81,41 @@ export default function EditUserForm({
   }
 
   const handleSubmit = async (e: any) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
     try {
-      const fd = new FormData()
-      Object.entries(formData).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          value.forEach((v) => fd.append(key, v))
-        } else {
-          fd.append(key, value)
+      // Password validation (only if admin is setting a new password)
+      if (formData.password || formData.confirmPassword) {
+        if (formData.password !== formData.confirmPassword) {
+          setError("Passwords do not match.");
+          setLoading(false);
+          return;
         }
-      })
-      await updateUser(user.id, fd)
-      router.replace(`/users/${user.id}`)
+        if (formData.password.length < 6) {
+          setError("Password must be at least 6 characters.");
+          setLoading(false);
+          return;
+        }
+      }
+      const fd = new FormData();
+      Object.entries(formData).forEach(([key, value]) => {
+        if (key === "password" && !value) return; // Don't send empty password
+        if (key === "confirmPassword") return; // Don't send confirmPassword
+        if (Array.isArray(value)) {
+          value.forEach((v) => fd.append(key, v));
+        } else {
+          fd.append(key, value);
+        }
+      });
+      await updateUser(user.id, fd);
+      router.replace(`/users/${user.id}`);
     } catch (err: any) {
-      setError(err?.message || "Failed to update user.")
+      setError(err?.message || "Failed to update user.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -177,6 +194,34 @@ export default function EditUserForm({
           })}
         </div>
       </div>
+
+      {/* Admin password reset fields */}
+      {user?.sessionUserRole === "Admin" && (
+        <div className="space-y-2">
+          <Label htmlFor="password">Set New Password</Label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            value={formData.password}
+            onChange={handleChange}
+            autoComplete="new-password"
+            minLength={6}
+            placeholder="Enter new password"
+          />
+          <Label htmlFor="confirmPassword">Confirm New Password</Label>
+          <Input
+            id="confirmPassword"
+            name="confirmPassword"
+            type="password"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            autoComplete="new-password"
+            minLength={6}
+            placeholder="Confirm new password"
+          />
+        </div>
+      )}
       <div className="flex items-center space-x-2">
         <Checkbox id="isActive" name="isActive" checked={formData.isActive} onChange={handleChange} />
         <Label htmlFor="isActive">{formData.isActive ? "Active User" : "Inactive User"}</Label>
