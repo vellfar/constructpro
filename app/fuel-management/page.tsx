@@ -714,14 +714,12 @@ export default function FuelManagementPage() {
     const status = REQUEST_STATUSES.find((s) => s.value === request.status)
     const StatusIcon = status?.icon || Clock
     const urgency = URGENCY_LEVELS.find((u) => u.value === request.urgency)
-    // Shorten/truncate request number for mobile
     const shortRequestNumber = (request.requestNumber || `FR-${request.id}`).length > 10
       ? (request.requestNumber || `FR-${request.id}`).slice(0, 10) + '...'
       : (request.requestNumber || `FR-${request.id}`);
 
-    // Action permissions (reuse logic from main component)
-    // These must be in scope, so we use the same logic as above
-
+    // Desktop action logic reused for mobile
+    // Use the same dropdown UI and logic as desktop, but render in the card
     return (
       <Card key={request.id} className="bg-white border border-gray-200 hover:shadow-md transition-shadow duration-200">
         <CardContent className="p-4">
@@ -749,49 +747,54 @@ export default function FuelManagementPage() {
                 <div className="text-gray-500">Issued: {request.issuedQuantity}L</div>
               )}
             </div>
-            {/* Actions for mobile (match desktop logic) */}
+            {/* Actions for mobile (reuse desktop dropdown and logic) */}
             <div className="flex flex-wrap gap-2 mt-2">
-              {/* Approve/Reject action */}
-              {canApproveRequest && request.status === "PENDING" && (
-                <Button
-                  size="sm"
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => {
-                    setSelectedRequest(request);
-                    setShowApprovalDialog(true);
-                  }}
-                >
-                  <CheckCircle className="h-4 w-4 mr-1" /> Approve
-                </Button>
-              )}
-              {/* Issue action */}
-              {canIssueRequest && request.status === "APPROVED" && (
-                <Button
-                  size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={() => {
-                    setSelectedRequest(request);
-                    setShowIssueDialog(true);
-                  }}
-                >
-                  <Fuel className="h-4 w-4 mr-1" /> Issue
-                </Button>
-              )}
-              {/* Acknowledge action (if you have this on desktop) */}
-              {canIssueRequest && request.status === "ISSUED" && (
-                <Button
-                  size="sm"
-                  className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                  onClick={() => {
-                    // Implement acknowledge logic here
-                    // setSelectedRequest(request);
-                    // setShowAcknowledgeDialog(true);
-                  }}
-                >
-                  <CheckCircle className="h-4 w-4 mr-1" /> Acknowledge
-                </Button>
-              )}
-              {/* Add more actions here as needed, matching desktop logic */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="border-gray-300">
+                    Actions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-white">
+                  {/* Approve/Reject action */}
+                  {canApproveRequest && request.status === "PENDING" && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSelectedRequest(request);
+                        setShowApprovalDialog(true);
+                      }}
+                      className="text-green-700 hover:bg-green-50"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" /> Approve
+                    </DropdownMenuItem>
+                  )}
+                  {/* Issue action */}
+                  {canIssueRequest && request.status === "APPROVED" && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSelectedRequest(request);
+                        setShowIssueDialog(true);
+                      }}
+                      className="text-blue-700 hover:bg-blue-50"
+                    >
+                      <Fuel className="h-4 w-4 mr-2" /> Issue
+                    </DropdownMenuItem>
+                  )}
+                  {/* Acknowledge action (if you have this on desktop) */}
+                  {canIssueRequest && request.status === "ISSUED" && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        // setSelectedRequest(request);
+                        // setShowAcknowledgeDialog(true);
+                      }}
+                      className="text-yellow-700 hover:bg-yellow-50"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" /> Acknowledge
+                    </DropdownMenuItem>
+                  )}
+                  {/* Add more actions here as needed, matching desktop logic */}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </CardContent>
