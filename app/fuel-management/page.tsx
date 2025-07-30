@@ -719,6 +719,9 @@ export default function FuelManagementPage() {
       ? (request.requestNumber || `FR-${request.id}`).slice(0, 10) + '...'
       : (request.requestNumber || `FR-${request.id}`);
 
+    // Action permissions (reuse logic from main component)
+    // These must be in scope, so we use the same logic as above
+
     return (
       <Card key={request.id} className="bg-white border border-gray-200 hover:shadow-md transition-shadow duration-200">
         <CardContent className="p-4">
@@ -745,6 +748,50 @@ export default function FuelManagementPage() {
               {request.issuedQuantity && (
                 <div className="text-gray-500">Issued: {request.issuedQuantity}L</div>
               )}
+            </div>
+            {/* Actions for mobile (match desktop logic) */}
+            <div className="flex flex-wrap gap-2 mt-2">
+              {/* Approve/Reject action */}
+              {canApproveRequest && request.status === "PENDING" && (
+                <Button
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => {
+                    setSelectedRequest(request);
+                    setShowApprovalDialog(true);
+                  }}
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" /> Approve
+                </Button>
+              )}
+              {/* Issue action */}
+              {canIssueRequest && request.status === "APPROVED" && (
+                <Button
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => {
+                    setSelectedRequest(request);
+                    setShowIssueDialog(true);
+                  }}
+                >
+                  <Fuel className="h-4 w-4 mr-1" /> Issue
+                </Button>
+              )}
+              {/* Acknowledge action (if you have this on desktop) */}
+              {canIssueRequest && request.status === "ISSUED" && (
+                <Button
+                  size="sm"
+                  className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                  onClick={() => {
+                    // Implement acknowledge logic here
+                    // setSelectedRequest(request);
+                    // setShowAcknowledgeDialog(true);
+                  }}
+                >
+                  <CheckCircle className="h-4 w-4 mr-1" /> Acknowledge
+                </Button>
+              )}
+              {/* Add more actions here as needed, matching desktop logic */}
             </div>
           </div>
         </CardContent>
