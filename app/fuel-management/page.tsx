@@ -807,6 +807,7 @@ export default function FuelManagementPage() {
             <div className="text-gray-500 text-xs">{request.equipment?.equipmentCode || ""}</div>
             <div className="text-gray-900 font-medium text-sm">{request.project?.name || "N/A"}</div>
             <div className="text-gray-500 text-xs">{request.project?.projectCode || ""}</div>
+            {/* <div className="text-xs text-yellow-700 font-semibold">Urgency: {urgency?.label || request.urgency}</div> */}
             <div className="text-sm">
               <div className="text-gray-900">Requested: {request.requestedQuantity}L</div>
               {request.approvedQuantity && (
@@ -1358,6 +1359,7 @@ export default function FuelManagementPage() {
                                     {request.issuedQuantity && (
                                       <div className="text-gray-500">Issued: {request.issuedQuantity}L</div>
                                     )}
+                                    {/* <div className="text-xs text-yellow-700 font-semibold">Urgency: {URGENCY_LEVELS.find((u) => u.value === request.urgency)?.label || request.urgency}</div> */}
                                   </div>
                                 </TableCell>
                                 <TableCell>
@@ -1450,7 +1452,7 @@ export default function FuelManagementPage() {
                                         </DropdownMenuItem>
                                       )}
 
-                                      {/* Complete Request: Only Admin, status ACKNOWLEDGED */}
+                                      {/* Complete Request: Only Admin, status ACKNOWLEDGED 
                                       {request.status === "ACKNOWLEDGED" && session?.user?.role === "Admin" && (
                                         <DropdownMenuItem
                                           onClick={() => {
@@ -1464,7 +1466,7 @@ export default function FuelManagementPage() {
                                           <CheckCircle className="mr-2 h-4 w-4 text-blue-600" />
                                           Complete Request
                                         </DropdownMenuItem>
-                                      )}
+                                      )} */}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 </TableCell>
