@@ -22,6 +22,20 @@ export default function EditUserForm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Build a map of equipmentId -> userId for all assignments (if available)
+  // This should be passed as a prop or fetched if not available
+  // For this example, assume equipmentAssignments contains all assignments for all users
+  // If not, you may need to fetch all assignments in the parent page
+  // We'll build a map: equipmentId -> [userId, ...]
+  const equipmentAssignmentMap: Record<string, string[]> = {};
+  if (Array.isArray(equipmentAssignments)) {
+    equipmentAssignments.forEach((ea: any) => {
+      const eid = ea.equipmentId.toString();
+      if (!equipmentAssignmentMap[eid]) equipmentAssignmentMap[eid] = [];
+      equipmentAssignmentMap[eid].push(ea.userId?.toString?.() || "");
+    });
+  }
+
   const [formData, setFormData] = useState({
     firstName: user.firstName,
     lastName: user.lastName,
@@ -30,31 +44,35 @@ export default function EditUserForm({
     roleId: user.roleId.toString(),
     isActive: user.isActive,
     projectIds: projectAssignments?.map((pa: any) => pa.projectId.toString()) || [],
-    equipmentIds: equipmentAssignments?.map((ea: any) => ea.equipmentId.toString()) || [],
+    equipmentIds: equipmentAssignments?.filter((ea: any) => ea.userId === user.id).map((ea: any) => ea.equipmentId.toString()) || [],
   })
 
   const handleChange = (e: any) => {
-    const { name, value, type, checked } = e.target
+    const { name, value, type, checked } = e.target;
     if (type === "checkbox" && name === "isActive") {
-      setFormData({ ...formData, isActive: checked })
+      setFormData({ ...formData, isActive: checked });
     } else if (type === "checkbox" && name === "projectIds") {
       setFormData({
         ...formData,
         projectIds: checked
           ? [...formData.projectIds, value]
           : formData.projectIds.filter((id: string) => id !== value),
-      })
+      });
     } else if (type === "checkbox" && name === "equipmentIds") {
-      setFormData({
-        ...formData,
-        equipmentIds: checked
-          ? [...formData.equipmentIds, value]
-          : formData.equipmentIds.filter((id: string) => id !== value),
-      })
+      // Prevent duplicate assignment: only add if not already present
+      setFormData((prev) => {
+        const alreadyAssigned = prev.equipmentIds.includes(value);
+        if (checked && !alreadyAssigned) {
+          return { ...prev, equipmentIds: [...prev.equipmentIds, value] };
+        } else if (!checked && alreadyAssigned) {
+          return { ...prev, equipmentIds: prev.equipmentIds.filter((id: string) => id !== value) };
+        }
+        return prev;
+      });
     } else {
-      setFormData({ ...formData, [name]: value })
+      setFormData({ ...formData, [name]: value });
     }
-  }
+  };
 
   const handleRoleChange = (value: string) => {
     setFormData({ ...formData, roleId: value })
@@ -139,20 +157,24 @@ export default function EditUserForm({
       <div className="space-y-2">
         <Label htmlFor="equipmentIds">Assign Equipment</Label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {equipment.map((eq: any) => (
-            <div key={eq.id} className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id={`equipment-${eq.id}`}
-                name="equipmentIds"
-                value={eq.id.toString()}
-                checked={formData.equipmentIds.includes(eq.id.toString())}
-                onChange={handleChange}
-                className="accent-primary"
-              />
-              <Label htmlFor={`equipment-${eq.id}`}>{eq.name}</Label>
-            </div>
-          ))}
+          {equipment.map((eq: any) => {
+            const eid = eq.id.toString();
+            // Only prevent duplicate assignment to the same user
+            return (
+              <div key={eq.id} className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id={`equipment-${eq.id}`}
+                  name="equipmentIds"
+                  value={eid}
+                  checked={formData.equipmentIds.includes(eid)}
+                  onChange={handleChange}
+                  className="accent-primary"
+                />
+                <Label htmlFor={`equipment-${eq.id}`}>{eq.name}</Label>
+              </div>
+            );
+          })}
         </div>
       </div>
       <div className="flex items-center space-x-2">
