@@ -577,6 +577,7 @@ async function generateFuelReport(dateFrom: string, dateTo: string, projectId: s
         quantityRequested: req.requestedQuantity ?? req.quantity ?? 0,
         quantityApproved: req.approvedQuantity ?? 0,
         quantityIssued: req.issuedQuantity ?? 0,
+        odometerKm: req.odometerKm ?? "N/A",
         status: req.status,
         requestedBy: req.requestedBy ? `${req.requestedBy.firstName} ${req.requestedBy.lastName}` : "N/A",
         approvedOrRejectedBy: req.approvedBy && typeof req.approvedBy === 'object' ? `${req.approvedBy.firstName} ${req.approvedBy.lastName}` : "N/A",
