@@ -1316,6 +1316,7 @@ export default function FuelManagementPage() {
                           <TableRow className="border-gray-200">
                             <TableHead className="text-gray-700 w-24 md:w-32 lg:w-36 xl:w-40 truncate">Request #</TableHead>
                             <TableHead className="text-gray-700">Equipment</TableHead>
+                            <TableHead className="text-gray-700">Odometer (Km)</TableHead>
                             <TableHead className="text-gray-700">Project</TableHead>
                             <TableHead className="text-gray-700">Fuel Type</TableHead>
                             <TableHead className="text-gray-700">Quantity</TableHead>
@@ -1344,6 +1345,9 @@ export default function FuelManagementPage() {
                                   </div>
                                 </TableCell>
                                 <TableCell>
+                                  <div className="font-medium text-gray-900">{request.odometerKm ?? "N/A"}</div>
+                                </TableCell>
+                                <TableCell>
                                   <div>
                                     <div className="font-medium text-gray-900">{request.project?.name || "N/A"}</div>
                                     <div className="text-sm text-gray-500">{request.project?.projectCode || ""}</div>
@@ -1363,7 +1367,6 @@ export default function FuelManagementPage() {
                                     {request.issuedQuantity && (
                                       <div className="text-gray-500">Issued: {request.issuedQuantity}L</div>
                                     )}
-                                    {/* <div className="text-xs text-yellow-700 font-semibold">Urgency: {URGENCY_LEVELS.find((u) => u.value === request.urgency)?.label || request.urgency}</div> */}
                                   </div>
                                 </TableCell>
                                 <TableCell>

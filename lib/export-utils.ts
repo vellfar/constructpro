@@ -179,6 +179,7 @@ export function formatDataForExport(
         Equipment: req.equipment?.name || "N/A",
         Project: req.project?.name || "N/A",
         "Requested By": req.requestedBy ? `${req.requestedBy.firstName} ${req.requestedBy.lastName}` : "N/A",
+        "Odometer (Km)": req.odometerKm || "N/A",
         "Request Date": req.requestDate
           ? new Date(req.requestDate).toLocaleDateString()
           : new Date(req.createdAt).toLocaleDateString(),
