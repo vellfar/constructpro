@@ -13,21 +13,44 @@ export async function getProjects() {
     const session = await getServerSession(authOptions)
     if (!session?.user) return { success: false, error: "Unauthorized" }
 
-    const projects = await prisma.project.findMany({
-      include: {
-        client: { select: { id: true, name: true } },
-        createdBy: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+    let projects;
+    if (session.user.role === "Admin") {
+      projects = await prisma.project.findMany({
+        include: {
+          client: { select: { id: true, name: true } },
+          createdBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    })
-
+        orderBy: { createdAt: "desc" },
+      });
+    } else {
+      // Only show projects assigned to the user
+      projects = await prisma.project.findMany({
+        where: {
+          projectAssignments: {
+            some: { userId: session.user.id }
+          }
+        },
+        include: {
+          client: { select: { id: true, name: true } },
+          createdBy: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    }
     return { success: true, data: projects }
   } catch (error) {
     console.error("Failed to fetch projects:", error)
@@ -70,6 +93,9 @@ export async function createProject(formData: FormData) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
       return { success: false, error: "Please log in to create projects" }
+    }
+    if (session.user.role !== "Admin") {
+      return { success: false, error: "Only Admins can create projects" }
     }
 
     const name = formData.get("name") as string

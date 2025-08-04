@@ -56,7 +56,6 @@ import {
 } from "lucide-react"
 import { useSession } from "next-auth/react"
 import { toast } from "sonner"
-import type { FuelType, FuelUrgency } from "@prisma/client"
 import { exportToCSV, exportToExcel, formatDataForExport } from "@/lib/export-utils"
 
 export const viewport = {
@@ -69,12 +68,12 @@ export const viewport = {
 interface FuelRequestWithRelations {
   id: number
   requestNumber?: string
-  fuelType: FuelType
+  fuelType: string
   requestedQuantity: number
   approvedQuantity?: number | null
   issuedQuantity?: number | null
   status: string
-  urgency: FuelUrgency
+  urgency: string
   justification: string
   createdAt: string
   updatedAt: string
@@ -411,10 +410,10 @@ export default function FuelManagementPage() {
       const requestData = {
         projectId: createForm.projectId === EMPTY_VALUE ? null : Number.parseInt(createForm.projectId),
         equipmentId: createForm.equipmentId === EMPTY_VALUE ? null : Number.parseInt(createForm.equipmentId),
-        fuelType: createForm.fuelType as FuelType,
+        fuelType: createForm.fuelType,
         requestedQuantity: Number.parseFloat(createForm.requestedQuantity),
         odometerKm: createForm.odometerKm ? Number.parseFloat(createForm.odometerKm) : null,
-        urgency: createForm.urgency as FuelUrgency,
+        urgency: createForm.urgency,
         justification: createForm.justification,
       }
 
@@ -516,12 +515,18 @@ export default function FuelManagementPage() {
   }
 
   const handleExportCSV = () => {
-    const exportData = formatDataForExport(filteredRequests, "fuel-requests")
+    const exportData = formatDataForExport(filteredRequests, "fuel-requests").map(row => ({
+      ...row,
+      odometer: row.odometerKm ?? ""
+    }));
     exportToCSV(exportData, `fuel-requests-${new Date().toISOString().split("T")[0]}`)
   }
 
   const handleExportExcel = () => {
-    const exportData = formatDataForExport(filteredRequests, "fuel-requests")
+    const exportData = formatDataForExport(filteredRequests, "fuel-requests").map(row => ({
+      ...row,
+      odometer: row.odometerKm ?? ""
+    }));
     exportToExcel(exportData, `fuel-requests-${new Date().toISOString().split("T")[0]}`, "Fuel Requests")
   }
 
@@ -717,13 +722,7 @@ export default function FuelManagementPage() {
     const shortRequestNumber = (request.requestNumber || `FR-${request.id}`).length > 10
       ? (request.requestNumber || `FR-${request.id}`).slice(0, 10) + '...'
       : (request.requestNumber || `FR-${request.id}`);
-
-    // Use the same dropdown UI and logic as desktop, but render at the top right below the date
-    // Use the same acknowledge logic and permissions as desktop view
-    // Desktop: const canAcknowledge = request.status === "ISSUED" && session?.user?.id && request.requestedBy?.id && session.user.id === request.requestedBy.id;
-    // We'll define canAcknowledge at the top level and pass it as a prop if needed, or just inline here referencing the same logic
     const canAcknowledge = (() => {
-      // This matches the desktop logic, but ensures type consistency (string vs number)
       return request.status === "ISSUED" && session?.user?.id && request.requestedBy?.id && session.user.id === String(request.requestedBy.id);
     })();
 
@@ -803,12 +802,17 @@ export default function FuelManagementPage() {
                 </DropdownMenu>
               </div>
             </div>
+            {/* Equipment type above equipment name */}
+            <div className="text-xs text-gray-500 font-semibold">{request.equipment?.type || ""}</div>
             <div className="text-gray-900 font-medium text-sm">{request.equipment?.name || "N/A"}</div>
             <div className="text-gray-500 text-xs">{request.equipment?.equipmentCode || ""}</div>
             <div className="text-gray-900 font-medium text-sm">{request.project?.name || "N/A"}</div>
             <div className="text-gray-500 text-xs">{request.project?.projectCode || ""}</div>
-            {/* <div className="text-xs text-yellow-700 font-semibold">Urgency: {urgency?.label || request.urgency}</div> */}
+            {/* Requested by above quantity */}
+            <div className="text-xs text-gray-700 font-semibold">Requested by: {request.requestedBy?.firstName} {request.requestedBy?.lastName}</div>
             <div className="text-sm">
+              {/* Odometer reading */}
+              <div className="text-gray-900">Odometer: {(request.odometerKm ?? "N/A")} km</div>
               <div className="text-gray-900">Requested: {request.requestedQuantity}L</div>
               {request.approvedQuantity && (
                 <div className="text-gray-500">Approved: {request.approvedQuantity}L</div>
@@ -1333,10 +1337,10 @@ export default function FuelManagementPage() {
                                 </TableCell>
                                 <TableCell>
                                   <div>
+                                    {/* Equipment type above equipment name */}
+                                    <div className="text-xs text-gray-500 font-semibold">{request.equipment?.type || ""}</div>
                                     <div className="font-medium text-gray-900">{request.equipment?.name || "N/A"}</div>
-                                    <div className="text-sm text-gray-500">
-                                      {request.equipment?.equipmentCode || ""}
-                                    </div>
+                                    <div className="text-sm text-gray-500">{request.equipment?.equipmentCode || ""}</div>
                                   </div>
                                 </TableCell>
                                 <TableCell>
