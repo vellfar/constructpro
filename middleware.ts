@@ -9,7 +9,7 @@ export default withAuth(
     // Public routes that don't require authentication
     const publicRoutes = [
       "/auth/login",
-      "/auth/register",
+      //"/auth/register",
       "/auth/forgot-password",
       "/auth/reset-password",
       "/unauthorized",
