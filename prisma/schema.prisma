@@ -1,3 +1,16 @@
+enum ActivityStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum EquipmentStatus {
+  OPERATIONAL
+  UNDER_MAINTENANCE
+  OUT_OF_SERVICE
+  RETIRED
+}
 generator client {
   provider = "prisma-client-js"
 }
@@ -36,6 +49,15 @@ model User {
   fuelRequestsIssued    FuelRequest[]         @relation("IssuedBy")
   fuelRequestsAcknowledged FuelRequest[]      @relation("AcknowledgedBy")
   fuelRequestsCompleted FuelRequest[]         @relation("CompletedBy")
+  purchaseOrdersCreated PurchaseOrder[]       @relation("PurchaseOrderCreatedBy")
+  purchaseOrdersApproved PurchaseOrder[]      @relation("PurchaseOrderApprovedBy")
+  purchaseOrdersReceived PurchaseOrder[]      @relation("PurchaseOrderReceivedBy")
+  materialRequestsCreated MaterialRequest[]   @relation("MaterialRequestCreatedBy")
+  materialRequestsApproved MaterialRequest[]  @relation("MaterialRequestApprovedBy")
+  materialRequestsIssued MaterialRequest[]    @relation("MaterialRequestIssuedBy")
+  materialRequestsAcknowledged MaterialRequest[] @relation("MaterialRequestAcknowledgedBy")
+  materialRequestsCompleted MaterialRequest[] @relation("MaterialRequestCompletedBy")
+  materialTransactionsPerformed MaterialTransaction[]
 }
 
 model Role {
@@ -138,6 +160,9 @@ model Project {
   projectAssignments    ProjectAssignment[]
   fuelRequests          FuelRequest[]
   invoices              Invoice[]       // ✅ If you want to include invoices
+  purchaseOrders        PurchaseOrder[]
+  materialInventories   MaterialInventory[]
+  materialRequests      MaterialRequest[]
 }
 
 model ProjectAssignment {
@@ -327,18 +352,234 @@ model Report {
   updatedAt   DateTime @updatedAt //add project
 }
 
-model AuditLog {
-  id          Int      @id @default(autoincrement())
-  action      String
-  entityType  String
-  entityId    Int
-  oldValues   Json?
-  newValues   Json?
-  userId      Int
-  ipAddress   String?
-  userAgent   String?
-  createdAt   DateTime @default(now())
+// Material Management Models
+
+model Supplier {
+  id            Int      @id @default(autoincrement())
+  name          String
+  contactPerson String?
+  email         String?
+  phone         String?
+  address       String?
+  taxNumber     String?
+  paymentTerms  String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  materials      Material[]
+  purchaseOrders PurchaseOrder[]
+
+  @@map("suppliers")
 }
+
+model Material {
+  id                 Int      @id @default(autoincrement())
+  materialCode       String   @unique
+  name               String
+  description        String?
+  category           String
+  unit               String
+  unitCost           Decimal? @db.Decimal(10, 2)
+  minimumStockLevel  Decimal? @db.Decimal(10, 2) @default(0)
+  maximumStockLevel  Decimal? @db.Decimal(10, 2)
+  reorderPoint       Decimal? @db.Decimal(10, 2)
+  supplierId         Int?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  // Relations
+  supplier            Supplier?             @relation(fields: [supplierId], references: [id])
+  inventory           MaterialInventory[]
+  requests            MaterialRequest[]
+  transactions        MaterialTransaction[]
+  purchaseOrderItems  PurchaseOrderItem[]
+
+  @@map("materials")
+}
+
+model MaterialInventory {
+  id                Int      @id @default(autoincrement())
+  materialId        Int
+  locationType      LocationType
+  locationReference String?
+  projectId         Int?
+  currentStock      Decimal  @db.Decimal(10, 2) @default(0)
+  reservedStock     Decimal  @db.Decimal(10, 2) @default(0)
+  lastUpdated       DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  material Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  project  Project? @relation(fields: [projectId], references: [id])
+
+  @@unique([materialId, locationType, locationReference, projectId])
+  @@map("material_inventory")
+}
+
+model MaterialRequest {
+  id                      Int                   @id @default(autoincrement())
+  requestNumber           String                @unique
+  materialId              Int
+  projectId               Int
+  requestedById           Int
+  requestedQuantity       Decimal               @db.Decimal(10, 2)
+  approvedQuantity        Decimal?              @db.Decimal(10, 2)
+  issuedQuantity          Decimal?              @db.Decimal(10, 2)
+  acknowledgedQuantity    Decimal?              @db.Decimal(10, 2)
+  unitCost                Decimal?              @db.Decimal(10, 2)
+  totalCost               Decimal?              @db.Decimal(15, 2)
+  justification           String
+  urgency                 MaterialUrgency       @default(NORMAL)
+  status                  MaterialRequestStatus @default(PENDING)
+  deliveryLocation        LocationType          @default(SITE)
+  requiredDate            DateTime?
+  requestDate             DateTime              @default(now())
+  approvalDate            DateTime?
+  issuanceDate            DateTime?
+  acknowledgmentDate      DateTime?
+  completionDate          DateTime?
+  approvedById            Int?
+  issuedById              Int?
+  acknowledgedById        Int?
+  completedById           Int?
+  approvalComments        String?
+  issuanceComments        String?
+  acknowledgmentComments  String?
+  completionComments      String?
+  rejectionReason         String?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+
+  // Relations
+  material       Material @relation(fields: [materialId], references: [id])
+  project        Project  @relation(fields: [projectId], references: [id])
+  requestedBy    User     @relation("MaterialRequestCreatedBy", fields: [requestedById], references: [id])
+  approvedBy     User?    @relation("MaterialRequestApprovedBy", fields: [approvedById], references: [id])
+  issuedBy       User?    @relation("MaterialRequestIssuedBy", fields: [issuedById], references: [id])
+  acknowledgedBy User?    @relation("MaterialRequestAcknowledgedBy", fields: [acknowledgedById], references: [id])
+  completedBy    User?    @relation("MaterialRequestCompletedBy", fields: [completedById], references: [id])
+
+  @@map("material_requests")
+}
+
+model MaterialTransaction {
+  id                    Int                   @id @default(autoincrement())
+  materialId            Int
+  transactionType       TransactionType
+  referenceType         String?
+  referenceId           Int?
+  fromLocationType      LocationType?
+  fromLocationReference String?
+  fromProjectId         Int?
+  toLocationType        LocationType?
+  toLocationReference   String?
+  toProjectId           Int?
+  quantity              Decimal               @db.Decimal(10, 2)
+  unitCost              Decimal?              @db.Decimal(10, 2)
+  totalCost             Decimal?              @db.Decimal(15, 2)
+  transactionDate       DateTime              @default(now())
+  performedById         Int?
+  notes                 String?
+  createdAt             DateTime              @default(now())
+
+  // Relations
+  material    Material @relation(fields: [materialId], references: [id])
+  performedBy User?    @relation(fields: [performedById], references: [id])
+
+  @@map("material_transactions")
+}
+
+model PurchaseOrder {
+  id                   Int                 @id @default(autoincrement())
+  poNumber             String              @unique
+  supplierId           Int
+  projectId            Int?
+  status               PurchaseOrderStatus @default(DRAFT)
+  orderDate            DateTime            @default(now())
+  expectedDeliveryDate DateTime?
+  actualDeliveryDate   DateTime?
+  totalAmount          Decimal?            @db.Decimal(15, 2)
+  taxAmount            Decimal?            @db.Decimal(15, 2)
+  grandTotal           Decimal?            @db.Decimal(15, 2)
+  deliveryLocation     LocationType        @default(STORE)
+  deliveryAddress      String?
+  termsAndConditions   String?
+  createdById          Int?
+  approvedById         Int?
+  receivedById         Int?
+  notes                String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  // Relations
+  supplier   Supplier            @relation(fields: [supplierId], references: [id])
+  project    Project?            @relation(fields: [projectId], references: [id])
+  createdBy  User?               @relation("PurchaseOrderCreatedBy", fields: [createdById], references: [id])
+  approvedBy User?               @relation("PurchaseOrderApprovedBy", fields: [approvedById], references: [id])
+  receivedBy User?               @relation("PurchaseOrderReceivedBy", fields: [receivedById], references: [id])
+  items      PurchaseOrderItem[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id                Int           @id @default(autoincrement())
+  purchaseOrderId   Int
+  materialId        Int
+  quantity          Decimal       @db.Decimal(10, 2)
+  unitCost          Decimal       @db.Decimal(10, 2)
+  totalCost         Decimal       @db.Decimal(15, 2)
+  receivedQuantity  Decimal       @db.Decimal(10, 2) @default(0)
+  notes             String?
+  createdAt         DateTime      @default(now())
+
+  // Relations
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  material      Material      @relation(fields: [materialId], references: [id])
+
+  @@map("purchase_order_items")
+}
+
+model Invoice {
+  id            Int           @id @default(autoincrement())
+  invoiceNumber String        @unique
+  projectId     Int
+  amount        Decimal       @db.Decimal(15, 2)
+  status        InvoiceStatus @default(PENDING)
+  invoiceDate   DateTime
+  dueDate       DateTime?
+  description   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  items   InvoiceItem[]
+
+  @@map("invoices")
+}
+
+
+model InvoiceItem {
+  id          Int     @id @default(autoincrement())
+  invoiceId   Int
+  description String
+  quantity    Decimal @db.Decimal(10, 2)
+  unitPrice   Decimal @db.Decimal(10, 2)
+  amount      Decimal @db.Decimal(15, 2)
+
+  // Relations
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_items")
+}
+
+
+
 
 // Enums
 enum ProjectStatus {
@@ -347,20 +588,6 @@ enum ProjectStatus {
   ON_HOLD
   COMPLETED
   CANCELLED
-}
-
-enum ActivityStatus {
-  PLANNED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-}
-
-enum EquipmentStatus {
-  OPERATIONAL
-  UNDER_MAINTENANCE
-  OUT_OF_SERVICE
-  RETIRED
 }
 
 enum EquipmentOwnership {
@@ -394,22 +621,53 @@ enum FuelUrgency {
   URGENT
 }
 
-model Invoice {
-  id                     Int      @id @default(autoincrement())
-  invoiceNumber          String   @unique    // ✅ Add this line
-  projectId              Int
-  serviceProvider        String
-  amount                 Float
-  invoiceDate            DateTime
-  dateReceived           DateTime
-  contractNumber         String?
-  status                 String
-  procurementDescription String
-  providerId             String?
-  documentId             Int?
-  goodsReceivedNote      String?
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+// Enums
+enum InvoiceStatus {
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
+  CANCELLED
+}
 
-  project                Project  @relation(fields: [projectId], references: [id])
+// Material Management Enums
+enum LocationType {
+  STORE
+  SITE
+  SUPPLIER
+}
+
+enum MaterialUrgency {
+  LOW
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum MaterialRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ISSUED
+  ACKNOWLEDGED
+  COMPLETED
+  CANCELLED
+}
+
+enum TransactionType {
+  RECEIPT
+  ISSUE
+  TRANSFER
+  ADJUSTMENT
+  RETURN
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  SENT
+  RECEIVED
+  COMPLETED
+  CANCELLED
 }

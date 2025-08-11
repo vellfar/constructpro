@@ -41,6 +41,7 @@ const NAV_ITEMS = [
   { title: "Activities", url: "/activities", icon: Activity, roles: ["Admin", "Project Manager", "Employee"] },
   { title: "Employees", url: "/employees", icon: Users, roles: ["Admin", "Project Manager"] },
   { title: "Equipment", url: "/equipment", icon: Wrench, roles: ["Admin", "Project Manager", "Store Manager"] },
+  { title: "Material Management", url: "/material-management", icon: FileText, roles: ["Admin", "Project Manager", "Store Manager"] },
   { title: "Fuel Management", url: "/fuel-management", icon: Fuel, roles: ["Admin", "Project Manager", "Store Manager", "Employee"] },
   { title: "Clients", url: "/clients", icon: UserCircle, roles: ["Admin", "Project Manager"] },
   { title: "Invoices", url: "/invoices", icon: Receipt, roles: ["Admin"] },

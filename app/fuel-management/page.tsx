@@ -77,6 +77,7 @@ interface FuelRequestWithRelations {
   justification: string
   createdAt: string
   updatedAt: string
+  odometerKm?: number | string | null
   equipment?: {
     id: number
     name: string
@@ -515,19 +516,17 @@ export default function FuelManagementPage() {
   }
 
   const handleExportCSV = () => {
-    const exportData = formatDataForExport(filteredRequests, "fuel-requests").map(row => ({
-      ...row,
-      odometer: row.odometerKm ?? ""
-    }));
-    exportToCSV(exportData, `fuel-requests-${new Date().toISOString().split("T")[0]}`)
+    // Ensure odometerKm is present for all rows
+    const safeRequests = filteredRequests.map(req => ({ ...req, odometerKm: req.odometerKm ?? "N/A" }));
+    const exportData = formatDataForExport(safeRequests, "fuel-requests");
+    exportToCSV(exportData, `fuel-requests-${new Date().toISOString().split("T")[0]}`);
   }
 
   const handleExportExcel = () => {
-    const exportData = formatDataForExport(filteredRequests, "fuel-requests").map(row => ({
-      ...row,
-      odometer: row.odometerKm ?? ""
-    }));
-    exportToExcel(exportData, `fuel-requests-${new Date().toISOString().split("T")[0]}`, "Fuel Requests")
+    // Ensure odometerKm is present for all rows
+    const safeRequests = filteredRequests.map(req => ({ ...req, odometerKm: req.odometerKm ?? "N/A" }));
+    const exportData = formatDataForExport(safeRequests, "fuel-requests");
+    exportToExcel(exportData, `fuel-requests-${new Date().toISOString().split("T")[0]}`, "Fuel Requests");
   }
 
   // Validation functions
