@@ -58,6 +58,12 @@ const NAV_ITEMS = [
     icon: Truck,
     roles: ["Admin", "Project Manager", "Store Manager"],
   },
+  { 
+    title: "Material Management", 
+    url: "/material-management", 
+    icon: FileText, 
+    roles: ["Admin", "Project Manager", "Store Manager"] 
+  },
   {
     title: "Fuel Management",
     url: "/fuel-management",

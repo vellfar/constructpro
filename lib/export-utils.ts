@@ -124,8 +124,8 @@ export function formatDataForExport(
         Ownership: eq.ownership,
         Size: eq.size,
         Unit: eq.unit,
-        "Purchase Date": eq.purchaseDate ? new Date(eq.purchaseDate).toLocaleDateString() : "",
-        "Purchase Price": eq.purchasePrice,
+        "Date Received": eq.dateReceived ? new Date(eq.dateReceived).toLocaleDateString() : "",
+        "Acquisition Cost": eq.acquisitionCost,
       }))
 
     case "projects":
