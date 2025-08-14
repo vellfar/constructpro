@@ -125,7 +125,8 @@ export function formatDataForExport(
         Size: eq.size,
         Unit: eq.unit,
         "Date Received": eq.dateReceived ? new Date(eq.dateReceived).toLocaleDateString() : "",
-        "Acquisition Cost": eq.acquisitionCost,
+        "Acquisition Cost": typeof eq.acquisitionCost === "number" ?
+          new Intl.NumberFormat("en-US", { style: "currency", currency: "UGX" }).format(eq.acquisitionCost) : "N/A",
       }))
 
     case "projects":

@@ -36,9 +36,9 @@ async function getMaterialDashboardStats() {
         isActive: true,
         inventory: {
           some: {
+            // Compare currentStock to the material's minimumStockLevel
             currentStock: {
-              // Compare to a numeric value (e.g.,  minimumStockLevel: 0)
-              lt: 0 // You may want to adjust this logic to fetch low stock items properly
+              lt: prisma.material.fields.minimumStockLevel
             }
           }
         }
