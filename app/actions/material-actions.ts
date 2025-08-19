@@ -194,7 +194,7 @@ export async function createMaterialRequest(data: CreateMaterialRequestRequest) 
         requestNumber,
         materialId: data.materialId,
         projectId: data.projectId,
-        requestedById: user.id,
+  requestedById: Number(user.id),
         requestedQuantity: data.requestedQuantity,
         justification: data.justification,
         urgency: data.urgency,
@@ -246,7 +246,7 @@ export async function approveMaterialRequest(id: number, data: ApproveMaterialRe
     const updateData: any = {
       status: data.approved ? 'APPROVED' : 'REJECTED',
       approvalDate: new Date(),
-      approvedById: user.id,
+  approvedById: Number(user.id),
       approvalComments: data.approvalComments,
     }
 
@@ -320,7 +320,7 @@ export async function issueMaterialRequest(id: number, data: IssueMaterialReques
           status: 'ISSUED',
           issuedQuantity: data.issuedQuantity,
           issuanceDate: new Date(),
-          issuedById: user.id,
+          issuedById: Number(user.id),
           issuanceComments: data.issuanceComments,
         },
         include: {
@@ -385,7 +385,7 @@ export async function issueMaterialRequest(id: number, data: IssueMaterialReques
           quantity: data.issuedQuantity,
           unitCost: materialRequest.unitCost,
           totalCost: materialRequest.unitCost ? Number(materialRequest.unitCost) * data.issuedQuantity : null,
-          performedById: user.id,
+          performedById: Number(user.id),
           notes: data.issuanceComments,
         }
       })
@@ -428,7 +428,7 @@ export async function acknowledgeMaterialRequest(id: number, data: AcknowledgeMa
         status: 'ACKNOWLEDGED',
         acknowledgedQuantity: data.acknowledgedQuantity,
         acknowledgmentDate: new Date(),
-        acknowledgedById: user.id,
+        acknowledgedById: Number(user.id),
         acknowledgmentComments: data.acknowledgmentComments,
       },
       include: {
@@ -475,7 +475,7 @@ export async function completeMaterialRequest(id: number, data: CompleteMaterial
       data: {
         status: 'COMPLETED',
         completionDate: new Date(),
-        completedById: user.id,
+  completedById: Number(user.id),
         completionComments: data.completionComments,
       },
       include: {
@@ -682,7 +682,7 @@ export async function adjustInventory(data: InventoryAdjustmentRequest) {
           toLocationReference: data.locationReference,
           toProjectId: data.projectId,
           quantity: data.adjustmentType === 'INCREASE' ? data.adjustmentQuantity : -data.adjustmentQuantity,
-          performedById: user.id,
+          performedById: Number(user.id),
           notes: data.reason,
         }
       })
@@ -770,7 +770,7 @@ export async function transferMaterial(
           toLocationReference: toLocation.reference,
           toProjectId: toLocation.projectId,
           quantity,
-          performedById: user.id,
+          performedById: Number(user.id),
           notes,
         }
       })

@@ -31,20 +31,18 @@ async function getMaterialDashboardStats() {
     prisma.materialRequest.count({ where: { status: 'APPROVED' } }),
     prisma.materialRequest.count({ where: { status: 'ISSUED' } }),
     prisma.materialRequest.count({ where: { status: 'COMPLETED' } }),
-    prisma.material.findMany({
-      where: {
-        isActive: true,
-        inventory: {
-          some: {
-            // Compare currentStock to the material's minimumStockLevel
-            currentStock: {
-              lt: prisma.material.fields.minimumStockLevel
-            }
-          }
-        }
-      },
-      take: 10
-    }),
+    (async () => {
+      const materials = await prisma.material.findMany({
+        where: { isActive: true },
+        include: { inventory: true }
+      });
+      // Filter for materials with any inventory item below minimumStockLevel
+      return materials.filter(mat =>
+        mat.inventory.some(inv =>
+          inv.currentStock < (mat.minimumStockLevel ?? 0)
+        )
+      ).slice(0, 10);
+    })(),
     prisma.materialRequest.findMany({
       include: {
         material: { select: { name: true, materialCode: true } },
