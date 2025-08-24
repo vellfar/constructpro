@@ -58,6 +58,22 @@ export default function ProjectsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [total, setTotal] = useState(0)
+  const [userRole, setUserRole] = useState<string>("")
+
+  useEffect(() => {
+    async function fetchUserRole() {
+      try {
+        const res = await fetch("/api/session")
+        if (res.ok) {
+          const data = await res.json()
+          setUserRole(data?.user?.role || "")
+        }
+      } catch (err) {
+        setUserRole("")
+      }
+    }
+    fetchUserRole()
+  }, [])
 
   // Move fetchProjects to be a stable function so it can be used in event handlers
   const fetchProjects = async () => {
@@ -239,13 +255,15 @@ export default function ProjectsPage() {
               </p>
             </div>
             <div className="flex-shrink-0">
-              <Button asChild className="w-full sm:w-auto bg-blue-700 hover:bg-blue-600 text-white" size="sm">
-                <Link href="/projects/new">
-                  <Plus className="mr-2 h-4 w-4" />
-                  <span className="hidden xs:inline">New Project</span>
-                  <span className="xs:hidden">New</span>
-                </Link>
-              </Button>
+              {userRole === 'Admin' && (
+                <Button asChild className="w-full sm:w-auto bg-blue-700 hover:bg-blue-600 text-white" size="sm">
+                  <Link href="/projects/new">
+                    <Plus className="mr-2 h-4 w-4" />
+                    <span className="hidden xs:inline">New Project</span>
+                    <span className="xs:hidden">New</span>
+                  </Link>
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -341,12 +359,14 @@ export default function ProjectsPage() {
                   : "Get started by creating your first project to begin managing your construction work."}
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button asChild className="bg-gray-900 hover:bg-gray-800 text-white">
-                  <Link href="/projects/new">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Project
-                  </Link>
-                </Button>
+                {userRole === 'Admin' && (
+                  <Button asChild className="bg-gray-900 hover:bg-gray-800 text-white">
+                    <Link href="/projects/new">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Project
+                    </Link>
+                  </Button>
+                )}
                 {(searchTerm || statusFilter !== "ALL_STATUS") && (
                   <Button
                     variant="outline"

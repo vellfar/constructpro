@@ -159,13 +159,9 @@ export async function updateUser(id: number, formData: FormData) {
         data: updateData as any,
       })
 
-      // Soft delete (archive) existing project assignments for this user
-      await db.projectAssignment.updateMany({
-        where: { userId: id, endDate: null },
-        data: {
-          endDate: new Date(),
-          role: "ARCHIVED",
-        },
+      // Full delete existing project assignments for this user
+      await db.projectAssignment.deleteMany({
+        where: { userId: id },
       })
 
       // Validate projectIds (ensure projects exist)
@@ -199,18 +195,12 @@ export async function updateUser(id: number, formData: FormData) {
         })
       }
 
-      // Archive (soft delete) existing equipment assignments for this user and equipment
+      // Full delete existing equipment assignments for this user and equipment
       if (equipmentIds.length > 0) {
-        await db.equipmentAssignment.updateMany({
+        await db.equipmentAssignment.deleteMany({
           where: {
             userId: id,
             equipmentId: { in: equipmentIds },
-            endDate: null,
-          },
-          data: {
-            endDate: new Date(),
-            notes: "ARCHIVED",
-            status: "ARCHIVED",
           },
         })
       }

@@ -163,6 +163,14 @@ export default async function EquipmentDetailPage({ params }: { params: { id: st
                                 <Badge variant={assignment.endDate ? "secondary" : "default"}>
                                   {assignment.endDate ? "Completed" : "Active"}
                                 </Badge>
+                                <form action={async () => {
+                                  'use server'
+                                  const { unassignEquipmentFromProject } = require('@/app/actions/equipment-actions')
+                                  await unassignEquipmentFromProject(equipment.id, assignment.project.id)
+                                  // Optionally revalidate or redirect
+                                }}>
+                                  <Button type="submit" size="sm" variant="outline">Unassign</Button>
+                                </form>
                               </TableCell>
                             </TableRow>
                           ))

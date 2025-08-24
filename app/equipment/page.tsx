@@ -44,6 +44,7 @@ export default function EquipmentPage() {
   const [typeFilter, setTypeFilter] = useState("all")
   const [statusFilter, setStatusFilter] = useState("all")
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid")
+    const [userRole, setUserRole] = useState<string>("")
 
   // Pagination state
   const [page, setPage] = useState(1)
@@ -56,6 +57,21 @@ export default function EquipmentPage() {
   function getTotalPages(list: Equipment[]) {
     return Math.max(1, Math.ceil(list.length / pageSize))
   }
+  
+    useEffect(() => {
+      async function fetchUserRole() {
+        try {
+          const res = await fetch("/api/session")
+          if (res.ok) {
+            const data = await res.json()
+            setUserRole(data?.user?.role || "")
+          }
+        } catch (err) {
+          setUserRole("")
+        }
+      }
+      fetchUserRole()
+    }, [])
 
   useEffect(() => {
     // Set view mode based on screen size
@@ -167,12 +183,14 @@ export default function EquipmentPage() {
               ? "No equipment matches your current filters. Try adjusting your search criteria."
               : "Get started by adding your first piece of equipment to track and manage your construction assets."}
           </p>
-          <Button asChild className="bg-blue-600 hover:bg-blue-700">
-            <Link href="/equipment/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Equipment
-            </Link>
-          </Button>
+          {userRole === 'Admin' && (
+            <Button asChild className="bg-blue-600 hover:bg-blue-700">
+              <Link href="/equipment/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Equipment
+              </Link>
+            </Button>
+          )}
         </div>
       )
     }
@@ -269,12 +287,14 @@ export default function EquipmentPage() {
               ? "No equipment matches your current filters. Try adjusting your search criteria."
               : "Get started by adding your first piece of equipment to track and manage your construction assets."}
           </p>
-          <Button asChild className="bg-blue-600 hover:bg-blue-700">
-            <Link href="/equipment/new">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Equipment
-            </Link>
-          </Button>
+          {userRole === 'Admin' && (
+            <Button asChild className="bg-blue-600 hover:bg-blue-700">
+              <Link href="/equipment/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Equipment
+              </Link>
+            </Button>
+          )}
         </div>
       )
     }
@@ -485,13 +505,17 @@ export default function EquipmentPage() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <BulkUploadDialog onSuccess={() => window.location.reload()} />
-            <Button size="sm" asChild className="bg-blue-600 hover:bg-blue-700">
-              <Link href="/equipment/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Equipment
-              </Link>
-            </Button>
+            {userRole === 'Admin' && (
+              <>
+                <BulkUploadDialog onSuccess={() => window.location.reload()} />
+                <Button size="sm" asChild className="bg-blue-600 hover:bg-blue-700">
+                  <Link href="/equipment/new">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Equipment
+                  </Link>
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile Actions */}
@@ -511,16 +535,20 @@ export default function EquipmentPage() {
                   <Download className="mr-2 h-4 w-4" />
                   Export Excel
                 </DropdownMenuItem>
-                <div className="px-2 py-1">
-                  <BulkUploadDialog onSuccess={() => window.location.reload()} />
-                </div>
+                {userRole === 'Admin' && (
+                  <div className="px-2 py-1">
+                    <BulkUploadDialog onSuccess={() => window.location.reload()} />
+                  </div>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button size="sm" asChild className="bg-blue-600 hover:bg-blue-700">
-              <Link href="/equipment/new">
-                <Plus className="h-4 w-4" />
-              </Link>
-            </Button>
+            {userRole === 'Admin' && (
+              <Button size="sm" asChild className="bg-blue-600 hover:bg-blue-700">
+                <Link href="/equipment/new">
+                  <Plus className="h-4 w-4" />
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
       </header>

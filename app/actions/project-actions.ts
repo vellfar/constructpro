@@ -1,3 +1,24 @@
+// Unassign user from project (full delete)
+export async function unassignUserFromProject(userId: number, projectId: number) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+  try {
+    await prisma.projectAssignment.deleteMany({
+      where: {
+        userId: Number(userId),
+        projectId,
+      },
+    })
+    revalidatePath(`/projects/${projectId}`)
+    revalidatePath(`/users/${userId}`)
+    return { success: true, message: "User unassigned from project" }
+  } catch (error) {
+    console.error("❌ Failed to unassign user from project:", error)
+    return { success: false, error: "Failed to unassign user from project" }
+  }
+}
 "use server"
 
 import { revalidatePath } from "next/cache"
@@ -34,7 +55,7 @@ export async function getProjects() {
       projects = await prisma.project.findMany({
         where: {
           projectAssignments: {
-            some: { userId: session.user.id }
+            some: { userId: Number(session.user.id) }
           }
         },
         include: {

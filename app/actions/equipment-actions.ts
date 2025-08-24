@@ -1,3 +1,24 @@
+// Unassign equipment from project (full delete)
+export async function unassignEquipmentFromProject(equipmentId: number, projectId: number) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+  try {
+    await prisma.equipmentAssignment.deleteMany({
+      where: {
+        equipmentId,
+        projectId,
+      },
+    })
+    revalidatePath(`/equipment/${equipmentId}`)
+    revalidatePath(`/projects/${projectId}`)
+    return { success: true, message: "Equipment unassigned from project" }
+  } catch (error) {
+    console.error("❌ Failed to unassign equipment:", error)
+    return { success: false, error: "Failed to unassign equipment" }
+  }
+}
 "use server"
 
 // @ts-ignore
@@ -126,7 +147,7 @@ export async function bulkUploadEquipment(csvText: string) {
             make: row.make?.trim() || "Unknown",
             model: row.model?.trim() || "Unknown",
             yearOfManufacture: yearNum,
-            ownership: ownership,
+            ownership: ownership as any,
             measurementType: row.measurementType?.trim() || "Unit",
             unit: row.unit?.trim() || "pcs",
             size: sizeNum,

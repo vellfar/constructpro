@@ -170,10 +170,18 @@ export default async function UserPage({ params }: UserPageProps) {
               <CardContent>
                 <div className="grid gap-2 md:grid-cols-2">
                   {user.projectAssignments.map((assignment: any) => (
-                    <div key={assignment.project.id} className="p-2 border rounded">
+                    <div key={assignment.project.id} className="p-2 border rounded flex flex-col gap-1">
                       <p className="font-medium">{assignment.project.name}</p>
                       <p className="text-sm text-muted-foreground">Code: {assignment.project.projectCode || "N/A"}</p>
                       <p className="text-xs text-muted-foreground">Role: {assignment.role}</p>
+                      <form action={async () => {
+                        'use server'
+                        const { unassignUserFromProject } = require('@/app/actions/project-actions')
+                        await unassignUserFromProject(user.id, assignment.project.id)
+                        // Optionally revalidate or redirect
+                      }}>
+                        <Button type="submit" size="sm" variant="outline">Unassign</Button>
+                      </form>
                     </div>
                   ))}
                 </div>
@@ -190,10 +198,18 @@ export default async function UserPage({ params }: UserPageProps) {
               <CardContent>
                 <div className="grid gap-2 md:grid-cols-2">
                   {user.equipmentAssignments.map((assignment: any) => (
-                    <div key={assignment.equipment.id} className="p-2 border rounded">
+                    <div key={assignment.equipment.id} className="p-2 border rounded flex flex-col gap-1">
                       <p className="font-medium">{assignment.equipment.name}</p>
                       <p className="text-sm text-muted-foreground">Code: {assignment.equipment.equipmentCode || "N/A"}</p>
                       <p className="text-xs text-muted-foreground">Project: {assignment.projectId}</p>
+                      <form action={async () => {
+                        'use server'
+                        const { unassignEquipmentFromProject } = require('@/app/actions/equipment-actions')
+                        await unassignEquipmentFromProject(assignment.equipment.id, assignment.projectId)
+                        // Optionally revalidate or redirect
+                      }}>
+                        <Button type="submit" size="sm" variant="outline">Unassign</Button>
+                      </form>
                     </div>
                   ))}
                 </div>

@@ -50,6 +50,12 @@ export default async function ProjectDetailPage({ params }: PageProps) {
           include: { equipment: true },
           orderBy: { createdAt: "desc" },
         },
+        projectAssignments: {
+          include: { user: true },
+        },
+        equipmentAssignments: {
+          include: { equipment: true },
+        },
       },
     })
 
@@ -227,109 +233,55 @@ export default async function ProjectDetailPage({ params }: PageProps) {
             </CardContent>
           </Card>
 
-          {/* Tabs */}
-          <Tabs defaultValue="activities" className="space-y-4">
-            <TabsList className="grid grid-cols-2 w-full">
-              <TabsTrigger value="activities">Activities ({project.activities.length})</TabsTrigger>
-              <TabsTrigger value="fuel">Fuel Requests ({project.fuelRequests.length})</TabsTrigger>
-            </TabsList>
-
-            {/* Activities Tab */}
-            <TabsContent value="activities">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Project Activities</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {project.activities.length ? (
-                    <div className="w-full overflow-x-auto">
-                      <Table className="min-w-[640px]">
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Activity</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Start</TableHead>
-                            <TableHead>End</TableHead>
-                            <TableHead>Created</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {project.activities.map(a => (
-                            <TableRow key={a.id}>
-                              <TableCell>{a.name}</TableCell>
-                              <TableCell>
-                                <Badge variant={getStatusBadgeVariant(a.status)}>{a.status}</Badge>
-                              </TableCell>
-                              <TableCell>{formatDate(a.startDate)}</TableCell>
-                              <TableCell>{formatDate(a.endDate)}</TableCell>
-                              <TableCell>{formatDate(a.createdAt)}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+          {/* Assignments Section */}
+          {project.projectAssignments && project.projectAssignments.length > 0 && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Assigned Users</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {project.projectAssignments.map((assignment: any) => (
+                    <div key={assignment.userId} className="p-2 border rounded flex flex-col gap-1">
+                      <p className="font-medium">{assignment.user?.firstName} {assignment.user?.lastName}</p>
+                      <p className="text-xs text-muted-foreground">Role: {assignment.role}</p>
+                      <form action={async () => {
+                        'use server'
+                        const { unassignUserFromProject } = require('@/app/actions/project-actions')
+                        await unassignUserFromProject(assignment.userId, project.id)
+                      }}>
+                        <Button type="submit" size="sm" variant="outline">Unassign</Button>
+                      </form>
                     </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <p className="text-muted-foreground">No activities found</p>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {project.equipmentAssignments && project.equipmentAssignments.length > 0 && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Assigned Equipment</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {project.equipmentAssignments.map((assignment: any) => (
+                    <div key={assignment.equipmentId} className="p-2 border rounded flex flex-col gap-1">
+                      <p className="font-medium">{assignment.equipment?.name}</p>
+                      <form action={async () => {
+                        'use server'
+                        const { unassignEquipmentFromProject } = require('@/app/actions/equipment-actions')
+                        await unassignEquipmentFromProject(assignment.equipmentId, project.id)
+                      }}>
+                        <Button type="submit" size="sm" variant="outline">Unassign</Button>
+                      </form>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Fuel Requests Tab */}
-            <TabsContent value="fuel">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Fuel Requests</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {project.fuelRequests.length ? (
-                    <div className="w-full overflow-x-auto">
-                      <Table className="min-w-[640px]">
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Request #</TableHead>
-                            <TableHead>Equipment</TableHead>
-                            <TableHead>Fuel Type</TableHead>
-                            <TableHead className="text-right">Qty</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Date</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {project.fuelRequests.map(r => {
-                            const eq = getEquipment(r.equipment)
-                            return (
-                              <TableRow key={r.id}>
-                                <TableCell>{r.requestNumber || `REQ-${r.id}`}</TableCell>
-                                <TableCell>
-                                  <p>{eq.name}</p>
-                                  <p className="text-sm text-muted-foreground">{eq.code}</p>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline">{r.fuelType}</Badge>
-                                </TableCell>
-                                <TableCell className="text-right">{r.requestedQuantity}L</TableCell>
-                                <TableCell>
-                                  <Badge variant={getStatusBadgeVariant(r.status)}>{r.status}</Badge>
-                                </TableCell>
-                                <TableCell>{formatDate(r.createdAt)}</TableCell>
-                              </TableRow>
-                            )
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <p className="text-muted-foreground">No fuel requests found</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {/* ...existing tabs and content... */}
         </main>
       </div>
     )
