@@ -1,3 +1,10 @@
+"use server"
+import { revalidatePath } from "next/cache"
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+import { ProjectStatus } from "@prisma/client"
+import { redirect } from "next/navigation"
 // Unassign user from project (full delete)
 export async function unassignUserFromProject(userId: number, projectId: number) {
   const session = await getServerSession(authOptions)
@@ -19,14 +26,8 @@ export async function unassignUserFromProject(userId: number, projectId: number)
     return { success: false, error: "Failed to unassign user from project" }
   }
 }
-"use server"
 
-import { revalidatePath } from "next/cache"
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth"
-import { prisma } from "@/lib/prisma"
-import { ProjectStatus } from "@prisma/client"
-import { redirect } from "next/navigation"
+
 
 // Get all projects
 export async function getProjects() {

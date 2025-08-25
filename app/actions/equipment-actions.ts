@@ -1,3 +1,15 @@
+"use server"
+// @ts-ignore
+import { revalidatePath } from "next/cache"
+import { prisma } from "@/lib/db"
+// @ts-ignore
+import { getServerSession } from "next-auth/next"
+import { authOptions } from "@/lib/auth"
+// To use bulkUploadEquipment, install csv-parse: npm install csv-parse
+// Usage: Call bulkUploadEquipment(file: File) with a CSV file containing equipment data.
+import { parse } from "csv-parse/sync"
+import type { Readable } from "stream"
+// Bulk upload equipment from CSV
 // Unassign equipment from project (full delete)
 export async function unassignEquipmentFromProject(equipmentId: number, projectId: number) {
   const session = await getServerSession(authOptions)
@@ -19,19 +31,8 @@ export async function unassignEquipmentFromProject(equipmentId: number, projectI
     return { success: false, error: "Failed to unassign equipment" }
   }
 }
-"use server"
 
-// @ts-ignore
-import { revalidatePath } from "next/cache"
-import { prisma } from "@/lib/db"
-// @ts-ignore
-import { getServerSession } from "next-auth/next"
-import { authOptions } from "@/lib/auth"
-// To use bulkUploadEquipment, install csv-parse: npm install csv-parse
-// Usage: Call bulkUploadEquipment(file: File) with a CSV file containing equipment data.
-import { parse } from "csv-parse/sync"
-import type { Readable } from "stream"
-// Bulk upload equipment from CSV
+
 export async function bulkUploadEquipment(csvText: string) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.email) {
